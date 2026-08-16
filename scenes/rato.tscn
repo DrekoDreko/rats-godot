@@ -1,0 +1,28 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/rato.gd" id="1_rato"]
+[ext_resource type="PackedScene" uid="uid://c8f7bjmvqsrxx" path="res://mobs/rats/Rat_Fbx.fbx" id="2_modelo"]
+
+[sub_resource type="CapsuleShape3D" id="Forma_rato"]
+radius = 0.15
+height = 0.36
+
+[node name="Rato" type="CharacterBody3D" groups=["ratos"]]
+collision_layer = 4
+collision_mask = 1
+script = ExtResource("1_rato")
+
+[node name="Colisao" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.18, 0)
+shape = SubResource("Forma_rato")
+
+[node name="Navegacao" type="NavigationAgent3D" parent="."]
+path_desired_distance = 0.4
+target_desired_distance = 0.6
+path_height_offset = 0.2
+path_max_distance = 3.0
+
+[node name="Modelo" type="Node3D" parent="."]
+
+[node name="Malha" parent="Modelo" instance=ExtResource("2_modelo")]
+transform = Transform3D(0.45, 0, 0, 0, 0.45, 0, 0, 0, 0.45, 0, 0, 0)

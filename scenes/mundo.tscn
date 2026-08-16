@@ -1,8 +1,570 @@
-[gd_scene format=3 uid="uid://3o1jdkd6gviy"]
+[gd_scene load_steps=35 format=3 uid="uid://3o1jdkd6gviy"]
 
 [ext_resource type="PackedScene" uid="uid://baae21uy7nxug" path="res://models/van.glb" id="1_wqn8j"]
+[ext_resource type="PackedScene" path="res://scenes/jogador.tscn" id="2_jogador"]
+[ext_resource type="PackedScene" path="res://scenes/rato.tscn" id="4_rato"]
+[ext_resource type="Script" path="res://scripts/contador_ratos.gd" id="5_contador"]
+[ext_resource type="Script" path="res://scripts/navegacao.gd" id="6_navegacao"]
+[ext_resource type="Script" path="res://scripts/hud_esganamento.gd" id="7_esganamento"]
 
-[node name="Mundo" type="Node3D" unique_id=788409053]
+[sub_resource type="ProceduralSkyMaterial" id="Ceu_material"]
+sky_top_color = Color(0.36, 0.38, 0.41, 1)
+sky_horizon_color = Color(0.62, 0.63, 0.65, 1)
+ground_horizon_color = Color(0.62, 0.63, 0.65, 1)
+ground_bottom_color = Color(0.3, 0.3, 0.32, 1)
 
-[node name="van" parent="." unique_id=157850771 instance=ExtResource("1_wqn8j")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.24438202, -1.1920929e-07, 0.12161064)
+[sub_resource type="Sky" id="Ceu"]
+sky_material = SubResource("Ceu_material")
+
+[sub_resource type="Environment" id="Ambiente"]
+background_mode = 2
+sky = SubResource("Ceu")
+tonemap_mode = 2
+ssao_enabled = true
+fog_enabled = true
+fog_light_color = Color(0.58, 0.6, 0.62, 1)
+fog_density = 0.0045
+
+[sub_resource type="StandardMaterial3D" id="Mat_chao"]
+albedo_color = Color(0.13, 0.13, 0.14, 1)
+roughness = 0.95
+metallic_specular = 0.1
+
+[sub_resource type="PlaneMesh" id="Mesh_chao"]
+material = SubResource("Mat_chao")
+size = Vector2(60, 60)
+
+[sub_resource type="BoxShape3D" id="Forma_chao"]
+size = Vector3(60, 2, 60)
+
+[sub_resource type="StandardMaterial3D" id="Mat_parede"]
+albedo_color = Color(0.36, 0.36, 0.38, 1)
+roughness = 0.95
+
+[sub_resource type="BoxMesh" id="Mesh_parede_ns"]
+material = SubResource("Mat_parede")
+size = Vector3(68, 10, 4)
+
+[sub_resource type="BoxShape3D" id="Forma_parede_ns"]
+size = Vector3(68, 10, 4)
+
+[sub_resource type="BoxMesh" id="Mesh_parede_lo"]
+material = SubResource("Mat_parede")
+size = Vector3(4, 10, 68)
+
+[sub_resource type="BoxShape3D" id="Forma_parede_lo"]
+size = Vector3(4, 10, 68)
+
+[sub_resource type="StandardMaterial3D" id="Mat_bloco"]
+albedo_color = Color(0.5, 0.5, 0.53, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="Mesh_bloco"]
+material = SubResource("Mat_bloco")
+size = Vector3(8, 14, 8)
+
+[sub_resource type="BoxShape3D" id="Forma_bloco"]
+size = Vector3(8, 14, 8)
+
+[sub_resource type="StandardMaterial3D" id="Mat_caixa"]
+albedo_color = Color(0.66, 0.66, 0.68, 1)
+roughness = 0.85
+
+[sub_resource type="BoxMesh" id="Mesh_caixa_media"]
+material = SubResource("Mat_caixa")
+size = Vector3(6, 6, 6)
+
+[sub_resource type="BoxShape3D" id="Forma_caixa_media"]
+size = Vector3(6, 6, 6)
+
+[sub_resource type="BoxMesh" id="Mesh_caixa_pequena"]
+material = SubResource("Mat_caixa")
+size = Vector3(3, 3, 3)
+
+[sub_resource type="BoxShape3D" id="Forma_caixa_pequena"]
+size = Vector3(3, 3, 3)
+
+[sub_resource type="StandardMaterial3D" id="Mat_coluna"]
+albedo_color = Color(0.74, 0.74, 0.76, 1)
+roughness = 0.8
+
+[sub_resource type="CylinderMesh" id="Mesh_coluna"]
+material = SubResource("Mat_coluna")
+top_radius = 1.5
+bottom_radius = 1.5
+height = 8.0
+
+[sub_resource type="CylinderShape3D" id="Forma_coluna"]
+height = 8.0
+radius = 1.5
+
+[sub_resource type="StandardMaterial3D" id="Mat_rampa"]
+albedo_color = Color(0.58, 0.56, 0.52, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="Mesh_rampa"]
+material = SubResource("Mat_rampa")
+size = Vector3(6, 1, 14)
+
+[sub_resource type="BoxShape3D" id="Forma_rampa"]
+size = Vector3(6, 1, 14)
+
+[sub_resource type="BoxMesh" id="Mesh_plataforma"]
+material = SubResource("Mat_rampa")
+size = Vector3(10, 1, 10)
+
+[sub_resource type="BoxShape3D" id="Forma_plataforma"]
+size = Vector3(10, 1, 10)
+
+[sub_resource type="NavigationMesh" id="Malha_navegacao"]
+geometry_parsed_geometry_type = 1
+geometry_collision_mask = 1
+geometry_source_geometry_mode = 1
+geometry_source_group_name = "cenario"
+cell_height = 0.1
+agent_height = 0.8
+agent_radius = 0.25
+agent_max_climb = 0.2
+
+[node name="Mundo" type="Node3D"]
+
+[node name="Ambiente" type="WorldEnvironment" parent="."]
+environment = SubResource("Ambiente")
+
+[node name="Sol" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.8192, 0.4394, -0.3687, 0, 0.6428, 0.766, 0.5736, -0.6275, 0.5266, 0, 40, 0)
+light_energy = 1.1
+shadow_enabled = true
+directional_shadow_max_distance = 60.0
+
+[node name="Chao" type="StaticBody3D" parent="." groups=["cenario"]]
+
+[node name="Malha" type="MeshInstance3D" parent="Chao"]
+mesh = SubResource("Mesh_chao")
+
+[node name="Colisao" type="CollisionShape3D" parent="Chao"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, 0)
+shape = SubResource("Forma_chao")
+
+[node name="Paredes" type="Node3D" parent="." groups=["cenario"]]
+
+[node name="Norte" type="StaticBody3D" parent="Paredes"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, -32)
+
+[node name="Malha" type="MeshInstance3D" parent="Paredes/Norte"]
+mesh = SubResource("Mesh_parede_ns")
+
+[node name="Colisao" type="CollisionShape3D" parent="Paredes/Norte"]
+shape = SubResource("Forma_parede_ns")
+
+[node name="Sul" type="StaticBody3D" parent="Paredes"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 32)
+
+[node name="Malha" type="MeshInstance3D" parent="Paredes/Sul"]
+mesh = SubResource("Mesh_parede_ns")
+
+[node name="Colisao" type="CollisionShape3D" parent="Paredes/Sul"]
+shape = SubResource("Forma_parede_ns")
+
+[node name="Leste" type="StaticBody3D" parent="Paredes"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 32, 5, 0)
+
+[node name="Malha" type="MeshInstance3D" parent="Paredes/Leste"]
+mesh = SubResource("Mesh_parede_lo")
+
+[node name="Colisao" type="CollisionShape3D" parent="Paredes/Leste"]
+shape = SubResource("Forma_parede_lo")
+
+[node name="Oeste" type="StaticBody3D" parent="Paredes"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -32, 5, 0)
+
+[node name="Malha" type="MeshInstance3D" parent="Paredes/Oeste"]
+mesh = SubResource("Mesh_parede_lo")
+
+[node name="Colisao" type="CollisionShape3D" parent="Paredes/Oeste"]
+shape = SubResource("Forma_parede_lo")
+
+[node name="Obstaculos" type="Node3D" parent="." groups=["cenario"]]
+
+[node name="Bloco1" type="StaticBody3D" parent="Obstaculos"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 7, -18)
+
+[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Bloco1"]
+mesh = SubResource("Mesh_bloco")
+
+[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Bloco1"]
+shape = SubResource("Forma_bloco")
+
+[node name="Bloco2" type="StaticBody3D" parent="Obstaculos"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 7, -14)
+
+[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Bloco2"]
+mesh = SubResource("Mesh_bloco")
+
+[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Bloco2"]
+shape = SubResource("Forma_bloco")
+
+[node name="Bloco3" type="StaticBody3D" parent="Obstaculos"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 7, -2)
+
+[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Bloco3"]
+mesh = SubResource("Mesh_bloco")
+
+[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Bloco3"]
+shape = SubResource("Forma_bloco")
+
+[node name="Bloco4" type="StaticBody3D" parent="Obstaculos"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 7, 8)
+
+[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Bloco4"]
+mesh = SubResource("Mesh_bloco")
+
+[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Bloco4"]
+shape = SubResource("Forma_bloco")
+
+[node name="Bloco5" type="StaticBody3D" parent="Obstaculos"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 7, 21)
+
+[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Bloco5"]
+mesh = SubResource("Mesh_bloco")
+
+[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Bloco5"]
+shape = SubResource("Forma_bloco")
+
+[node name="Bloco6" type="StaticBody3D" parent="Obstaculos"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23, 7, 20)
+
+[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Bloco6"]
+mesh = SubResource("Mesh_bloco")
+
+[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Bloco6"]
+shape = SubResource("Forma_bloco")
+
+[node name="CaixaMedia1" type="StaticBody3D" parent="Obstaculos"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 3, 4)
+
+[node name="Malha" type="MeshInstance3D" parent="Obstaculos/CaixaMedia1"]
+mesh = SubResource("Mesh_caixa_media")
+
+[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/CaixaMedia1"]
+shape = SubResource("Forma_caixa_media")
+
+[node name="CaixaMedia2" type="StaticBody3D" parent="Obstaculos"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 3, -6)
+
+[node name="Malha" type="MeshInstance3D" parent="Obstaculos/CaixaMedia2"]
+mesh = SubResource("Mesh_caixa_media")
+
+[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/CaixaMedia2"]
+shape = SubResource("Forma_caixa_media")
+
+[node name="CaixaMedia3" type="StaticBody3D" parent="Obstaculos"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, -10)
+
+[node name="Malha" type="MeshInstance3D" parent="Obstaculos/CaixaMedia3"]
+mesh = SubResource("Mesh_caixa_media")
+
+[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/CaixaMedia3"]
+shape = SubResource("Forma_caixa_media")
+
+[node name="CaixaMedia4" type="StaticBody3D" parent="Obstaculos"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 3, 9)
+
+[node name="Malha" type="MeshInstance3D" parent="Obstaculos/CaixaMedia4"]
+mesh = SubResource("Mesh_caixa_media")
+
+[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/CaixaMedia4"]
+shape = SubResource("Forma_caixa_media")
+
+[node name="CaixaMedia5" type="StaticBody3D" parent="Obstaculos"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 3, -26)
+
+[node name="Malha" type="MeshInstance3D" parent="Obstaculos/CaixaMedia5"]
+mesh = SubResource("Mesh_caixa_media")
+
+[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/CaixaMedia5"]
+shape = SubResource("Forma_caixa_media")
+
+[node name="CaixaMedia6" type="StaticBody3D" parent="Obstaculos"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26, 3, -14)
+
+[node name="Malha" type="MeshInstance3D" parent="Obstaculos/CaixaMedia6"]
+mesh = SubResource("Mesh_caixa_media")
+
+[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/CaixaMedia6"]
+shape = SubResource("Forma_caixa_media")
+
+[node name="CaixaPequena1" type="StaticBody3D" parent="Obstaculos"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 1.5, 8)
+
+[node name="Malha" type="MeshInstance3D" parent="Obstaculos/CaixaPequena1"]
+mesh = SubResource("Mesh_caixa_pequena")
+
+[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/CaixaPequena1"]
+shape = SubResource("Forma_caixa_pequena")
+
+[node name="CaixaPequena2" type="StaticBody3D" parent="Obstaculos"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 1.5, -2)
+
+[node name="Malha" type="MeshInstance3D" parent="Obstaculos/CaixaPequena2"]
+mesh = SubResource("Mesh_caixa_pequena")
+
+[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/CaixaPequena2"]
+shape = SubResource("Forma_caixa_pequena")
+
+[node name="CaixaPequena3" type="StaticBody3D" parent="Obstaculos"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 1.5, 20)
+
+[node name="Malha" type="MeshInstance3D" parent="Obstaculos/CaixaPequena3"]
+mesh = SubResource("Mesh_caixa_pequena")
+
+[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/CaixaPequena3"]
+shape = SubResource("Forma_caixa_pequena")
+
+[node name="CaixaPequena4" type="StaticBody3D" parent="Obstaculos"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 1.5, 2)
+
+[node name="Malha" type="MeshInstance3D" parent="Obstaculos/CaixaPequena4"]
+mesh = SubResource("Mesh_caixa_pequena")
+
+[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/CaixaPequena4"]
+shape = SubResource("Forma_caixa_pequena")
+
+[node name="CaixaPequena5" type="StaticBody3D" parent="Obstaculos"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 17, 1.5, -8)
+
+[node name="Malha" type="MeshInstance3D" parent="Obstaculos/CaixaPequena5"]
+mesh = SubResource("Mesh_caixa_pequena")
+
+[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/CaixaPequena5"]
+shape = SubResource("Forma_caixa_pequena")
+
+[node name="CaixaPequena6" type="StaticBody3D" parent="Obstaculos"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 1.5, 20)
+
+[node name="Malha" type="MeshInstance3D" parent="Obstaculos/CaixaPequena6"]
+mesh = SubResource("Mesh_caixa_pequena")
+
+[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/CaixaPequena6"]
+shape = SubResource("Forma_caixa_pequena")
+
+[node name="Coluna1" type="StaticBody3D" parent="Obstaculos"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 4, -21)
+
+[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Coluna1"]
+mesh = SubResource("Mesh_coluna")
+
+[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Coluna1"]
+shape = SubResource("Forma_coluna")
+
+[node name="Coluna2" type="StaticBody3D" parent="Obstaculos"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 4, -21)
+
+[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Coluna2"]
+mesh = SubResource("Mesh_coluna")
+
+[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Coluna2"]
+shape = SubResource("Forma_coluna")
+
+[node name="Coluna3" type="StaticBody3D" parent="Obstaculos"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 4, -26)
+
+[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Coluna3"]
+mesh = SubResource("Mesh_coluna")
+
+[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Coluna3"]
+shape = SubResource("Forma_coluna")
+
+[node name="Coluna4" type="StaticBody3D" parent="Obstaculos"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 4, -26)
+
+[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Coluna4"]
+mesh = SubResource("Mesh_coluna")
+
+[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Coluna4"]
+shape = SubResource("Forma_coluna")
+
+[node name="Plataforma1" type="StaticBody3D" parent="Obstaculos"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 4, 9)
+
+[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Plataforma1"]
+mesh = SubResource("Mesh_plataforma")
+
+[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Plataforma1"]
+shape = SubResource("Forma_plataforma")
+
+[node name="Rampa1" type="StaticBody3D" parent="Obstaculos"]
+transform = Transform3D(1, 0, 0, 0, 0.9397, -0.342, 0, 0.342, 0.9397, 15, 1.75, 20.6)
+
+[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Rampa1"]
+mesh = SubResource("Mesh_rampa")
+
+[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Rampa1"]
+shape = SubResource("Forma_rampa")
+
+[node name="Plataforma2" type="StaticBody3D" parent="Obstaculos"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 4, -9)
+
+[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Plataforma2"]
+mesh = SubResource("Mesh_plataforma")
+
+[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Plataforma2"]
+shape = SubResource("Forma_plataforma")
+
+[node name="Rampa2" type="StaticBody3D" parent="Obstaculos"]
+transform = Transform3D(1, 0, 0, 0, 0.9397, 0.342, 0, -0.342, 0.9397, -15, 1.75, -20.6)
+
+[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Rampa2"]
+mesh = SubResource("Mesh_rampa")
+
+[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Rampa2"]
+shape = SubResource("Forma_rampa")
+
+[node name="Navegacao" type="NavigationRegion3D" parent="."]
+navigation_mesh = SubResource("Malha_navegacao")
+script = ExtResource("6_navegacao")
+
+[node name="van" parent="." instance=ExtResource("1_wqn8j")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0, 2)
+
+[node name="Jogador" parent="." instance=ExtResource("2_jogador")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 4)
+
+[node name="Ratos" type="Node3D" parent="."]
+
+[node name="Rato1" parent="Ratos" instance=ExtResource("4_rato")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.1, 12)
+
+[node name="Rato2" parent="Ratos" instance=ExtResource("4_rato")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0.1, 1)
+
+[node name="Rato3" parent="Ratos" instance=ExtResource("4_rato")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.1, -16)
+
+[node name="Rato4" parent="Ratos" instance=ExtResource("4_rato")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0.1, 2)
+
+[node name="Rato5" parent="Ratos" instance=ExtResource("4_rato")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 0.1, -12)
+
+[node name="Rato6" parent="Ratos" instance=ExtResource("4_rato")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0.1, 14)
+
+[node name="Rato7" parent="Ratos" instance=ExtResource("4_rato")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0.1, -20)
+
+[node name="Rato8" parent="Ratos" instance=ExtResource("4_rato")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.1, -27)
+
+[node name="Rato9" parent="Ratos" instance=ExtResource("4_rato")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0.1, 6)
+
+[node name="Rato10" parent="Ratos" instance=ExtResource("4_rato")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0.1, 26)
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="Ajuda" type="Label" parent="HUD"]
+offset_left = 16.0
+offset_top = 12.0
+offset_right = 320.0
+offset_bottom = 150.0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+text = "WASD / setas — andar\nShift — correr\nEspaço — pular\nMouse — girar a câmera\nBotão esquerdo — agarrar o rato\nBotão esquerdo (segurando) — esganar\nEsc — soltar o mouse"
+
+[node name="Contador" type="Label" parent="HUD"]
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -220.0
+offset_top = 12.0
+offset_right = -16.0
+offset_bottom = 40.0
+grow_horizontal = 0
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+text = "Ratos: 0 / 0"
+horizontal_alignment = 2
+script = ExtResource("5_contador")
+
+[node name="Mira" type="Label" parent="HUD"]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -10.0
+offset_top = -14.0
+offset_right = 10.0
+offset_bottom = 14.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 1, 1, 0.75)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.6)
+theme_override_constants/outline_size = 4
+text = "+"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Esganamento" type="Control" parent="HUD"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("7_esganamento")
+caminho_da_mira = NodePath("../Mira")
+
+[node name="Botao" type="Label" parent="HUD/Esganamento"]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -160.0
+offset_top = 96.0
+offset_right = 160.0
+offset_bottom = 148.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.94, 0.86, 0.36, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 8
+theme_override_font_sizes/font_size = 38
+text = "CLIQUE"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Instrucao" type="Label" parent="HUD/Esganamento"]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -160.0
+offset_top = 150.0
+offset_right = 160.0
+offset_bottom = 176.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+text = "martele para esganar"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Barra" type="ProgressBar" parent="HUD/Esganamento"]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -130.0
+offset_top = 182.0
+offset_right = 130.0
+offset_bottom = 200.0
+grow_horizontal = 2
+grow_vertical = 2
+max_value = 1.0
+step = 0.01
+value = 0.0
+show_percentage = false
