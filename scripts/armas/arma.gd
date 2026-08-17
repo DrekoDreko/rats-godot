@@ -10,6 +10,11 @@ extends Node3D
 ## Uma arma pode ficar *ocupada*: enquanto estiver, o jogador não usa outra nem
 ## se move à vontade. As mãos ficam ocupadas segurando o rato; um martelo, por
 ## exemplo, nunca ficaria.
+##
+## Toda arma também declara *de que morte* ela mata (um `Morte.Tipo`, ver
+## `scripts/economia/morte.gd`) e passa esse tipo ao rato na hora de matá-lo — é
+## ele que decide quanto o corpo vai pagar. Quem entrega o bicho inteiro recebe
+## mais; quem o desmancha, menos.
 
 ## Um uso da arma. `acertou` é falso quando não havia rato na mira.
 signal usou(acertou: bool)

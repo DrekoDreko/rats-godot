@@ -21,15 +21,22 @@ extends Arma
 @export var tempo_ate_escapar := 1.6
 
 @export_group("Mão")
-## Distância do rato até a câmera. É o que decide o tamanho dele na tela.
-@export var distancia_maos := 0.6
-## Altura do rato em relação ao centro da tela: um tiquinho abaixo, para sobrar
-## espaço para o aviso do esganamento embaixo dele.
-@export var altura_maos := -0.05
+## Distância do rato até a câmera. É o que decide o tamanho dele na tela: o bicho
+## tem quase um metro do focinho ao quadril, e de pé a esta distância ele ocupa
+## pouco mais da metade da altura do quadro, com o rabo pendurado até embaixo.
+@export var distancia_maos := 0.95
+## Altura do meio do corpo dele em relação ao centro da tela. Fica abaixo do
+## centro de propósito: preso pelo pescoço ele estica a cabeça para cima, e é o
+## corpo — e não o meio geométrico do bicho — que precisa cair no meio do quadro.
+@export var altura_maos := -0.1
 
 ## Força do chacoalhão do agarrão e a de cada aperto.
 const COICE_AGARRAO := 1.0
 const COICE_APERTO := 0.45
+## De que morte estas mãos matam. Esganado o rato chega inteiro, sem um furo na
+## pelagem, e é por isso que as mãos são as que mais pagam — nenhuma arma vai
+## render mais que elas.
+const TIPO_DE_MORTE := Morte.Tipo.ESTRANGULAMENTO
 
 @onready var ponto: Node3D = get_parent().get_node("PontoCaptura")
 
@@ -110,7 +117,7 @@ func _soltar(matou: bool) -> void:
 	_pressao = 0.0
 	_tempo_vazio = 0.0
 	if matou:
-		rato.morrer_nas_maos()
+		rato.morrer_nas_maos(TIPO_DE_MORTE)
 		# O rato morreu no meio de uma martelada e ainda vêm cliques na rabeira:
 		# sem esta pausa eles agarrariam o rato seguinte sem o jogador querer.
 		recarregar()

@@ -62,6 +62,41 @@ dá para reagarrá-lo.
 As mãos são o único jeito de matar rato por enquanto. Uma arma que resolva num
 golpe só precisa herdar de `Arma` e sobrescrever o `_usar()`.
 
+## A recompensa
+
+Rato morto é mercadoria, e quem compra quer o bicho inteiro. O preço sai de duas
+coisas: **quanto vale a espécie** e **de que morte ela morreu**.
+
+```
+recompensa = valor da espécie × o que sobrou dela depois daquela morte
+```
+
+O estrangulamento é o teto da tabela: esganado o rato chega sem um furo na
+pelagem, e por isso as mãos pagam cheio — nenhuma arma vai render mais que elas.
+Toda arma daqui para frente estraga um pouco a mercadoria e desconta no preço,
+do veneno (que só apodrece a carne) até o esmagamento (do qual mal sobra rato).
+A tabela dos descontos está em `scripts/economia/morte.gd`, com os tipos que
+ainda não têm arma já escritos à espera delas: veneno, armadilha, perfuração,
+tiro e esmagamento.
+
+**O dinheiro entra quando a caçada daquele rato se encerra**, não quando ele
+morre. Esganado, isso é na cintura: entre o último aperto e o corpo ser guardado
+ainda passa um segundo, e nele o jogador não tem nada. Matar e perder o corpo não
+paga. Morto de longe, a caçada acaba onde ele cai, e é lá que a conta fecha.
+Rato que se solta da mão e foge, claro, não paga nada.
+
+Quem guarda o dinheiro é a `Carteira`, o único autoload do projeto — o mapa
+recomeça, o que se ganhou nele não. Ela avisa por sinal (`dinheiro_mudou`,
+`captura_registrada`) quem quiser mostrar isso na tela.
+
+### As espécies
+
+Cada raça de rato é um arquivo em `recursos/especies/`: como ela se chama, com
+que pelagens ela nasce, quanto ela vale inteira e quanto um bicho pode ser maior
+ou menor que os da mesma ninhada. Hoje só existe o **rato comum** — as quatro
+pelagens do pacote e dez reais a cabeça. Rato novo, mais raro e mais caro, é
+duplicar o `.tres` e mexer nos números; nada de código.
+
 ### Por onde eles andam
 
 Os ratos andam por uma malha de navegação assada quando o mapa abre, a partir
@@ -115,11 +150,14 @@ instalação do Blender para rodar o jogo.
   andam, `contador_ratos.gd` o placar do HUD e `hud_esganamento.gd` o aviso do esganamento)
 - `scripts/armas/` — as armas do jogador: `arma.gd` é a base de todas e `maos.gd`
   é a primeira delas, a que agarra e esgana
+- `scripts/economia/` — o dinheiro da caçada: `morte.gd` é a tabela dos tipos de
+  morte, `especie_rato.gd` é o molde de uma raça de rato e `carteira.gd` é o
+  autoload que guarda o que se ganhou
+- `recursos/especies/` — as raças de rato, uma por arquivo (`rato_comum.tres`)
 - `models/` — modelos 3D (`.glb`) e seus arquivos de import
 - `mobs/rats/` — o modelo do rato: `Rat_Fbx.fbx` (malha, esqueleto e animações),
   as quatro texturas de pelagem, o `Rat.blend` de origem e o script de
   pós-importação
-- `shaders/` — shaders (`chao_xadrez.gdshader` desenha o piso quadriculado)
 - `icon.svg` — ícone do projeto
 
 O mapa é um quadrado cinza de 60x60 unidades, cercado por paredes e com blocos,

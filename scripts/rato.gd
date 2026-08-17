@@ -2,18 +2,24 @@ extends CharacterBody3D
 ## Rato: um mob medroso. Passeia devagar pelo mapa, dispara em fuga quando o
 ## jogador chega perto e procura um ponto fora da linha de visão dele para se
 ## esconder. Quando o jogador o agarra, ele é arrancado do chão e vai parar na
-## mão dele, onde se debate até ser esganado — ou até se soltar.
+## mão dele, onde se debate até ser esganado — e então é guardado na cintura — ou
+## até se soltar e voltar a fugir.
 ##
 ## Tanto o passeio quanto a fuga andam pela malha de navegação assada no
 ## `mundo.tscn`: ele só escolhe destinos que dá para alcançar, e o caminho até
 ## eles já vem contornando as paredes e as caixas.
 
-signal morreu(rato: Node3D)
+signal morreu(rato: Node3D, tipo_morte: Morte.Tipo)
 
 enum Estado { PASSEANDO, PARADO, FUGINDO, ESCONDIDO, CAPTURADO, MORTO }
 
-## As batidas da captura, do agarrão até o corpo amolecer na mão.
-enum Captura { BOTE, SUBINDO, NA_MAO, AMOLECENDO }
+## As batidas da captura, do agarrão até o corpo morto ser guardado na cintura.
+enum Captura { BOTE, SUBINDO, NA_MAO, AMOLECENDO, GUARDANDO }
+
+@export_group("Espécie")
+## Que rato é este: de onde saem a pelagem e o preço dele. Ver
+## `recursos/especies/`.
+@export var especie: EspecieRato
 
 @export_group("Movimento")
 @export var velocidade_passeio := 2.2
@@ -105,19 +111,46 @@ const TEMPO_SUBIDA := 0.35
 const ALTURA_ARCO := 0.55
 ## A cambalhota que ele dá no ar enquanto sobe, desmanchando conforme ele chega.
 const GIRO_CAMBALHOTA := PI
-## Como o rato fica na mão: virado para o jogador, cabeça um pouco para cima e
-## torto, para não ficar de frente chapada para a câmera.
-const POSE_SEGURADA := Vector3(-12.0, 200.0, 8.0)
-## Como ele fica depois de morto, antes de ser largado: pendurado e mole.
-const POSE_AMOLECIDA := Vector3(-80.0, 200.0, 20.0)
+## Como o rato fica na mão: de pé, quase na vertical, com a barriga e o focinho
+## virados para o jogador — a cabeça tomba um pouco para a frente, e o corpo fica
+## torto de lado, para não ficar de frente chapada para a câmera. O rabo e as
+## patas de trás ficam pendurados embaixo dele.
+const POSE_SEGURADA := Vector3(66.0, 200.0, 0.0)
+## Como ele fica depois de morto, antes de ser guardado: o corpo tomba para a
+## frente e desaba de lado, sem força nenhuma segurando a cabeça.
+const POSE_AMOLECIDA := Vector3(16.0, 200.0, 28.0)
+## Como ele desce pendurado ao ser guardado: de cabeça para baixo, torto, do
+## jeito de quem já está segurando o bicho pelo rabo.
+const POSE_GUARDADA := Vector3(-72.0, 200.0, 24.0)
+## O meio do corpo dele, em coordenadas do próprio rato. A origem do rato está no
+## chão, entre as patas, e o tronco (do focinho ao quadril) fica à frente e acima
+## dela — é este ponto, e não a origem, que a mão põe no meio da tela. Sem isso o
+## bicho é pendurado pelos pés e o corpo sai do quadro; de pé, o focinho chegava
+## a passar a um palmo da câmera.
+const CENTRO_DO_CORPO := Vector3(0.0, 0.2, -0.125)
 ## Encolhido no chão, no bote.
 const ESCALA_BOTE := Vector3(1.2, 0.7, 1.2)
 ## Esticado no arranque — a barriga alonga quando ele sai do chão.
 const ESCALA_ESTICADA := Vector3(0.85, 1.3, 0.85)
-## Espremido, no quadro de cada aperto.
-const ESCALA_ESMAGADO := Vector3(1.25, 0.72, 1.25)
-## Quanto tempo o corpo leva para amolecer na mão antes de ser largado.
+## Espremido, no quadro de cada aperto. Preso de pé, o que a câmera vê encolher é
+## o *comprimento* dele, e não a altura de quem anda de quatro: a esmagada sai no
+## eixo do corpo (Z) e o resto incha para os lados.
+const ESCALA_ESMAGADO := Vector3(1.2, 1.2, 0.78)
+## Quanto tempo o corpo leva para amolecer na mão antes de ser guardado.
 const TEMPO_AMOLECIMENTO := 0.5
+## Quanto dura a guardada: da mão até a cintura. O rato sai do quadro na primeira
+## metade do gesto; o resto é o braço terminando de descer com ele.
+const TEMPO_GUARDADA := 0.55
+## Onde a mão leva o rato morto, em coordenadas do ponto de captura: para baixo,
+## para o lado da mão e para perto do corpo do jogador, na altura da cintura.
+## Fica fora do quadro — quem olhar para baixo vê o bicho descendo, quem estiver
+## olhando para a frente só vê ele sair de cena por baixo.
+const CINTURA := Vector3(0.22, -0.68, 0.42)
+## O quanto o caminho até a cintura abre para fora antes de descer. É o que faz o
+## gesto ler como pulso virando para guardar, e não como corpo caindo.
+const DESVIO_GUARDADA := Vector3(0.15, 0.05, -0.08)
+## A partir daqui, no fim da guardada, o corpo já sumiu na cintura.
+const SUMICO_GUARDADA := 0.62
 ## Depois de escapar, ele fica um tempo impossível de reagarrar.
 const TEMPO_IMUNIDADE := 1.5
 ## Agitação de quem está preso e ninguém está apertando. Nunca é zero: ele se
@@ -162,13 +195,8 @@ const CADENCIA_MAXIMA := 2.2
 const VELOCIDADE_PARADO := 0.35
 ## Tempo de mistura entre uma animação e outra.
 const MISTURA := 0.15
-## As quatro pelagens do pacote de assets, sorteadas uma por rato.
-const PELAGENS := [
-	preload("res://mobs/rats/Rat.png"),
-	preload("res://mobs/rats/Rat_2.png"),
-	preload("res://mobs/rats/Rat_3.png"),
-	preload("res://mobs/rats/Rat_4.png"),
-]
+## De que espécie é o rato que alguém largou no mapa sem dizer qual.
+const ESPECIE_PADRAO := preload("res://recursos/especies/rato_comum.tres")
 
 @onready var navegador: NavigationAgent3D = $Navegacao
 @onready var modelo: Node3D = $Modelo
@@ -200,16 +228,29 @@ var _pai_original: Node
 var _camada_original := 0
 var _origem_subida := Vector3.ZERO
 var _base_origem := Basis.IDENTITY
+## De onde sai a guardada, já em coordenadas do ponto de captura: o corpo mole
+## nunca para exatamente na mesma pose, então o gesto começa de onde ele parou.
+var _origem_guardada := Vector3.ZERO
+var _base_guardada := Basis.IDENTITY
 var _agitacao := 1.0
 var _solavanco := Vector3.ZERO
 var _solavanco_giro := Vector3.ZERO
 var _tempo_esperneio := 0.0
 var _tempo_imune := 0.0
 
+## De que ele morreu, e o quanto ele é grande para um da espécie dele: as duas
+## metades do preço. `_pago` é a tranca para a recompensa não cair duas vezes.
+var _tipo_morte := Morte.Tipo.INDEFINIDA
+var _tamanho := 1.0
+var _pago := false
+
 func _ready() -> void:
 	add_to_group("ratos")
 	# `_process` é só da captura; solto pelo mapa o rato vive na física.
 	set_process(false)
+	if especie == null:
+		especie = ESPECIE_PADRAO
+	_tamanho = especie.sortear_tamanho()
 	_vida = vida_maxima
 	_preparar_consulta_cobertura()
 	_posicao_inicial = global_position
@@ -274,20 +315,28 @@ func _process(delta: float) -> void:
 			_processar_na_mao(delta)
 		Captura.AMOLECENDO:
 			_processar_amolecimento(delta)
+		Captura.GUARDANDO:
+			_processar_guardada(delta)
 
-## Leva um golpe. Com `vida_maxima` 1 (o padrão) qualquer acerto mata.
-func levar_dano(quantidade: int = 1, origem: Vector3 = PONTO_INVALIDO) -> void:
+## Leva um golpe. Com `vida_maxima` 1 (o padrão) qualquer acerto mata. `tipo` é
+## de que morte a arma mata, e é o que decide quanto o corpo vai pagar.
+func levar_dano(quantidade: int = 1, origem: Vector3 = PONTO_INVALIDO,
+		tipo := Morte.Tipo.INDEFINIDA) -> void:
 	if _estado == Estado.MORTO or _estado == Estado.CAPTURADO:
 		return
 	_vida -= quantidade
 	if _vida <= 0:
-		_morrer(origem)
+		_morrer(origem, 3.0, tipo)
 		return
 	_mudar_estado(Estado.FUGINDO)
 	if origem != PONTO_INVALIDO:
 		velocity += _para_longe_de(origem) * forca_empurrao
 
+## Verdadeiro assim que a vida dele acaba, mesmo nos instantes em que o corpo
+## ainda está na mão do jogador — amolecendo ou descendo para a cintura.
 func esta_morto() -> bool:
+	if _estado == Estado.CAPTURADO:
+		return _fase_captura == Captura.AMOLECENDO or _fase_captura == Captura.GUARDANDO
 	return _estado == Estado.MORTO
 
 func esta_capturado() -> bool:
@@ -297,6 +346,11 @@ func esta_capturado() -> bool:
 func esta_na_mao() -> bool:
 	return _estado == Estado.CAPTURADO and _fase_captura == Captura.NA_MAO
 
+## Onde está, no mundo, o meio do corpo dele: o ponto que a mão segura e que a
+## captura leva até o meio da tela.
+func centro_do_corpo() -> Vector3:
+	return global_position + global_basis * CENTRO_DO_CORPO
+
 # --- Captura ---------------------------------------------------------------
 #
 # O jogador agarra o rato, ele é arrancado do chão em arco até `ponto` — um nó
@@ -304,6 +358,10 @@ func esta_na_mao() -> bool:
 # desse nó. Ser filho é o que garante que ele fique *colado* no meio da tela por
 # mais rápido que o jogador gire a câmera: não há transformação sendo perseguida
 # quadro a quadro, ele simplesmente vai junto.
+#
+# Esganado, ele nunca volta para o chão: amolece na mão e desce para a cintura,
+# guardado. Carcaça no chão é coisa de rato morto de longe — o que morre na mão
+# do jogador some com ele.
 
 ## O jogador agarrou este rato. Devolve falso quando não dá: morto, já na mão de
 ## alguém ou recém-escapado.
@@ -342,9 +400,10 @@ func apertar() -> void:
 	modelo.scale = ESCALA_ESMAGADO
 	_espernear(0.6)
 
-## Morreu na mão: amolece por um instante e depois é largado no chão.
-func morrer_nas_maos() -> void:
-	if _estado != Estado.CAPTURADO or _fase_captura == Captura.AMOLECENDO:
+## Morreu na mão: amolece por um instante e depois é guardado na cintura. `tipo`
+## vem da arma que o matou — hoje só as mãos chegam aqui, esganando.
+func morrer_nas_maos(tipo := Morte.Tipo.ESTRANGULAMENTO) -> void:
+	if _estado != Estado.CAPTURADO or esta_morto():
 		return
 	# Quem martelou rápido demais pode matá-lo antes de ele terminar de subir.
 	# Nesse caso ele chega na mão de uma vez e amolece de lá — sem isso o corpo
@@ -356,6 +415,10 @@ func morrer_nas_maos() -> void:
 	_agitacao = 0.0
 	animador.speed_scale = 1.0
 	animador.play(ANIM_MORTE, MISTURA)
+	# Para o placar ele já morreu aqui, no último aperto. O que vem depois —
+	# amolecer e ser guardado — é só o gesto. O dinheiro, esse, só entra no fim
+	# dele: quem mata e perde o corpo não recebe.
+	_registrar_morte(tipo)
 
 ## Se soltou da mão do jogador e dispara em fuga.
 func escapar() -> void:
@@ -404,14 +467,17 @@ func _processar_subida(_delta: float) -> void:
 	# Sai rápido do chão e desacelera chegando na mão — é o que dá o puxão.
 	var avanco := 1.0 - pow(1.0 - t, 3.0)
 
+	var pose := _ponto_captura.global_basis.orthonormalized() * Basis.from_euler(_radianos(POSE_SEGURADA))
+
 	# O destino é lido a cada quadro: se o jogador anda ou gira enquanto o rato
 	# sobe, o rato corrige a rota no ar. A origem, não: ela fica onde o rato
 	# estava, no mundo, senão ele subiria "de lugar nenhum" a cada virada de câmera.
-	var destino := _ponto_captura.global_position
+	# Quem chega ao ponto é o meio do corpo dele, e não a origem lá nos pés — daí
+	# a subida mirar já descontada da ancoragem que ele vai ter na mão.
+	var destino := _ponto_captura.global_position + _ancoragem(pose)
 	var meio := (_origem_subida + destino) * 0.5 + Vector3.UP * ALTURA_ARCO
 	global_position = _bezier(_origem_subida, meio, destino, avanco)
 
-	var pose := _ponto_captura.global_basis.orthonormalized() * Basis.from_euler(_radianos(POSE_SEGURADA))
 	var giro := _base_origem.get_rotation_quaternion().slerp(pose.get_rotation_quaternion(), avanco)
 	# A cambalhota se desmancha conforme ele chega: no fim sobra só a pose.
 	var cambalhota := Quaternion(Vector3.RIGHT, GIRO_CAMBALHOTA * (1.0 - avanco))
@@ -425,9 +491,16 @@ func _processar_subida(_delta: float) -> void:
 ## Chegou: de agora em diante ele *é* filho do ponto no meio da tela.
 func _encaixar_na_mao() -> void:
 	reparent(_ponto_captura, true)
-	transform = Transform3D(Basis.from_euler(_radianos(POSE_SEGURADA)), Vector3.ZERO)
+	var pose := Basis.from_euler(_radianos(POSE_SEGURADA))
+	transform = Transform3D(pose, _ancoragem(pose))
 	_fase_captura = Captura.NA_MAO
 	_tempo_captura = 0.0
+
+## Onde a origem do rato precisa ficar, na pose `base`, para o meio do corpo dele
+## cair bem em cima do ponto de captura. É por isso que ele se debate *em volta*
+## do meio da tela em vez de varrer o quadro inteiro a cada esperneio.
+func _ancoragem(base: Basis) -> Vector3:
+	return -(base * CENTRO_DO_CORPO)
 
 ## Preso na mão: tremendo o tempo todo, esperneando de vez em quando e mordendo
 ## quando dá. Tudo em coordenadas locais, sobre o ponto no meio da tela.
@@ -457,28 +530,59 @@ func _processar_na_mao(delta: float) -> void:
 		sin(t * 29.0 + 2.2) * 0.7
 	) * deg_to_rad(TREMOR_ANGULO) * _agitacao
 
-	position = tremor + _solavanco
 	basis = Basis.from_euler(_radianos(POSE_SEGURADA) + giro + _solavanco_giro)
+	position = _ancoragem(basis) + tremor + _solavanco
 	modelo.scale = modelo.scale.lerp(Vector3.ONE, minf(delta * 9.0, 1.0))
 
-## Morreu: o corpo amolece na mão e depois é largado.
+## Morreu: o corpo amolece na mão antes de ser guardado.
 func _processar_amolecimento(delta: float) -> void:
 	_amortecer_solavanco(delta)
 	var t := minf(_tempo_captura / TEMPO_AMOLECIMENTO, 1.0)
 	var pendurado := Basis.from_euler(_radianos(POSE_AMOLECIDA))
 	basis = Basis(basis.get_rotation_quaternion().slerp(pendurado.get_rotation_quaternion(), minf(delta * 9.0, 1.0)))
-	# Escorrega da mão enquanto amolece.
-	position = position.lerp(Vector3(0.0, -0.12, 0.05), minf(delta * 6.0, 1.0))
+	# Escorrega da mão enquanto amolece — sempre em volta do meio do corpo, senão
+	# o corpo mole sairia do quadro no meio do tombo.
+	position = position.lerp(_ancoragem(basis) + Vector3(0.0, -0.12, 0.05), minf(delta * 6.0, 1.0))
 	modelo.scale = modelo.scale.lerp(Vector3.ONE, minf(delta * 9.0, 1.0))
 	if t < 1.0:
 		return
 
-	# Largado, não arremessado: cai à frente do jogador e a carcaça segue o
-	# caminho de sempre.
-	var frente := -_ponto_captura.global_basis.z
-	_devolver_ao_mundo()
-	_morrer(PONTO_INVALIDO, 0.0)
-	velocity = Vector3(frente.x, 0.0, frente.z).normalized() * 1.2
+	# Sem força nenhuma sobrando no bicho, o braço desce com ele.
+	_fase_captura = Captura.GUARDANDO
+	_tempo_captura = 0.0
+	_origem_guardada = position - _ancoragem(basis)
+	_base_guardada = basis
+
+## A guardada: o jogador baixa o rato morto do meio da tela até a cintura, onde
+## ele sai do quadro. É aqui que a caçada se encerra — o corpo não volta ao
+## mundo, ele some junto com quem o matou.
+func _processar_guardada(_delta: float) -> void:
+	var t := clampf(_tempo_captura / TEMPO_GUARDADA, 0.0, 1.0)
+	# Sai devagar da mão e desacelera na cintura: é um gesto de guardar, não um
+	# corpo despencando.
+	var avanco := t * t * (3.0 - 2.0 * t)
+
+	# O pulso vira antes de o braço descer. Fora de ordem, o corpo ainda deitado
+	# varre o caminho todo com o focinho e passa raspando na câmera, inchando na
+	# tela justamente no quadro em que devia estar saindo dela.
+	var guardada := Basis.from_euler(_radianos(POSE_GUARDADA))
+	basis = Basis(_base_guardada.get_rotation_quaternion().slerp(
+		guardada.get_rotation_quaternion(), smoothstep(0.0, 0.55, t)))
+
+	# Quem percorre o caminho é o meio do corpo, como na mão: assim ele desce
+	# inteiro em vez de girar em volta das patas.
+	var meio := (_origem_guardada + CINTURA) * 0.5 + DESVIO_GUARDADA
+	position = _bezier(_origem_guardada, meio, CINTURA, avanco) + _ancoragem(basis)
+
+	# Some encolhendo no fim do caminho, como a carcaça some no chão: quem estiver
+	# olhando para baixo vê o rato ser guardado, e não sumir de estalo.
+	modelo.scale = Vector3.ONE.lerp(Vector3(0.02, 0.02, 0.02), smoothstep(SUMICO_GUARDADA, 1.0, t))
+
+	if t >= 1.0:
+		# Chegou na cintura: é aqui que a caçada deste rato se encerra e que ele
+		# vira dinheiro.
+		_pagar_recompensa()
+		queue_free()
 
 func _espernear(forca: float) -> void:
 	_solavanco = Vector3(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0), randf_range(-0.5, 0.5)) \
@@ -911,11 +1015,14 @@ func _sacudir_para_o_lado() -> void:
 
 # --- Aparência e animação --------------------------------------------------
 
-## Dá a este rato uma das quatro pelagens do pacote, sem mexer no material que
-## os outros compartilham.
+## Dá a este rato uma das pelagens da espécie dele, sem mexer no material que os
+## outros compartilham. Espécie sem pelagem nenhuma fica com o material do modelo.
 func _sortear_pelagem() -> void:
+	var pelagem := especie.sortear_pelagem()
+	if pelagem == null:
+		return
 	var material := malha.mesh.surface_get_material(0).duplicate() as StandardMaterial3D
-	material.albedo_texture = PELAGENS.pick_random()
+	material.albedo_texture = pelagem
 	malha.set_surface_override_material(0, material)
 
 ## A animação segue a velocidade, não o estado: passeando ele trota, fugindo
@@ -944,14 +1051,34 @@ func _tocar_repouso() -> void:
 
 # --- Morte -----------------------------------------------------------------
 
-## `salto` é o pulinho que o corpo dá ao morrer. Quem morre de pé leva o tranco
-## do golpe; quem morre na mão do jogador é solto e só cai.
-func _morrer(origem: Vector3, salto := 3.0) -> void:
-	_estado = Estado.MORTO
+## A morte nos livros do jogo, valha ela no chão ou na mão do jogador: ele sai da
+## conta dos vivos, para de poder levar golpe, guarda de que morreu e avisa quem
+## estiver escutando. Não paga nada — pagar é do `_pagar_recompensa`.
+func _registrar_morte(tipo: Morte.Tipo) -> void:
+	_tipo_morte = tipo
 	remove_from_group("ratos")
-	# Sai da camada dos ratos para não levar golpe de novo, mas continua caindo
-	# no chão do cenário.
+	# Sai da camada dos ratos para não levar golpe de novo. A máscara fica: a
+	# carcaça ainda precisa achar o chão.
 	set_deferred("collision_layer", 0)
+	morreu.emit(self, tipo)
+
+## Fecha a conta deste rato, uma vez só. Vale quando a caçada dele terminou, e
+## cada morte termina num lugar: esganado, é na cintura do jogador; morto de
+## longe, é onde o corpo caiu. Escapar da mão não fecha conta nenhuma.
+func _pagar_recompensa() -> void:
+	if _pago:
+		return
+	_pago = true
+	Carteira.receber(especie, _tipo_morte, _tamanho)
+
+## Cai morto onde estava, de pé no mundo. `salto` é o pulinho que o corpo dá ao
+## levar o golpe. Quem morre esganado não passa por aqui: some na cintura do
+## jogador, sem carcaça.
+func _morrer(origem: Vector3, salto := 3.0, tipo := Morte.Tipo.INDEFINIDA) -> void:
+	_estado = Estado.MORTO
+	_registrar_morte(tipo)
+	# Morto de longe, o corpo cai e o serviço acabou ali mesmo: paga na hora.
+	_pagar_recompensa()
 
 	velocity = Vector3.UP * salto
 	if origem != PONTO_INVALIDO:
@@ -967,8 +1094,6 @@ func _morrer(origem: Vector3, salto := 3.0) -> void:
 	tween.tween_interval(TEMPO_CARCACA)
 	tween.tween_property(modelo, "scale", Vector3(0.02, 0.02, 0.02), 0.3).set_ease(Tween.EASE_IN)
 	tween.tween_callback(queue_free)
-
-	morreu.emit(self)
 
 # --- Utilidades ------------------------------------------------------------
 

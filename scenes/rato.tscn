@@ -1,7 +1,8 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/rato.gd" id="1_rato"]
 [ext_resource type="PackedScene" uid="uid://c8f7bjmvqsrxx" path="res://mobs/rats/Rat_Fbx.fbx" id="2_modelo"]
+[ext_resource type="Resource" path="res://recursos/especies/rato_comum.tres" id="3_especie"]
 
 [sub_resource type="CapsuleShape3D" id="Forma_rato"]
 radius = 0.15
@@ -11,6 +12,7 @@ height = 0.36
 collision_layer = 4
 collision_mask = 1
 script = ExtResource("1_rato")
+especie = ExtResource("3_especie")
 
 [node name="Colisao" type="CollisionShape3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.18, 0)

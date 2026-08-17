@@ -2,12 +2,17 @@ extends SceneTree
 ## Teste de bancada da captura: encosta o jogador num rato, agarra e acompanha a
 ## subida quadro a quadro — quanto falta para a mão, em que fase ele está e como
 ## está a escala do modelo. Depois roda dois desfechos: um rato martelado até
-## morrer e um rato largado, que precisa se soltar e voltar a fugir.
+## morrer — que tem de ser guardado na cintura, sem carcaça no chão — e um rato
+## largado, que precisa se soltar e voltar a fugir.
 ##
 ## Rodar com: godot --headless --script _teste_captura.gd
 ##
 ## O terceiro rato cobre o caso do jogador que martela rápido demais e mata o
 ## bicho antes de ele terminar de subir.
+##
+## De quebra a bancada confere a carteira nos três desfechos: o dinheiro não pode
+## entrar no aperto que mata, só quando o corpo chega na cintura — e rato que
+## escapa não paga nada.
 
 ## Quadros de folga entre uma etapa e outra.
 const ESPERA := 8
@@ -32,9 +37,21 @@ var _apertos := 0
 var _rato: Node3D
 var _distancia_anterior := INF
 var _falhas := 0
+## O corpo saiu da mão antes de terminar de ser guardado. Só interessa reclamar
+## uma vez: sem isso a falha sairia repetida em todo quadro do gesto.
+var _largado_cedo := false
 ## Ratos já usados por uma etapa anterior; o recém-escapado ainda está imune, e
 ## reagarrá-lo daria uma falha que não é do jogo, é do teste.
 var _usados: Array[StringName] = []
+## Como estava a carteira quando o rato da vez foi agarrado, e o que ele vale
+## esganado — em faixa, porque a espécie pode sortear o tamanho de cada bicho.
+var _dinheiro_antes := 0
+var _capturas_antes := 0
+var _preco: Vector2i
+## A carteira vem pela árvore, e não pelo nome global `Carteira`: rodando por
+## `--script` o autoload entra depois de este script ser compilado, e o nome
+## global ainda não existe na hora em que a bancada é lida.
+var _carteira: Node
 
 func _initialize() -> void:
 	# Sem tela o laço rodaria a milhares de quadros por segundo e a subida
@@ -55,16 +72,24 @@ func _initialize() -> void:
 func _physics_process(_delta: float) -> bool:
 	_quadros += 1
 	_relogio += 1
+	# A carteira é autoload, e não há garantia de que ela já esteja na árvore no
+	# `_initialize`. Pegá-la aqui, no primeiro quadro, é o que é seguro.
+	if _quadros == 1:
+		_carteira = root.get_node_or_null("Carteira")
+		if _carteira == null:
+			print("FALHA: o autoload Carteira nao esta na arvore")
+			return _terminar()
+		_carteira.zerar()
 	match _etapa:
 		0: return _agarrar("primeiro")
 		1: return _acompanhar_subida()
 		2: return _martelar()
-		3: return _confirmar_morte()
+		3: return _confirmar_guardada()
 		4: return _agarrar("segundo")
 		5: return _largar()
 		6: return _agarrar("terceiro")
 		7: return _esganar_no_ar()
-		8: return _confirmar_morte()
+		8: return _confirmar_guardada()
 	return _terminar()
 
 # --- Etapas ----------------------------------------------------------------
@@ -87,17 +112,25 @@ func _agarrar(qual: String) -> bool:
 	if not _rato.esta_capturado():
 		print("FALHA: o %s rato nao foi capturado" % qual)
 		return _terminar()
-	print("--- %s rato (%s) agarrado ---" % [qual, _rato.name])
+	_preco = _faixa_de_preco(_rato)
+	print("--- %s rato (%s, %s, vale R$ %d esganado) agarrado ---" % [
+		qual, _rato.name, _rato.especie.nome, _preco.x
+	])
 	_conferir_hud(true, "com o rato na mao")
 	_usados.append(_rato.name)
 	_distancia_anterior = INF
 	_apertos = 0
+	_largado_cedo = false
+	_dinheiro_antes = _carteira.dinheiro
+	_capturas_antes = _carteira.capturas
 	return _avancar()
 
 ## O ponto do teste: a subida precisa encurtar a distância até a mão sem voltar
-## atrás e terminar com o rato exatamente no ponto de captura.
+## atrás e terminar com o meio do corpo do rato exatamente no ponto de captura —
+## é o meio dele, e não a origem lá nos pés, que fica no meio da tela.
 func _acompanhar_subida() -> bool:
-	var distancia := _rato.global_position.distance_to(_ponto.global_position)
+	var centro: Vector3 = _rato.centro_do_corpo()
+	var distancia := centro.distance_to(_ponto.global_position)
 	print("quadro %2d: ate a mao %.3f m, altura %.2f, na mao=%s, escala %.2v" % [
 		_relogio, distancia, _rato.global_position.y, _rato.esta_na_mao(), _rato.get_node("Modelo").scale
 	])
@@ -133,30 +166,49 @@ func _martelar() -> bool:
 	_apertos += 1
 	return false
 
-func _confirmar_morte() -> bool:
-	if not _rato.esta_morto():
-		if _relogio > LIMITE:
-			print("FALHA: o rato nao morreu depois de esganado")
+## Esganado, o rato morre no aperto e some com o jogador: amolece na mão, desce
+## até a cintura e é liberado lá, sem nunca voltar ao chão.
+func _confirmar_guardada() -> bool:
+	if _relogio == 1:
+		# A morte vale no último aperto, e não no fim do gesto: o placar não pode
+		# ficar contando um rato morto enquanto o braço desce.
+		if not _rato.esta_morto():
+			print("FALHA: o ultimo aperto nao matou o rato")
 			_falhas += 1
-			return _terminar()
-		return false
-	if _rato.get_parent() == _ponto:
-		print("FALHA: o rato morreu mas continua pendurado na mao")
+		if _rato.is_in_group("ratos"):
+			print("FALHA: o rato morreu mas continua no grupo dos vivos")
+			_falhas += 1
+		# O dinheiro é de quem guarda, não de quem mata: enquanto o braço desce, o
+		# jogador ainda pode perder o corpo, e a carteira tem de ficar parada.
+		if _carteira.dinheiro != _dinheiro_antes:
+			print("FALHA: a carteira subiu na morte, antes de o rato ser guardado")
+			_falhas += 1
+		_conferir_hud(false, "depois da morte")
+
+	if not is_instance_valid(_rato):
+		var ganho: int = _carteira.dinheiro - _dinheiro_antes
+		if ganho < _preco.x or ganho > _preco.y:
+			print("FALHA: guardado pagou R$ %d, fora da faixa de R$ %d a R$ %d" % [
+				ganho, _preco.x, _preco.y
+			])
+			_falhas += 1
+		if _carteira.capturas != _capturas_antes + 1:
+			print("FALHA: o rato foi guardado mas nao entrou na conta de capturas")
+			_falhas += 1
+		print("guardado %.2f s depois do ultimo aperto, +R$ %d (total R$ %d)" % [
+			_relogio / 60.0, ganho, _carteira.dinheiro
+		])
+		return _avancar()
+
+	if _rato.get_parent() != _ponto and not _largado_cedo:
+		_largado_cedo = true
+		print("FALHA: o corpo foi largado em %s em vez de guardado" % _rato.get_parent().name)
 		_falhas += 1
-	if _rato.is_in_group("ratos"):
-		print("FALHA: o rato morreu mas continua no grupo dos vivos")
+	if _relogio > LIMITE:
+		print("FALHA: o rato nunca terminou de ser guardado")
 		_falhas += 1
-	# O corpo é largado da mão: cai aos pés do jogador. Se aparecer longe, ele
-	# amoleceu em coordenadas da mão sem estar preso nela.
-	var distancia := _plana(_rato.global_position, _jogador.global_position)
-	if distancia > 3.0:
-		print("FALHA: o corpo caiu a %.1f m do jogador" % distancia)
-		_falhas += 1
-	_conferir_hud(false, "depois da morte")
-	print("morreu %.2f s depois do ultimo aperto, a %.2f m do jogador, largado em %s" % [
-		_relogio / 60.0, distancia, _rato.get_parent().name
-	])
-	return _avancar()
+		return _terminar()
+	return false
 
 ## O jogador que martela rápido demais: todos os apertos no quadro seguinte ao
 ## agarrão, com o rato ainda no ar. Ele tem de morrer assim mesmo.
@@ -190,11 +242,24 @@ func _largar() -> bool:
 	if not _rato.is_in_group("ratos"):
 		print("FALHA: escapou mas saiu do grupo dos vivos")
 		_falhas += 1
+	if _carteira.dinheiro != _dinheiro_antes:
+		print("FALHA: o rato escapou e mesmo assim pagou R$ %d" % [_carteira.dinheiro - _dinheiro_antes])
+		_falhas += 1
 	_conferir_hud(false, "depois da escapada")
 	print("escapou em %.2f s, de volta ao mundo em %s" % [_relogio / 60.0, _rato.get_parent().name])
 	return _avancar()
 
 # --- Utilidades ------------------------------------------------------------
+
+## Entre que valores este rato pode pagar, esganado. Vira faixa e não número
+## porque a espécie pode sortear o tamanho de cada indivíduo; com a variação em
+## zero as duas pontas são o mesmo número.
+func _faixa_de_preco(rato: Node3D) -> Vector2i:
+	var especie: EspecieRato = rato.especie
+	return Vector2i(
+		especie.valor(Morte.Tipo.ESTRANGULAMENTO, 1.0 - especie.variacao),
+		especie.valor(Morte.Tipo.ESTRANGULAMENTO, 1.0 + especie.variacao)
+	)
 
 ## Põe o jogador atrás do rato e aponta corpo e cabeça para ele, para o rato
 ## cair dentro do alcance e do cone das mãos.
