@@ -1,30 +1,32 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene format=3 uid="uid://dmlgy5o48488h"]
 
-[ext_resource type="Script" path="res://scripts/rato.gd" id="1_rato"]
+[ext_resource type="Script" uid="uid://cq7v4rn2xk8ma" path="res://scripts/rato.gd" id="1_rato"]
 [ext_resource type="PackedScene" uid="uid://c8f7bjmvqsrxx" path="res://mobs/rats/Rat_Fbx.fbx" id="2_modelo"]
 [ext_resource type="Resource" path="res://recursos/especies/rato_comum.tres" id="3_especie"]
+[ext_resource type="PackedScene" uid="uid://bgordf5uoxh7c" path="res://scenes/ps1.tscn" id="4_u6wux"]
 
 [sub_resource type="CapsuleShape3D" id="Forma_rato"]
 radius = 0.15
 height = 0.36
 
-[node name="Rato" type="CharacterBody3D" groups=["ratos"]]
+[node name="Rato" type="CharacterBody3D" unique_id=1668221528 groups=["ratos"]]
 collision_layer = 4
-collision_mask = 1
 script = ExtResource("1_rato")
 especie = ExtResource("3_especie")
 
-[node name="Colisao" type="CollisionShape3D" parent="."]
+[node name="Colisao" type="CollisionShape3D" parent="." unique_id=1744694663]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.18, 0)
 shape = SubResource("Forma_rato")
 
-[node name="Navegacao" type="NavigationAgent3D" parent="."]
+[node name="Navegacao" type="NavigationAgent3D" parent="." unique_id=1942953611]
 path_desired_distance = 0.4
 target_desired_distance = 0.6
 path_height_offset = 0.2
 path_max_distance = 3.0
 
-[node name="Modelo" type="Node3D" parent="."]
+[node name="Modelo" type="Node3D" parent="." unique_id=681090001]
 
-[node name="Malha" parent="Modelo" instance=ExtResource("2_modelo")]
+[node name="Malha" parent="Modelo" unique_id=158646142 instance=ExtResource("2_modelo")]
 transform = Transform3D(0.45, 0, 0, 0, 0.45, 0, 0, 0, 0.45, 0, 0, 0)
+
+[node name="PS1" parent="Modelo/Malha" unique_id=1777166207 instance=ExtResource("4_u6wux")]

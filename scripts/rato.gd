@@ -1017,12 +1017,26 @@ func _sacudir_para_o_lado() -> void:
 
 ## Dá a este rato uma das pelagens da espécie dele, sem mexer no material que os
 ## outros compartilham. Espécie sem pelagem nenhuma fica com o material do modelo.
+##
+## O material de onde ele parte é o que estiver no lugar: o do modelo, ou o do
+## PS1 se houver um `PS1MaterialApplier` no `Malha`. Como o aplicador roda no
+## `_ready` dele — filho, portanto antes do `_ready` do rato — a troca de pelagem
+## acontece sempre depois, e é ela que fica.
 func _sortear_pelagem() -> void:
 	var pelagem := especie.sortear_pelagem()
 	if pelagem == null:
 		return
-	var material := malha.mesh.surface_get_material(0).duplicate() as StandardMaterial3D
-	material.albedo_texture = pelagem
+
+	var atual := malha.get_surface_override_material(0)
+	if atual == null:
+		atual = malha.mesh.surface_get_material(0)
+
+	var material := atual.duplicate()
+	if material is ShaderMaterial:
+		(material as ShaderMaterial).set_shader_parameter("albedo", pelagem)
+	elif material is BaseMaterial3D:
+		(material as BaseMaterial3D).albedo_texture = pelagem
+
 	malha.set_surface_override_material(0, material)
 
 ## A animação segue a velocidade, não o estado: passeando ele trota, fugindo

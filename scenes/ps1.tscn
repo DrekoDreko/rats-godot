@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://bgordf5uoxh7c"]
+
+[ext_resource type="Script" uid="uid://0gbrn33wb41a" path="res://scripts/ps1_material_applier.gd" id="1_t1f04"]
+[ext_resource type="Material" path="res://materials/ps1.tres" id="2_sp7j3"]
+
+[node name="PS1" type="Node" unique_id=1777166207]
+script = ExtResource("1_t1f04")
+material = ExtResource("2_sp7j3")

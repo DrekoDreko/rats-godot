@@ -21,7 +21,11 @@ Carteira="*res://scripts/economia/carteira.gd"
 
 [display]
 
-window/stretch/mode="canvas_items"
+window/size/viewport_width=640
+window/size/viewport_height=360
+window/size/window_width_override=1280
+window/size/window_height_override=720
+window/stretch/mode="viewport"
 window/stretch/aspect="expand"
 
 [filesystem]
@@ -96,4 +100,8 @@ atacar={
 
 [rendering]
 
+textures/canvas_textures/default_texture_filter=0
 rendering_device/driver.windows="d3d12"
+lights_and_shadows/directional_shadow/soft_shadow_filter_quality=0
+lights_and_shadows/positional_shadow/soft_shadow_filter_quality=0
+2d/snap/snap_2d_vertices_to_pixel=true

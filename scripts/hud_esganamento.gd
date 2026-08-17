@@ -17,52 +17,52 @@ const PISCADAS := 6.0
 ## pelo editor, e o HUD do `mundo.tscn` é escrito à mão.
 @export var caminho_da_mira := NodePath("../Mira")
 
-@onready var botao: Label = $Botao
-@onready var barra: ProgressBar = $Barra
+@onready var botao: Label = $VBoxContainer/Botao
+@onready var barra: ProgressBar = $VBoxContainer/Barra
 @onready var mira: Control = get_node_or_null(caminho_da_mira)
 
 var _pressao := 0.0
 
 func _ready() -> void:
-	hide()
-	set_process(false)
-	# Espera um quadro para o jogador já estar na árvore.
-	await get_tree().process_frame
-	var jogador := get_tree().get_first_node_in_group("jogador")
-	if jogador == null:
-		return
-	jogador.captura_iniciada.connect(_ao_capturar)
-	jogador.captura_progresso.connect(_ao_progredir)
-	jogador.captura_terminada.connect(_ao_terminar)
+    hide()
+    set_process(false)
+    # Espera um quadro para o jogador já estar na árvore.
+    await get_tree().process_frame
+    var jogador := get_tree().get_first_node_in_group("jogador")
+    if jogador == null:
+        return
+    jogador.captura_iniciada.connect(_ao_capturar)
+    jogador.captura_progresso.connect(_ao_progredir)
+    jogador.captura_terminada.connect(_ao_terminar)
 
 func _process(_delta: float) -> void:
-	if _pressao > PRESSAO_DE_PERIGO:
-		botao.modulate.a = 1.0
-		return
-	# Quase escapando: o aviso pisca para o jogador martelar mais rápido.
-	botao.modulate.a = 0.35 + 0.65 * absf(sin(Time.get_ticks_msec() / 1000.0 * PI * PISCADAS))
+    if _pressao > PRESSAO_DE_PERIGO:
+        botao.modulate.a = 1.0
+        return
+    # Quase escapando: o aviso pisca para o jogador martelar mais rápido.
+    botao.modulate.a = 0.35 + 0.65 * absf(sin(Time.get_ticks_msec() / 1000.0 * PI * PISCADAS))
 
 func _ao_capturar(_rato: Node3D) -> void:
-	_pressao = 0.0
-	_atualizar_cores()
-	show()
-	set_process(true)
-	if mira != null:
-		mira.hide()
+    _pressao = 0.0
+    _atualizar_cores()
+    show()
+    set_process(true)
+    if mira != null:
+        mira.hide()
 
 func _ao_progredir(fracao: float) -> void:
-	_pressao = fracao
-	barra.value = fracao
-	_atualizar_cores()
+    _pressao = fracao
+    barra.value = fracao
+    _atualizar_cores()
 
 func _ao_terminar(_matou: bool) -> void:
-	hide()
-	set_process(false)
-	if mira != null:
-		mira.show()
+    hide()
+    set_process(false)
+    if mira != null:
+        mira.show()
 
 func _atualizar_cores() -> void:
-	var perigo := _pressao <= PRESSAO_DE_PERIGO
-	var cor := COR_PERIGO if perigo else COR_NORMAL
-	botao.add_theme_color_override("font_color", cor)
-	barra.modulate = cor
+    var perigo := _pressao <= PRESSAO_DE_PERIGO
+    var cor := COR_PERIGO if perigo else COR_NORMAL
+    botao.add_theme_color_override("font_color", cor)
+    barra.modulate = cor

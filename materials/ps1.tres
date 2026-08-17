@@ -1,0 +1,13 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://cacrbbtx4ntdk"]
+
+[ext_resource type="Shader" uid="uid://bwmdy542q66bt" path="res://scripts/ps1.gdshader" id="1_shader"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_shader")
+shader_parameter/albedo_color = Color(1, 1, 1, 1)
+shader_parameter/jitter = 0.50000002375
+shader_parameter/jitter_z_coordinate = false
+shader_parameter/jitter_depth_independent = true
+shader_parameter/affine_texture_mapping = true
+shader_parameter/alpha_scissor = 0.5
