@@ -1,20 +1,22 @@
 shader_type spatial;
-// `specular_phong` existia quando este shader foi escrito, mas saiu do Godot na
-// 4.4: hoje só restam `specular_schlick_ggx` (o padrão) e `specular_disabled`.
+// `specular_phong` existed when this shader was written, but it left Godot in
+// 4.4: today only `specular_schlick_ggx` (the default) and `specular_disabled`
+// remain.
 render_mode vertex_lighting, skip_vertex_transform, diffuse_lambert_wrap;
 
-// Os hints também mudaram de nome desde a 3.x: `hint_black` virou
-// `hint_default_black`, e o antigo `hint_black_albedo` se desdobrou em
-// `source_color` (a conversão de espaço de cor) mais o padrão da textura.
-// O albedo cai para branco quando ninguém preenche o uniform, senão todo objeto
-// sem textura ficaria preto.
+// The hints changed names since 3.x too: `hint_black` became
+// `hint_default_black`, and the old `hint_black_albedo` split into
+// `source_color` (the colour space conversion) plus the texture default.
+// Albedo falls back to white when nobody fills the uniform, otherwise every
+// object without a texture would come out black.
 uniform sampler2D albedo: source_color, hint_default_white;
 uniform sampler2D specular: hint_default_black;
 uniform sampler2D emission: source_color, hint_default_black;
 
-// Cor por cima da textura, como no `StandardMaterial3D`. É o que salva os
-// modelos low-poly pintados só com cor sólida — os de kits como Kenney e
-// Quaternius, sem textura nenhuma: sem isso o objeto todo sairia branco.
+// Colour on top of the texture, as in `StandardMaterial3D`. It is what saves the
+// low-poly models painted with a solid colour alone — the ones from kits like
+// Kenney and Quaternius, with no texture at all: without it the whole object
+// would come out white.
 uniform vec4 albedo_color: source_color = vec4(1.0);
 
 uniform float jitter: hint_range(0.0, 1.0) = 0.5;
@@ -52,10 +54,10 @@ void fragment() {
 		uv /= VERTEX.z;
 	}
 	
-	vec4 cor = texture(albedo, uv) * albedo_color;
-	ALBEDO = cor.rgb;
-	ALPHA = cor.a;
-	// Na 3.x este built-in se chamava só `ALPHA_SCISSOR`.
+	vec4 color = texture(albedo, uv) * albedo_color;
+	ALBEDO = color.rgb;
+	ALPHA = color.a;
+	// In 3.x this built-in was called just `ALPHA_SCISSOR`.
 	ALPHA_SCISSOR_THRESHOLD = alpha_scissor;
 	EMISSION = texture(emission, uv).rgb;
 	SPECULAR = texture(specular, uv).r;

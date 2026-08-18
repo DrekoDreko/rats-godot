@@ -1,170 +1,172 @@
 # RATS
 
-Jogo 3D feito na Godot 4.7 (Forward Plus, Jolt Physics).
+3D game made in Godot 4.7 (Forward Plus, Jolt Physics).
 
-## Rodando o projeto
+## Running the project
 
-1. Instale a [Godot 4.7](https://godotengine.org/download).
-2. Abra a Godot, clique em **Import** e selecione o `project.godot` deste repositório.
-3. Rode com `F5`.
+1. Install [Godot 4.7](https://godotengine.org/download).
+2. Open Godot, click **Import** and pick this repository's `project.godot`.
+3. Run with `F5`.
 
-## Controles
+## Controls
 
-| Tecla | Ação |
+| Key | Action |
 | --- | --- |
-| `WASD` / setas | Andar (relativo a para onde se está olhando) |
-| `Shift` | Correr |
-| `Espaço` | Pular |
-| Mouse | Olhar em volta |
-| Botão esquerdo | Agarrar o rato |
-| Botão esquerdo (com um rato na mão) | Esganar |
-| `Esc` | Soltar/recapturar o mouse |
+| `WASD` / arrows | Move (relative to where you are looking) |
+| `Shift` | Run |
+| `Space` | Jump |
+| Mouse | Look around |
+| Left button | Grab the rat |
+| Left button (with a rat in hand) | Strangle |
+| `Esc` | Release/recapture the mouse |
 
-De mãos ocupadas o mesmo clique que agarrou passa a esganar, e o jogador anda
-devagar: com um rato se debatendo nas mãos não se corre nem se pula.
+With your hands full the same click that grabbed starts strangling, and the
+player walks slowly: with a rat struggling in your hands there is no running and
+no jumping.
 
-## Os ratos
+## The rats
 
-Dez ratos vivem soltos pelo mapa. Cada um tem quatro comportamentos:
+Ten rats live loose about the map. Each one has four behaviours:
 
-- **Passeando** — anda devagar até um ponto qualquer por perto e às vezes para para farejar.
-- **Fugindo** — ao ouvir o jogador a menos de 6 m, ou ao vê-lo a menos de 16 m
-  (mais longe ainda se ele estiver correndo), dispara em fuga. O arranque é mais
-  rápido que a corrida do jogador, mas depois ele cansa e passa a correr um pouco
-  mais devagar do que ela — dá para alcançar.
-- **Escondido** — enquanto foge, ele procura os obstáculos em volta e corre para o
-  ponto cego atrás de um deles, fora da linha de visão do jogador. Chegando lá,
-  se agacha e fica imóvel: só dispara de novo se for visto ou se o jogador chegar
-  a menos de 3 m.
-- **Capturado** — agarrado, ele é arrancado do chão e vai parar na mão do jogador.
-- **Morto** — esganado na mão, ou largado no chão já sem vida.
+- **Wandering** — walks slowly to any point nearby and sometimes stops to sniff.
+- **Fleeing** — on hearing the player closer than 6 m, or seeing him closer than
+  16 m (further still if he is running), it bolts. The burst is faster than the
+  player's run, but then it tires and settles into something a little slower than
+  that — you can catch up.
+- **Hiding** — while fleeing, it looks at the obstacles around it and runs for the
+  blind spot behind one of them, out of the player's line of sight. Once there it
+  crouches and keeps still: it only bolts again if it is seen or if the player
+  comes closer than 3 m.
+- **Captured** — grabbed, it is torn off the ground and ends up in the player's hand.
+- **Dead** — strangled in the hand, or dropped on the ground already lifeless.
 
-A caçada, então, é dobrar a esquina: enquanto o rato acha que está escondido,
-ele não sai do lugar, e é aí que dá para pegá-lo.
+The hunt, then, is about turning the corner: while the rat believes it is hidden
+it does not move, and that is when you can take it.
 
-## Matando rato
+## Killing a rat
 
-O jogo vai ter várias armas, e a primeira delas são as próprias mãos. Toda arma
-mora debaixo da cabeça do jogador (`scripts/armas/`), herda de `Arma` e procura
-o alvo do mesmo jeito: o rato mais próximo dentro de 2,6 m e de um cone de 50°
-em volta da mira, desde que não haja parede no caminho. O que muda de uma para
-outra é o que ela faz com o rato que achou.
+The game will have several weapons, and the first of them are your own hands.
+Every weapon lives under the player's head (`scripts/weapons/`), inherits from
+`Weapon` and looks for its target the same way: the closest rat within 2.6 m and
+within a 50° cone around the sights, as long as there is no wall in the way. What
+changes from one to the next is what it does with the rat it found.
 
-As mãos não matam: elas **agarram**. O rato se encolhe no chão, é arrancado num
-arco, dá uma cambalhota no ar e para no meio da tela, preso, se debatendo e
-tentando morder. Daí em diante o mesmo clique é que mata: cada um aperta um
-pouco mais o pescoço dele, e o aperto escorre sozinho enquanto o jogador não
-clica de novo. Martelando sem parar são uns treze apertos. Martelando
-devagar são mais — e se a barra chegar a zero e ficar lá, o rato se solta da
-mão, pula para longe e dispara em fuga com uns segundos de vantagem em que não
-dá para reagarrá-lo.
+Hands do not kill: they **grab**. The rat hunches on the ground, is torn off in
+an arc, turns a somersault in the air and stops in the middle of the screen,
+held, struggling and trying to bite. From then on the same click is what kills:
+each one squeezes its neck a little harder, and the grip drains on its own while
+the player does not click again. Hammering without stopping takes about thirteen
+squeezes. Hammering slowly takes more — and if the bar reaches zero and stays
+there, the rat gets loose from the hand, leaps away and bolts with a few seconds'
+head start in which it cannot be re-grabbed.
 
-As mãos são o único jeito de matar rato por enquanto. Uma arma que resolva num
-golpe só precisa herdar de `Arma` e sobrescrever o `_usar()`.
+Hands are the only way to kill a rat for now. A weapon that settles it in a
+single blow just needs to inherit from `Weapon` and override `_use()`.
 
-## A recompensa
+## The reward
 
-Rato morto é mercadoria, e quem compra quer o bicho inteiro. O preço sai de duas
-coisas: **quanto vale a espécie** e **de que morte ela morreu**.
+A dead rat is merchandise, and whoever buys it wants the whole animal. The price
+comes from two things: **what the species is worth** and **what death it died of**.
 
 ```
-recompensa = valor da espécie × o que sobrou dela depois daquela morte
+reward = species value × what was left of it after that death
 ```
 
-O estrangulamento é o teto da tabela: esganado o rato chega sem um furo na
-pelagem, e por isso as mãos pagam cheio — nenhuma arma vai render mais que elas.
-Toda arma daqui para frente estraga um pouco a mercadoria e desconta no preço,
-do veneno (que só apodrece a carne) até o esmagamento (do qual mal sobra rato).
-A tabela dos descontos está em `scripts/economia/morte.gd`, com os tipos que
-ainda não têm arma já escritos à espera delas: veneno, armadilha, perfuração,
-tiro e esmagamento.
+Strangulation is the ceiling of the table: strangled, the rat arrives without a
+hole in its fur, and that is why the hands pay in full — no weapon will ever earn
+more than they do. Every weapon from here on damages the goods a little and takes
+it off the price, from poison (which only rots the meat) to crushing (which
+leaves barely a rat at all). The table of discounts is in
+`scripts/economy/death.gd`, with the types that have no weapon yet already
+written and waiting for them: poison, trap, piercing, gunshot and crushing.
 
-**O dinheiro entra quando a caçada daquele rato se encerra**, não quando ele
-morre. Esganado, isso é na cintura: entre o último aperto e o corpo ser guardado
-ainda passa um segundo, e nele o jogador não tem nada. Matar e perder o corpo não
-paga. Morto de longe, a caçada acaba onde ele cai, e é lá que a conta fecha.
-Rato que se solta da mão e foge, claro, não paga nada.
+**The money lands when that rat's hunt comes to an end**, not when it dies.
+Strangled, that means at the waist: between the last squeeze and the body being
+stowed away a second still passes, and in it the player has nothing. Killing and
+losing the body pays nothing. Killed from a distance, the hunt ends where it
+falls, and that is where the account is settled. A rat that gets loose and
+escapes, of course, pays nothing at all.
 
-Quem guarda o dinheiro é a `Carteira`, o único autoload do projeto — o mapa
-recomeça, o que se ganhou nele não. Ela avisa por sinal (`dinheiro_mudou`,
-`captura_registrada`) quem quiser mostrar isso na tela.
+The one that holds the money is the `Wallet`, the project's only autoload — the
+map starts over, what was earned on it does not. It announces by signal
+(`money_changed`, `catch_recorded`) to whoever wants to show it on screen.
 
-### As espécies
+### The species
 
-Cada raça de rato é um arquivo em `recursos/especies/`: como ela se chama, com
-que pelagens ela nasce, quanto ela vale inteira e quanto um bicho pode ser maior
-ou menor que os da mesma ninhada. Hoje só existe o **rato comum** — as quatro
-pelagens do pacote e dez reais a cabeça. Rato novo, mais raro e mais caro, é
-duplicar o `.tres` e mexer nos números; nada de código.
+Each breed of rat is a file in `resources/species/`: what it is called, what furs
+it is born with, what it is worth whole and how much bigger or smaller an animal
+can be than the rest of its litter. Today only the **common rat** exists — the
+four furs from the pack and ten to the head. A new rat, rarer and pricier, means
+duplicating the `.tres` and changing the numbers; no code.
 
-### Por onde eles andam
+### Where they walk
 
-Os ratos andam por uma malha de navegação assada quando o mapa abre, a partir
-dos corpos estáticos do grupo `cenario` (`scripts/navegacao.gd`). É ela que
-resolve o problema de rato empacado na parede: em vez de correr no rumo do
-esconderijo e ir esbarrando no que aparecer, cada um segue um caminho que já vem
-contornando as caixas.
+The rats walk on a navigation mesh baked when the map opens, from the static
+bodies in the `scenery` group (`scripts/navigation.gd`). It is what solves the
+problem of a rat stuck against a wall: instead of running in the direction of its
+hideout and bumping into whatever appears, each one follows a path that already
+comes routed around the crates.
 
-Escolher o esconderijo é dar nota a uma dúzia de candidatos — os pontos cegos
-atrás dos obstáculos por perto, mais um leque de pontos para trás. Ganha nota
-quem está longe do jogador, quem some da linha de visão dele e quem tem saída
-por onde correr depois; perde nota quem fica longe demais e, principalmente,
-quem só é alcançável passando raspando em quem está caçando. Candidato dentro de
-uma caixa ou em cima de uma plataforma que não dá para subir nem entra na
-conta — o caminho até ele não existe.
+Picking the hideout means scoring a dozen candidates — the blind spots behind
+nearby obstacles, plus a fan of points behind it. Points go to whatever is far
+from the player, whatever vanishes from his line of sight and whatever has a way
+out to run afterwards; points are lost by whatever is too far away and, above
+all, by whatever can only be reached by grazing past the one doing the hunting. A
+candidate inside a crate or on top of a platform that cannot be climbed does not
+even enter the reckoning — the path to it does not exist.
 
-Sobrou um jeito de o rato ficar preso mesmo assim (empurrado para fora da malha,
-espremido numa quina): se ele passar meio segundo querendo andar sem sair do
-lugar, dá um passo de lado e procura outro caminho.
+There is still one way for the rat to get stuck all the same (pushed off the
+mesh, squeezed into a corner): if it spends half a second wanting to walk without
+going anywhere, it takes a step sideways and looks for another path.
 
-### O modelo
+### The model
 
-O rato é o modelo de `mobs/rats/`, com esqueleto de 13 ossos e as animações que
-vieram no pacote: `Rat|Idle`, `Rat|Idle_Break` (a pausa em que ele fareja o ar),
-`Rat|Run`, `Rat|Death` e `Rat|Attack`. A animação escolhida segue a velocidade do
-rato, e o ciclo de corrida acelera junto com ela — passeando ele trota, fugindo
-ele dispara, e preso na mão o mesmo ciclo vira o esperneio das patas no ar. A
-mordida é a única coisa que este rato medroso nunca faz solto pelo mapa: ela só
-aparece quando ele já está sendo esganado e não tem mais o que perder.
+The rat is the model in `mobs/rats/`, with a 13-bone skeleton and the animations
+that came in the pack: `Rat|Idle`, `Rat|Idle_Break` (the pause in which it sniffs
+the air), `Rat|Run`, `Rat|Death` and `Rat|Attack`. The chosen animation follows
+the rat's speed, and the run cycle speeds up along with it — wandering it trots,
+fleeing it bolts, and held in the hand the same cycle becomes the kicking of its
+legs in the air. The bite is the one thing this fearful rat never does loose
+about the map: it only shows up once it is already being strangled and has
+nothing left to lose.
 
-Cada rato sorteia uma das quatro pelagens do pacote (`Rat.png` a `Rat_4.png`) ao
-nascer, então o bando sai malhado de cinza, marrom e branco.
+Each rat rolls one of the four furs from the pack (`Rat.png` to `Rat_4.png`) when
+it is born, so the pack comes out mottled with grey, brown and white.
 
-O FBX foi exportado com a cena inteira do Blender — a luz e a câmera do autor
-vieram junto, e todas as animações têm faixas apontando para elas. Quem limpa
-isso na importação é `mobs/rats/limpar_importacao.gd`, um script de pós-importação
-que também descarta as animações duplicadas e marca o repouso e a corrida como
-cíclicas.
+The FBX was exported with the whole Blender scene — the author's light and camera
+came along with it, and every animation has tracks pointing at them. What cleans
+this up on import is `mobs/rats/clean_import.gd`, a post-import script that also
+discards the duplicate animations and marks the idle and the run as looping.
 
-O `Rat.blend` fica guardado como arquivo-fonte, mas quem o projeto importa é o
-`Rat_Fbx.fbx`. Por isso `filesystem/import/blender/enabled` está desligado nas
-configurações do projeto: sem isso a Godot tenta abrir o `.blend` e exige uma
-instalação do Blender para rodar o jogo.
+`Rat.blend` is kept as the source file, but what the project imports is
+`Rat_Fbx.fbx`. That is why `filesystem/import/blender/enabled` is off in the
+project settings: without it Godot tries to open the `.blend` and demands a
+Blender installation just to run the game.
 
-## Estrutura
+## Structure
 
-- `scenes/` — cenas do jogo (`mundo.tscn` é a cena principal, `jogador.tscn` é o
-  personagem e `rato.tscn` é o mob)
-- `scripts/` — scripts GDScript (`jogador.gd` controla o movimento em primeira pessoa,
-  `rato.gd` a IA dos ratos e a captura, `navegacao.gd` assa a malha por onde eles
-  andam, `contador_ratos.gd` o placar do HUD e `hud_esganamento.gd` o aviso do esganamento)
-- `scripts/armas/` — as armas do jogador: `arma.gd` é a base de todas e `maos.gd`
-  é a primeira delas, a que agarra e esgana
-- `scripts/economia/` — o dinheiro da caçada: `morte.gd` é a tabela dos tipos de
-  morte, `especie_rato.gd` é o molde de uma raça de rato e `carteira.gd` é o
-  autoload que guarda o que se ganhou
-- `recursos/especies/` — as raças de rato, uma por arquivo (`rato_comum.tres`)
-- `models/` — modelos 3D (`.glb`) e seus arquivos de import
-- `mobs/rats/` — o modelo do rato: `Rat_Fbx.fbx` (malha, esqueleto e animações),
-  as quatro texturas de pelagem, o `Rat.blend` de origem e o script de
-  pós-importação
-- `icon.svg` — ícone do projeto
+- `scenes/` — the game's scenes (`world.tscn` is the main scene, `player.tscn` is
+  the character and `rat.tscn` is the mob)
+- `scripts/` — GDScript scripts (`player.gd` handles first-person movement,
+  `rat.gd` the rats' AI and the capture, `navigation.gd` bakes the mesh they walk
+  on, `rat_counter.gd` the HUD scoreboard and `hud_strangle.gd` the strangling
+  prompt)
+- `scripts/weapons/` — the player's weapons: `weapon.gd` is the base of them all
+  and `hands.gd` is the first one, the one that grabs and strangles
+- `scripts/economy/` — the money from the hunt: `death.gd` is the table of death
+  types, `rat_species.gd` is the mould of a breed of rat and `wallet.gd` is the
+  autoload that holds what was earned
+- `resources/species/` — the breeds of rat, one per file (`common_rat.tres`)
+- `models/` — 3D models (`.glb`) and their import files
+- `mobs/rats/` — the rat model: `Rat_Fbx.fbx` (mesh, skeleton and animations), the
+  four fur textures, the source `Rat.blend` and the post-import script
+- `icon.svg` — the project icon
 
-O mapa é um quadrado cinza de 60x60 unidades, cercado por paredes e com blocos,
-caixas, colunas, rampas e plataformas feitos de formas geométricas simples — que
-são também os esconderijos dos ratos.
+The map is a grey 60x60-unit square, walled in and filled with blocks, crates,
+columns, ramps and platforms made of simple geometric shapes — which are also the
+rats' hiding places.
 
-As camadas de física são `1: cenario`, `2: jogador` e `3: ratos`. Os ratos não
-esbarram no jogador nem uns nos outros; só o cenário os detém.
+The physics layers are `1: scenery`, `2: player` and `3: rats`. The rats do not
+bump into the player or into each other; only the scenery stops them.
 
-A pasta `.godot/` é gerada pela engine e não é versionada.
+The `.godot/` folder is generated by the engine and is not versioned.

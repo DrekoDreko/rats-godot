@@ -1,27 +1,27 @@
 [gd_scene format=3 uid="uid://3o1jdkd6gviy"]
 
 [ext_resource type="PackedScene" uid="uid://baae21uy7nxug" path="res://models/van.glb" id="1_wqn8j"]
-[ext_resource type="PackedScene" path="res://scenes/jogador.tscn" id="2_jogador"]
+[ext_resource type="PackedScene" path="res://scenes/player.tscn" id="2_player"]
 [ext_resource type="Shader" uid="uid://bwmdy542q66bt" path="res://scripts/ps1.gdshader" id="2_kxyy5"]
 [ext_resource type="PackedScene" uid="uid://bgordf5uoxh7c" path="res://scenes/ps1.tscn" id="3_75jji"]
-[ext_resource type="PackedScene" uid="uid://dmlgy5o48488h" path="res://scenes/rato.tscn" id="4_rato"]
-[ext_resource type="Script" uid="uid://bk3mtd8wq1jyf" path="res://scripts/contador_ratos.gd" id="5_contador"]
-[ext_resource type="Script" uid="uid://x5twjg1fjgnu" path="res://scripts/navegacao.gd" id="6_navegacao"]
-[ext_resource type="Script" uid="uid://6r0t5qiq00nh" path="res://scripts/hud_esganamento.gd" id="7_esganamento"]
+[ext_resource type="PackedScene" uid="uid://dmlgy5o48488h" path="res://scenes/rat.tscn" id="4_rat"]
+[ext_resource type="Script" uid="uid://bk3mtd8wq1jyf" path="res://scripts/rat_counter.gd" id="5_counter"]
+[ext_resource type="Script" uid="uid://x5twjg1fjgnu" path="res://scripts/navigation.gd" id="6_navigation"]
+[ext_resource type="Script" uid="uid://6r0t5qiq00nh" path="res://scripts/hud_strangle.gd" id="7_strangle"]
 
-[sub_resource type="ProceduralSkyMaterial" id="Ceu_material"]
+[sub_resource type="ProceduralSkyMaterial" id="Sky_material"]
 sky_top_color = Color(0.36, 0.38, 0.41, 1)
 sky_horizon_color = Color(0.62, 0.63, 0.65, 1)
 ground_bottom_color = Color(0.3, 0.3, 0.32, 1)
 ground_horizon_color = Color(0.62, 0.63, 0.65, 1)
 
-[sub_resource type="Sky" id="Ceu"]
-sky_material = SubResource("Ceu_material")
+[sub_resource type="Sky" id="Sky"]
+sky_material = SubResource("Sky_material")
 
-[sub_resource type="Environment" id="Ambiente"]
+[sub_resource type="Environment" id="Environment"]
 background_mode = 1
 background_color = Color(1, 1, 1, 1)
-sky = SubResource("Ceu")
+sky = SubResource("Sky")
 ambient_light_source = 3
 ambient_light_color = Color(1, 1, 1, 1)
 ambient_light_energy = 0.45
@@ -32,13 +32,13 @@ fog_density = 1.0
 fog_depth_begin = 18.0
 fog_depth_end = 52.0
 
-[sub_resource type="StandardMaterial3D" id="Mat_chao"]
+[sub_resource type="StandardMaterial3D" id="Mat_floor"]
 albedo_color = Color(0.13, 0.13, 0.14, 1)
 metallic_specular = 0.1
 roughness = 0.95
 
-[sub_resource type="PlaneMesh" id="Mesh_chao"]
-material = SubResource("Mat_chao")
+[sub_resource type="PlaneMesh" id="Mesh_floor"]
+material = SubResource("Mat_floor")
 size = Vector2(60, 60)
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_kxyy5"]
@@ -51,15 +51,15 @@ shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
-[sub_resource type="BoxShape3D" id="Forma_chao"]
+[sub_resource type="BoxShape3D" id="Shape_floor"]
 size = Vector3(60, 2, 60)
 
-[sub_resource type="StandardMaterial3D" id="Mat_parede"]
+[sub_resource type="StandardMaterial3D" id="Mat_wall"]
 albedo_color = Color(0.36, 0.36, 0.38, 1)
 roughness = 0.95
 
-[sub_resource type="BoxMesh" id="Mesh_parede_ns"]
-material = SubResource("Mat_parede")
+[sub_resource type="BoxMesh" id="Mesh_wall_ns"]
+material = SubResource("Mat_wall")
 size = Vector3(68, 10, 4)
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_6o2rw"]
@@ -72,7 +72,7 @@ shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
-[sub_resource type="BoxShape3D" id="Forma_parede_ns"]
+[sub_resource type="BoxShape3D" id="Shape_wall_ns"]
 size = Vector3(68, 10, 4)
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_wd5o3"]
@@ -85,8 +85,8 @@ shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
-[sub_resource type="BoxMesh" id="Mesh_parede_lo"]
-material = SubResource("Mat_parede")
+[sub_resource type="BoxMesh" id="Mesh_wall_ew"]
+material = SubResource("Mat_wall")
 size = Vector3(4, 10, 68)
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_06eai"]
@@ -99,7 +99,7 @@ shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
-[sub_resource type="BoxShape3D" id="Forma_parede_lo"]
+[sub_resource type="BoxShape3D" id="Shape_wall_ew"]
 size = Vector3(4, 10, 68)
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_m7g0u"]
@@ -112,12 +112,12 @@ shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
-[sub_resource type="StandardMaterial3D" id="Mat_bloco"]
+[sub_resource type="StandardMaterial3D" id="Mat_block"]
 albedo_color = Color(0.5, 0.5, 0.53, 1)
 roughness = 0.9
 
-[sub_resource type="BoxMesh" id="Mesh_bloco"]
-material = SubResource("Mat_bloco")
+[sub_resource type="BoxMesh" id="Mesh_block"]
+material = SubResource("Mat_block")
 size = Vector3(8, 14, 8)
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_35q48"]
@@ -130,7 +130,7 @@ shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
-[sub_resource type="BoxShape3D" id="Forma_bloco"]
+[sub_resource type="BoxShape3D" id="Shape_block"]
 size = Vector3(8, 14, 8)
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_cae5a"]
@@ -183,12 +183,12 @@ shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
-[sub_resource type="StandardMaterial3D" id="Mat_caixa"]
+[sub_resource type="StandardMaterial3D" id="Mat_crate"]
 albedo_color = Color(0.66, 0.66, 0.68, 1)
 roughness = 0.85
 
-[sub_resource type="BoxMesh" id="Mesh_caixa_media"]
-material = SubResource("Mat_caixa")
+[sub_resource type="BoxMesh" id="Mesh_crate_medium"]
+material = SubResource("Mat_crate")
 size = Vector3(6, 6, 6)
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_c1ejn"]
@@ -201,7 +201,7 @@ shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
-[sub_resource type="BoxShape3D" id="Forma_caixa_media"]
+[sub_resource type="BoxShape3D" id="Shape_crate_medium"]
 size = Vector3(6, 6, 6)
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_vnytd"]
@@ -254,8 +254,8 @@ shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
-[sub_resource type="BoxMesh" id="Mesh_caixa_pequena"]
-material = SubResource("Mat_caixa")
+[sub_resource type="BoxMesh" id="Mesh_crate_small"]
+material = SubResource("Mat_crate")
 size = Vector3(3, 3, 3)
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_wf7jv"]
@@ -268,7 +268,7 @@ shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
-[sub_resource type="BoxShape3D" id="Forma_caixa_pequena"]
+[sub_resource type="BoxShape3D" id="Shape_crate_small"]
 size = Vector3(3, 3, 3)
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_lbjxv"]
@@ -321,12 +321,12 @@ shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
-[sub_resource type="StandardMaterial3D" id="Mat_coluna"]
+[sub_resource type="StandardMaterial3D" id="Mat_column"]
 albedo_color = Color(0.74, 0.74, 0.76, 1)
 roughness = 0.8
 
-[sub_resource type="CylinderMesh" id="Mesh_coluna"]
-material = SubResource("Mat_coluna")
+[sub_resource type="CylinderMesh" id="Mesh_column"]
+material = SubResource("Mat_column")
 top_radius = 1.5
 bottom_radius = 1.5
 height = 8.0
@@ -341,7 +341,7 @@ shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
-[sub_resource type="CylinderShape3D" id="Forma_coluna"]
+[sub_resource type="CylinderShape3D" id="Shape_column"]
 height = 8.0
 radius = 1.5
 
@@ -375,12 +375,12 @@ shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
-[sub_resource type="StandardMaterial3D" id="Mat_rampa"]
+[sub_resource type="StandardMaterial3D" id="Mat_ramp"]
 albedo_color = Color(0.58, 0.56, 0.52, 1)
 roughness = 0.9
 
-[sub_resource type="BoxMesh" id="Mesh_plataforma"]
-material = SubResource("Mat_rampa")
+[sub_resource type="BoxMesh" id="Mesh_platform"]
+material = SubResource("Mat_ramp")
 size = Vector3(10, 1, 10)
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_1e7fx"]
@@ -393,11 +393,11 @@ shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
-[sub_resource type="BoxShape3D" id="Forma_plataforma"]
+[sub_resource type="BoxShape3D" id="Shape_platform"]
 size = Vector3(10, 1, 10)
 
-[sub_resource type="BoxMesh" id="Mesh_rampa"]
-material = SubResource("Mat_rampa")
+[sub_resource type="BoxMesh" id="Mesh_ramp"]
+material = SubResource("Mat_ramp")
 size = Vector3(6, 1, 14)
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_vwmo8"]
@@ -410,7 +410,7 @@ shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
-[sub_resource type="BoxShape3D" id="Forma_rampa"]
+[sub_resource type="BoxShape3D" id="Shape_ramp"]
 size = Vector3(6, 1, 14)
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_ypjrv"]
@@ -433,11 +433,11 @@ shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
-[sub_resource type="NavigationMesh" id="Malha_navegacao"]
+[sub_resource type="NavigationMesh" id="Nav_mesh"]
 geometry_parsed_geometry_type = 1
 geometry_collision_mask = 1
 geometry_source_geometry_mode = 1
-geometry_source_group_name = &"cenario"
+geometry_source_group_name = &"scenery"
 cell_height = 0.1
 agent_height = 0.8
 agent_radius = 0.25
@@ -449,379 +449,379 @@ font_size = 8
 [sub_resource type="LabelSettings" id="LabelSettings_75jji"]
 font_size = 8
 
-[node name="Mundo" type="Node3D" unique_id=896002135]
+[node name="World" type="Node3D" unique_id=896002135]
 
 [node name="PS1" parent="." unique_id=1777166208 instance=ExtResource("3_75jji")]
 
-[node name="Ambiente" type="WorldEnvironment" parent="." unique_id=353208073]
-environment = SubResource("Ambiente")
+[node name="Environment" type="WorldEnvironment" parent="." unique_id=353208073]
+environment = SubResource("Environment")
 
-[node name="Sol" type="DirectionalLight3D" parent="." unique_id=1510908054]
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=1510908054]
 transform = Transform3D(0.8192, 0.4394, -0.3687, 0, 0.6428, 0.766, 0.5736, -0.6275, 0.5266, 0, 40, 0)
 light_energy = 1.1
 
-[node name="Chao" type="StaticBody3D" parent="." unique_id=1458331643 groups=["cenario"]]
+[node name="Floor" type="StaticBody3D" parent="." unique_id=1458331643 groups=["scenery"]]
 
-[node name="Malha" type="MeshInstance3D" parent="Chao" unique_id=804065504]
+[node name="Mesh" type="MeshInstance3D" parent="Floor" unique_id=804065504]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.005826831, -0.02224803, 0.010666132)
-mesh = SubResource("Mesh_chao")
+mesh = SubResource("Mesh_floor")
 surface_material_override/0 = SubResource("ShaderMaterial_kxyy5")
 
-[node name="Colisao" type="CollisionShape3D" parent="Chao" unique_id=491786415]
+[node name="Collision" type="CollisionShape3D" parent="Floor" unique_id=491786415]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, 0)
-shape = SubResource("Forma_chao")
+shape = SubResource("Shape_floor")
 
-[node name="Paredes" type="Node3D" parent="." unique_id=382611527 groups=["cenario"]]
+[node name="Walls" type="Node3D" parent="." unique_id=382611527 groups=["scenery"]]
 
-[node name="Norte" type="StaticBody3D" parent="Paredes" unique_id=1068365500]
+[node name="North" type="StaticBody3D" parent="Walls" unique_id=1068365500]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, -32)
 
-[node name="Malha" type="MeshInstance3D" parent="Paredes/Norte" unique_id=121092836]
-mesh = SubResource("Mesh_parede_ns")
+[node name="Mesh" type="MeshInstance3D" parent="Walls/North" unique_id=121092836]
+mesh = SubResource("Mesh_wall_ns")
 surface_material_override/0 = SubResource("ShaderMaterial_6o2rw")
 
-[node name="Colisao" type="CollisionShape3D" parent="Paredes/Norte" unique_id=598293181]
-shape = SubResource("Forma_parede_ns")
+[node name="Collision" type="CollisionShape3D" parent="Walls/North" unique_id=598293181]
+shape = SubResource("Shape_wall_ns")
 
-[node name="Sul" type="StaticBody3D" parent="Paredes" unique_id=284329528]
+[node name="South" type="StaticBody3D" parent="Walls" unique_id=284329528]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 32)
 
-[node name="Malha" type="MeshInstance3D" parent="Paredes/Sul" unique_id=527741498]
-mesh = SubResource("Mesh_parede_ns")
+[node name="Mesh" type="MeshInstance3D" parent="Walls/South" unique_id=527741498]
+mesh = SubResource("Mesh_wall_ns")
 surface_material_override/0 = SubResource("ShaderMaterial_wd5o3")
 
-[node name="Colisao" type="CollisionShape3D" parent="Paredes/Sul" unique_id=1546030304]
-shape = SubResource("Forma_parede_ns")
+[node name="Collision" type="CollisionShape3D" parent="Walls/South" unique_id=1546030304]
+shape = SubResource("Shape_wall_ns")
 
-[node name="Leste" type="StaticBody3D" parent="Paredes" unique_id=1814802015]
+[node name="East" type="StaticBody3D" parent="Walls" unique_id=1814802015]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 32, 5, 0)
 
-[node name="Malha" type="MeshInstance3D" parent="Paredes/Leste" unique_id=1833253467]
-mesh = SubResource("Mesh_parede_lo")
+[node name="Mesh" type="MeshInstance3D" parent="Walls/East" unique_id=1833253467]
+mesh = SubResource("Mesh_wall_ew")
 surface_material_override/0 = SubResource("ShaderMaterial_06eai")
 
-[node name="Colisao" type="CollisionShape3D" parent="Paredes/Leste" unique_id=10548637]
-shape = SubResource("Forma_parede_lo")
+[node name="Collision" type="CollisionShape3D" parent="Walls/East" unique_id=10548637]
+shape = SubResource("Shape_wall_ew")
 
-[node name="Oeste" type="StaticBody3D" parent="Paredes" unique_id=634091672]
+[node name="West" type="StaticBody3D" parent="Walls" unique_id=634091672]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -32, 5, 0)
 
-[node name="Malha" type="MeshInstance3D" parent="Paredes/Oeste" unique_id=158373678]
-mesh = SubResource("Mesh_parede_lo")
+[node name="Mesh" type="MeshInstance3D" parent="Walls/West" unique_id=158373678]
+mesh = SubResource("Mesh_wall_ew")
 surface_material_override/0 = SubResource("ShaderMaterial_m7g0u")
 
-[node name="Colisao" type="CollisionShape3D" parent="Paredes/Oeste" unique_id=221313045]
-shape = SubResource("Forma_parede_lo")
+[node name="Collision" type="CollisionShape3D" parent="Walls/West" unique_id=221313045]
+shape = SubResource("Shape_wall_ew")
 
-[node name="Obstaculos" type="Node3D" parent="." unique_id=638354537 groups=["cenario"]]
+[node name="Obstacles" type="Node3D" parent="." unique_id=638354537 groups=["scenery"]]
 
-[node name="Bloco1" type="StaticBody3D" parent="Obstaculos" unique_id=27781205]
+[node name="Block1" type="StaticBody3D" parent="Obstacles" unique_id=27781205]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 7, -18)
 
-[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Bloco1" unique_id=440270789]
-mesh = SubResource("Mesh_bloco")
+[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Block1" unique_id=440270789]
+mesh = SubResource("Mesh_block")
 surface_material_override/0 = SubResource("ShaderMaterial_35q48")
 
-[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Bloco1" unique_id=1706966893]
-shape = SubResource("Forma_bloco")
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/Block1" unique_id=1706966893]
+shape = SubResource("Shape_block")
 
-[node name="Bloco2" type="StaticBody3D" parent="Obstaculos" unique_id=731028130]
+[node name="Block2" type="StaticBody3D" parent="Obstacles" unique_id=731028130]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 7, -14)
 
-[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Bloco2" unique_id=1228591245]
-mesh = SubResource("Mesh_bloco")
+[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Block2" unique_id=1228591245]
+mesh = SubResource("Mesh_block")
 surface_material_override/0 = SubResource("ShaderMaterial_cae5a")
 
-[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Bloco2" unique_id=1275610450]
-shape = SubResource("Forma_bloco")
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/Block2" unique_id=1275610450]
+shape = SubResource("Shape_block")
 
-[node name="Bloco3" type="StaticBody3D" parent="Obstaculos" unique_id=765453795]
+[node name="Block3" type="StaticBody3D" parent="Obstacles" unique_id=765453795]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 7, -2)
 
-[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Bloco3" unique_id=467064409]
-mesh = SubResource("Mesh_bloco")
+[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Block3" unique_id=467064409]
+mesh = SubResource("Mesh_block")
 surface_material_override/0 = SubResource("ShaderMaterial_l7i8s")
 
-[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Bloco3" unique_id=1217289156]
-shape = SubResource("Forma_bloco")
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/Block3" unique_id=1217289156]
+shape = SubResource("Shape_block")
 
-[node name="Bloco4" type="StaticBody3D" parent="Obstaculos" unique_id=41529194]
+[node name="Block4" type="StaticBody3D" parent="Obstacles" unique_id=41529194]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 7, 8)
 
-[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Bloco4" unique_id=1119446617]
-mesh = SubResource("Mesh_bloco")
+[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Block4" unique_id=1119446617]
+mesh = SubResource("Mesh_block")
 surface_material_override/0 = SubResource("ShaderMaterial_f7ym0")
 
-[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Bloco4" unique_id=1738412547]
-shape = SubResource("Forma_bloco")
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/Block4" unique_id=1738412547]
+shape = SubResource("Shape_block")
 
-[node name="Bloco5" type="StaticBody3D" parent="Obstaculos" unique_id=1940376114]
+[node name="Block5" type="StaticBody3D" parent="Obstacles" unique_id=1940376114]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 7, 21)
 
-[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Bloco5" unique_id=606991865]
-mesh = SubResource("Mesh_bloco")
+[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Block5" unique_id=606991865]
+mesh = SubResource("Mesh_block")
 surface_material_override/0 = SubResource("ShaderMaterial_w7nu4")
 
-[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Bloco5" unique_id=2063749164]
-shape = SubResource("Forma_bloco")
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/Block5" unique_id=2063749164]
+shape = SubResource("Shape_block")
 
-[node name="Bloco6" type="StaticBody3D" parent="Obstaculos" unique_id=1083788107]
+[node name="Block6" type="StaticBody3D" parent="Obstacles" unique_id=1083788107]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23, 7, 20)
 
-[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Bloco6" unique_id=917722258]
-mesh = SubResource("Mesh_bloco")
+[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Block6" unique_id=917722258]
+mesh = SubResource("Mesh_block")
 surface_material_override/0 = SubResource("ShaderMaterial_541k4")
 
-[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Bloco6" unique_id=852850727]
-shape = SubResource("Forma_bloco")
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/Block6" unique_id=852850727]
+shape = SubResource("Shape_block")
 
-[node name="CaixaMedia1" type="StaticBody3D" parent="Obstaculos" unique_id=529881044]
+[node name="MediumCrate1" type="StaticBody3D" parent="Obstacles" unique_id=529881044]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 3, 4)
 
-[node name="Malha" type="MeshInstance3D" parent="Obstaculos/CaixaMedia1" unique_id=1332259129]
-mesh = SubResource("Mesh_caixa_media")
+[node name="Mesh" type="MeshInstance3D" parent="Obstacles/MediumCrate1" unique_id=1332259129]
+mesh = SubResource("Mesh_crate_medium")
 surface_material_override/0 = SubResource("ShaderMaterial_c1ejn")
 
-[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/CaixaMedia1" unique_id=176553507]
-shape = SubResource("Forma_caixa_media")
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/MediumCrate1" unique_id=176553507]
+shape = SubResource("Shape_crate_medium")
 
-[node name="CaixaMedia2" type="StaticBody3D" parent="Obstaculos" unique_id=1077734994]
+[node name="MediumCrate2" type="StaticBody3D" parent="Obstacles" unique_id=1077734994]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 3, -6)
 
-[node name="Malha" type="MeshInstance3D" parent="Obstaculos/CaixaMedia2" unique_id=406775171]
-mesh = SubResource("Mesh_caixa_media")
+[node name="Mesh" type="MeshInstance3D" parent="Obstacles/MediumCrate2" unique_id=406775171]
+mesh = SubResource("Mesh_crate_medium")
 surface_material_override/0 = SubResource("ShaderMaterial_vnytd")
 
-[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/CaixaMedia2" unique_id=1943427041]
-shape = SubResource("Forma_caixa_media")
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/MediumCrate2" unique_id=1943427041]
+shape = SubResource("Shape_crate_medium")
 
-[node name="CaixaMedia3" type="StaticBody3D" parent="Obstaculos" unique_id=1926700657]
+[node name="MediumCrate3" type="StaticBody3D" parent="Obstacles" unique_id=1926700657]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, -10)
 
-[node name="Malha" type="MeshInstance3D" parent="Obstaculos/CaixaMedia3" unique_id=1829870488]
-mesh = SubResource("Mesh_caixa_media")
+[node name="Mesh" type="MeshInstance3D" parent="Obstacles/MediumCrate3" unique_id=1829870488]
+mesh = SubResource("Mesh_crate_medium")
 surface_material_override/0 = SubResource("ShaderMaterial_e6vnd")
 
-[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/CaixaMedia3" unique_id=229303002]
-shape = SubResource("Forma_caixa_media")
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/MediumCrate3" unique_id=229303002]
+shape = SubResource("Shape_crate_medium")
 
-[node name="CaixaMedia4" type="StaticBody3D" parent="Obstaculos" unique_id=1202622196]
+[node name="MediumCrate4" type="StaticBody3D" parent="Obstacles" unique_id=1202622196]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 3, 9)
 
-[node name="Malha" type="MeshInstance3D" parent="Obstaculos/CaixaMedia4" unique_id=344111394]
-mesh = SubResource("Mesh_caixa_media")
+[node name="Mesh" type="MeshInstance3D" parent="Obstacles/MediumCrate4" unique_id=344111394]
+mesh = SubResource("Mesh_crate_medium")
 surface_material_override/0 = SubResource("ShaderMaterial_2jrhv")
 
-[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/CaixaMedia4" unique_id=509667385]
-shape = SubResource("Forma_caixa_media")
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/MediumCrate4" unique_id=509667385]
+shape = SubResource("Shape_crate_medium")
 
-[node name="CaixaMedia5" type="StaticBody3D" parent="Obstaculos" unique_id=564697205]
+[node name="MediumCrate5" type="StaticBody3D" parent="Obstacles" unique_id=564697205]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 3, -26)
 
-[node name="Malha" type="MeshInstance3D" parent="Obstaculos/CaixaMedia5" unique_id=487964584]
-mesh = SubResource("Mesh_caixa_media")
+[node name="Mesh" type="MeshInstance3D" parent="Obstacles/MediumCrate5" unique_id=487964584]
+mesh = SubResource("Mesh_crate_medium")
 surface_material_override/0 = SubResource("ShaderMaterial_g6hv0")
 
-[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/CaixaMedia5" unique_id=267366674]
-shape = SubResource("Forma_caixa_media")
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/MediumCrate5" unique_id=267366674]
+shape = SubResource("Shape_crate_medium")
 
-[node name="CaixaMedia6" type="StaticBody3D" parent="Obstaculos" unique_id=235996302]
+[node name="MediumCrate6" type="StaticBody3D" parent="Obstacles" unique_id=235996302]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26, 3, -14)
 
-[node name="Malha" type="MeshInstance3D" parent="Obstaculos/CaixaMedia6" unique_id=787955527]
-mesh = SubResource("Mesh_caixa_media")
+[node name="Mesh" type="MeshInstance3D" parent="Obstacles/MediumCrate6" unique_id=787955527]
+mesh = SubResource("Mesh_crate_medium")
 surface_material_override/0 = SubResource("ShaderMaterial_y4lqn")
 
-[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/CaixaMedia6" unique_id=1603652664]
-shape = SubResource("Forma_caixa_media")
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/MediumCrate6" unique_id=1603652664]
+shape = SubResource("Shape_crate_medium")
 
-[node name="CaixaPequena1" type="StaticBody3D" parent="Obstaculos" unique_id=997534327]
+[node name="SmallCrate1" type="StaticBody3D" parent="Obstacles" unique_id=997534327]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 1.5, 8)
 
-[node name="Malha" type="MeshInstance3D" parent="Obstaculos/CaixaPequena1" unique_id=535117309]
-mesh = SubResource("Mesh_caixa_pequena")
+[node name="Mesh" type="MeshInstance3D" parent="Obstacles/SmallCrate1" unique_id=535117309]
+mesh = SubResource("Mesh_crate_small")
 surface_material_override/0 = SubResource("ShaderMaterial_wf7jv")
 
-[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/CaixaPequena1" unique_id=407910446]
-shape = SubResource("Forma_caixa_pequena")
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/SmallCrate1" unique_id=407910446]
+shape = SubResource("Shape_crate_small")
 
-[node name="CaixaPequena2" type="StaticBody3D" parent="Obstaculos" unique_id=1606367004]
+[node name="SmallCrate2" type="StaticBody3D" parent="Obstacles" unique_id=1606367004]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 1.5, -2)
 
-[node name="Malha" type="MeshInstance3D" parent="Obstaculos/CaixaPequena2" unique_id=1136459400]
-mesh = SubResource("Mesh_caixa_pequena")
+[node name="Mesh" type="MeshInstance3D" parent="Obstacles/SmallCrate2" unique_id=1136459400]
+mesh = SubResource("Mesh_crate_small")
 surface_material_override/0 = SubResource("ShaderMaterial_lbjxv")
 
-[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/CaixaPequena2" unique_id=1498286255]
-shape = SubResource("Forma_caixa_pequena")
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/SmallCrate2" unique_id=1498286255]
+shape = SubResource("Shape_crate_small")
 
-[node name="CaixaPequena3" type="StaticBody3D" parent="Obstaculos" unique_id=45781042]
+[node name="SmallCrate3" type="StaticBody3D" parent="Obstacles" unique_id=45781042]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 1.5, 20)
 
-[node name="Malha" type="MeshInstance3D" parent="Obstaculos/CaixaPequena3" unique_id=27468951]
-mesh = SubResource("Mesh_caixa_pequena")
+[node name="Mesh" type="MeshInstance3D" parent="Obstacles/SmallCrate3" unique_id=27468951]
+mesh = SubResource("Mesh_crate_small")
 surface_material_override/0 = SubResource("ShaderMaterial_np3xf")
 
-[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/CaixaPequena3" unique_id=844510079]
-shape = SubResource("Forma_caixa_pequena")
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/SmallCrate3" unique_id=844510079]
+shape = SubResource("Shape_crate_small")
 
-[node name="CaixaPequena4" type="StaticBody3D" parent="Obstaculos" unique_id=1062645687]
+[node name="SmallCrate4" type="StaticBody3D" parent="Obstacles" unique_id=1062645687]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 1.5, 2)
 
-[node name="Malha" type="MeshInstance3D" parent="Obstaculos/CaixaPequena4" unique_id=1122574622]
-mesh = SubResource("Mesh_caixa_pequena")
+[node name="Mesh" type="MeshInstance3D" parent="Obstacles/SmallCrate4" unique_id=1122574622]
+mesh = SubResource("Mesh_crate_small")
 surface_material_override/0 = SubResource("ShaderMaterial_0iwyf")
 
-[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/CaixaPequena4" unique_id=2109681861]
-shape = SubResource("Forma_caixa_pequena")
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/SmallCrate4" unique_id=2109681861]
+shape = SubResource("Shape_crate_small")
 
-[node name="CaixaPequena5" type="StaticBody3D" parent="Obstaculos" unique_id=607535201]
+[node name="SmallCrate5" type="StaticBody3D" parent="Obstacles" unique_id=607535201]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 17, 1.5, -8)
 
-[node name="Malha" type="MeshInstance3D" parent="Obstaculos/CaixaPequena5" unique_id=1083450558]
-mesh = SubResource("Mesh_caixa_pequena")
+[node name="Mesh" type="MeshInstance3D" parent="Obstacles/SmallCrate5" unique_id=1083450558]
+mesh = SubResource("Mesh_crate_small")
 surface_material_override/0 = SubResource("ShaderMaterial_c58b4")
 
-[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/CaixaPequena5" unique_id=812576796]
-shape = SubResource("Forma_caixa_pequena")
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/SmallCrate5" unique_id=812576796]
+shape = SubResource("Shape_crate_small")
 
-[node name="CaixaPequena6" type="StaticBody3D" parent="Obstaculos" unique_id=1477145299]
+[node name="SmallCrate6" type="StaticBody3D" parent="Obstacles" unique_id=1477145299]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 1.5, 20)
 
-[node name="Malha" type="MeshInstance3D" parent="Obstaculos/CaixaPequena6" unique_id=608548599]
-mesh = SubResource("Mesh_caixa_pequena")
+[node name="Mesh" type="MeshInstance3D" parent="Obstacles/SmallCrate6" unique_id=608548599]
+mesh = SubResource("Mesh_crate_small")
 surface_material_override/0 = SubResource("ShaderMaterial_igy0i")
 
-[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/CaixaPequena6" unique_id=1708760894]
-shape = SubResource("Forma_caixa_pequena")
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/SmallCrate6" unique_id=1708760894]
+shape = SubResource("Shape_crate_small")
 
-[node name="Coluna1" type="StaticBody3D" parent="Obstaculos" unique_id=368364714]
+[node name="Column1" type="StaticBody3D" parent="Obstacles" unique_id=368364714]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 4, -21)
 
-[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Coluna1" unique_id=1531192281]
-mesh = SubResource("Mesh_coluna")
+[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Column1" unique_id=1531192281]
+mesh = SubResource("Mesh_column")
 surface_material_override/0 = SubResource("ShaderMaterial_rcwxx")
 
-[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Coluna1" unique_id=1617692389]
-shape = SubResource("Forma_coluna")
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/Column1" unique_id=1617692389]
+shape = SubResource("Shape_column")
 
-[node name="Coluna2" type="StaticBody3D" parent="Obstaculos" unique_id=226502724]
+[node name="Column2" type="StaticBody3D" parent="Obstacles" unique_id=226502724]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 4, -21)
 
-[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Coluna2" unique_id=1635043667]
-mesh = SubResource("Mesh_coluna")
+[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Column2" unique_id=1635043667]
+mesh = SubResource("Mesh_column")
 surface_material_override/0 = SubResource("ShaderMaterial_3y8jo")
 
-[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Coluna2" unique_id=1801258575]
-shape = SubResource("Forma_coluna")
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/Column2" unique_id=1801258575]
+shape = SubResource("Shape_column")
 
-[node name="Coluna3" type="StaticBody3D" parent="Obstaculos" unique_id=1704430060]
+[node name="Column3" type="StaticBody3D" parent="Obstacles" unique_id=1704430060]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 4, -26)
 
-[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Coluna3" unique_id=1781048997]
-mesh = SubResource("Mesh_coluna")
+[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Column3" unique_id=1781048997]
+mesh = SubResource("Mesh_column")
 surface_material_override/0 = SubResource("ShaderMaterial_gdkw2")
 
-[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Coluna3" unique_id=1734182116]
-shape = SubResource("Forma_coluna")
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/Column3" unique_id=1734182116]
+shape = SubResource("Shape_column")
 
-[node name="Coluna4" type="StaticBody3D" parent="Obstaculos" unique_id=1935652570]
+[node name="Column4" type="StaticBody3D" parent="Obstacles" unique_id=1935652570]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 4, -26)
 
-[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Coluna4" unique_id=566670278]
-mesh = SubResource("Mesh_coluna")
+[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Column4" unique_id=566670278]
+mesh = SubResource("Mesh_column")
 surface_material_override/0 = SubResource("ShaderMaterial_ws26n")
 
-[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Coluna4" unique_id=1584500374]
-shape = SubResource("Forma_coluna")
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/Column4" unique_id=1584500374]
+shape = SubResource("Shape_column")
 
-[node name="Plataforma1" type="StaticBody3D" parent="Obstaculos" unique_id=1141299144]
+[node name="Platform1" type="StaticBody3D" parent="Obstacles" unique_id=1141299144]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 4, 9)
 
-[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Plataforma1" unique_id=175169350]
-mesh = SubResource("Mesh_plataforma")
+[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Platform1" unique_id=175169350]
+mesh = SubResource("Mesh_platform")
 surface_material_override/0 = SubResource("ShaderMaterial_1e7fx")
 
-[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Plataforma1" unique_id=1193985580]
-shape = SubResource("Forma_plataforma")
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/Platform1" unique_id=1193985580]
+shape = SubResource("Shape_platform")
 
-[node name="Rampa1" type="StaticBody3D" parent="Obstaculos" unique_id=1746651173]
+[node name="Ramp1" type="StaticBody3D" parent="Obstacles" unique_id=1746651173]
 transform = Transform3D(1, 0, 0, 0, 0.9397, -0.342, 0, 0.342, 0.9397, 15, 1.75, 20.6)
 
-[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Rampa1" unique_id=405142041]
-mesh = SubResource("Mesh_rampa")
+[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Ramp1" unique_id=405142041]
+mesh = SubResource("Mesh_ramp")
 surface_material_override/0 = SubResource("ShaderMaterial_vwmo8")
 
-[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Rampa1" unique_id=1931259616]
-shape = SubResource("Forma_rampa")
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/Ramp1" unique_id=1931259616]
+shape = SubResource("Shape_ramp")
 
-[node name="Plataforma2" type="StaticBody3D" parent="Obstaculos" unique_id=360026285]
+[node name="Platform2" type="StaticBody3D" parent="Obstacles" unique_id=360026285]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 4, -9)
 
-[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Plataforma2" unique_id=1357574642]
-mesh = SubResource("Mesh_plataforma")
+[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Platform2" unique_id=1357574642]
+mesh = SubResource("Mesh_platform")
 surface_material_override/0 = SubResource("ShaderMaterial_ypjrv")
 
-[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Plataforma2" unique_id=948259020]
-shape = SubResource("Forma_plataforma")
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/Platform2" unique_id=948259020]
+shape = SubResource("Shape_platform")
 
-[node name="Rampa2" type="StaticBody3D" parent="Obstaculos" unique_id=1024697496]
+[node name="Ramp2" type="StaticBody3D" parent="Obstacles" unique_id=1024697496]
 transform = Transform3D(1, 0, 0, 0, 0.9397, 0.342, 0, -0.342, 0.9397, -15, 1.75, -20.6)
 
-[node name="Malha" type="MeshInstance3D" parent="Obstaculos/Rampa2" unique_id=160702179]
-mesh = SubResource("Mesh_rampa")
+[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Ramp2" unique_id=160702179]
+mesh = SubResource("Mesh_ramp")
 surface_material_override/0 = SubResource("ShaderMaterial_h4pmc")
 
-[node name="Colisao" type="CollisionShape3D" parent="Obstaculos/Rampa2" unique_id=1740421227]
-shape = SubResource("Forma_rampa")
+[node name="Collision" type="CollisionShape3D" parent="Obstacles/Ramp2" unique_id=1740421227]
+shape = SubResource("Shape_ramp")
 
-[node name="Navegacao" type="NavigationRegion3D" parent="." unique_id=1675674178]
-navigation_mesh = SubResource("Malha_navegacao")
-script = ExtResource("6_navegacao")
+[node name="Navigation" type="NavigationRegion3D" parent="." unique_id=1675674178]
+navigation_mesh = SubResource("Nav_mesh")
+script = ExtResource("6_navigation")
 
 [node name="van" parent="." unique_id=840043182 instance=ExtResource("1_wqn8j")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0, 2)
 
 [node name="PS1" parent="van" unique_id=1777166207 instance=ExtResource("3_75jji")]
 
-[node name="Jogador" parent="." unique_id=541805088 instance=ExtResource("2_jogador")]
+[node name="Player" parent="." unique_id=541805088 instance=ExtResource("2_player")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 4)
 
-[node name="Ratos" type="Node3D" parent="." unique_id=1730976301]
+[node name="Rats" type="Node3D" parent="." unique_id=1730976301]
 
-[node name="Rato1" parent="Ratos" unique_id=336481594 instance=ExtResource("4_rato")]
+[node name="Rat1" parent="Rats" unique_id=336481594 instance=ExtResource("4_rat")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.1, 12)
 
-[node name="Rato2" parent="Ratos" unique_id=1788396856 instance=ExtResource("4_rato")]
+[node name="Rat2" parent="Rats" unique_id=1788396856 instance=ExtResource("4_rat")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0.1, 1)
 
-[node name="Rato3" parent="Ratos" unique_id=1549134091 instance=ExtResource("4_rato")]
+[node name="Rat3" parent="Rats" unique_id=1549134091 instance=ExtResource("4_rat")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.1, -16)
 
-[node name="Rato4" parent="Ratos" unique_id=1728053416 instance=ExtResource("4_rato")]
+[node name="Rat4" parent="Rats" unique_id=1728053416 instance=ExtResource("4_rat")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0.1, 2)
 
-[node name="Rato5" parent="Ratos" unique_id=593484386 instance=ExtResource("4_rato")]
+[node name="Rat5" parent="Rats" unique_id=593484386 instance=ExtResource("4_rat")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 0.1, -12)
 
-[node name="Rato6" parent="Ratos" unique_id=808009004 instance=ExtResource("4_rato")]
+[node name="Rat6" parent="Rats" unique_id=808009004 instance=ExtResource("4_rat")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0.1, 14)
 
-[node name="Rato7" parent="Ratos" unique_id=212291970 instance=ExtResource("4_rato")]
+[node name="Rat7" parent="Rats" unique_id=212291970 instance=ExtResource("4_rat")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0.1, -20)
 
-[node name="Rato8" parent="Ratos" unique_id=1009427670 instance=ExtResource("4_rato")]
+[node name="Rat8" parent="Rats" unique_id=1009427670 instance=ExtResource("4_rat")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.1, -27)
 
-[node name="Rato9" parent="Ratos" unique_id=1752097958 instance=ExtResource("4_rato")]
+[node name="Rat9" parent="Rats" unique_id=1752097958 instance=ExtResource("4_rat")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0.1, 6)
 
-[node name="Rato10" parent="Ratos" unique_id=494732994 instance=ExtResource("4_rato")]
+[node name="Rat10" parent="Rats" unique_id=494732994 instance=ExtResource("4_rat")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0.1, 26)
 
 [node name="HUD" type="CanvasLayer" parent="." unique_id=1294235576]
 
-[node name="Ajuda" type="Label" parent="HUD" unique_id=715739734]
+[node name="Help" type="Label" parent="HUD" unique_id=715739734]
 offset_left = 16.0
 offset_top = 12.0
 offset_right = 320.0
@@ -829,16 +829,16 @@ offset_bottom = 150.0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
-text = "WASD / setas — andar
-Shift — correr
-Espaço — pular
-Mouse — girar a câmera
-Botão esquerdo — agarrar o rato
-Botão esquerdo (segurando) — esganar
-Esc — soltar o mouse"
+text = "WASD / arrows — move
+Shift — run
+Space — jump
+Mouse — look around
+Left button — grab the rat
+Left button (holding) — strangle
+Esc — release the mouse"
 label_settings = SubResource("LabelSettings_jaeu2")
 
-[node name="Contador" type="Label" parent="HUD" unique_id=535394653]
+[node name="Counter" type="Label" parent="HUD" unique_id=535394653]
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
@@ -850,12 +850,12 @@ grow_horizontal = 0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
-text = "Ratos: 0 / 0"
+text = "Rats: 0 / 0"
 label_settings = SubResource("LabelSettings_75jji")
 horizontal_alignment = 2
-script = ExtResource("5_contador")
+script = ExtResource("5_counter")
 
-[node name="Mira" type="Label" parent="HUD" unique_id=1287370853]
+[node name="Crosshair" type="Label" parent="HUD" unique_id=1287370853]
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -874,7 +874,7 @@ text = "+"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Esganamento" type="MarginContainer" parent="HUD" unique_id=1097222269]
+[node name="Strangle" type="MarginContainer" parent="HUD" unique_id=1097222269]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -885,34 +885,34 @@ theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 12
-script = ExtResource("7_esganamento")
+script = ExtResource("7_strangle")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="HUD/Esganamento" unique_id=1761056702]
+[node name="VBoxContainer" type="VBoxContainer" parent="HUD/Strangle" unique_id=1761056702]
 layout_mode = 2
 size_flags_horizontal = 4
 size_flags_vertical = 8
 
-[node name="Botao" type="Label" parent="HUD/Esganamento/VBoxContainer" unique_id=681584922]
+[node name="Button" type="Label" parent="HUD/Strangle/VBoxContainer" unique_id=681584922]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.94, 0.86, 0.36, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 8
 theme_override_font_sizes/font_size = 38
-text = "CLIQUE"
+text = "CLICK"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Barra" type="ProgressBar" parent="HUD/Esganamento/VBoxContainer" unique_id=602576959]
+[node name="Bar" type="ProgressBar" parent="HUD/Strangle/VBoxContainer" unique_id=602576959]
 custom_minimum_size = Vector2(300, 10)
 layout_mode = 2
 max_value = 1.0
 show_percentage = false
 
-[node name="Instrucao" type="Label" parent="HUD/Esganamento/VBoxContainer" unique_id=1090993103]
+[node name="Instruction" type="Label" parent="HUD/Strangle/VBoxContainer" unique_id=1090993103]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
-text = "martele para esganar"
+text = "hammer to strangle"
 horizontal_alignment = 1
 vertical_alignment = 1

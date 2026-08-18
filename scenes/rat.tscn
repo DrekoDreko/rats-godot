@@ -1,0 +1,32 @@
+[gd_scene format=3 uid="uid://dmlgy5o48488h"]
+
+[ext_resource type="Script" uid="uid://cq7v4rn2xk8ma" path="res://scripts/rat.gd" id="1_rat"]
+[ext_resource type="PackedScene" uid="uid://c8f7bjmvqsrxx" path="res://mobs/rats/Rat_Fbx.fbx" id="2_model"]
+[ext_resource type="Resource" path="res://resources/species/common_rat.tres" id="3_species"]
+[ext_resource type="PackedScene" uid="uid://bgordf5uoxh7c" path="res://scenes/ps1.tscn" id="4_u6wux"]
+
+[sub_resource type="CapsuleShape3D" id="Shape_rat"]
+radius = 0.15
+height = 0.36
+
+[node name="Rat" type="CharacterBody3D" unique_id=1668221528 groups=["rats"]]
+collision_layer = 4
+script = ExtResource("1_rat")
+species = ExtResource("3_species")
+
+[node name="Collision" type="CollisionShape3D" parent="." unique_id=1744694663]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.18, 0)
+shape = SubResource("Shape_rat")
+
+[node name="Navigation" type="NavigationAgent3D" parent="." unique_id=1942953611]
+path_desired_distance = 0.4
+target_desired_distance = 0.6
+path_height_offset = 0.2
+path_max_distance = 3.0
+
+[node name="Model" type="Node3D" parent="." unique_id=681090001]
+
+[node name="Mesh" parent="Model" unique_id=158646142 instance=ExtResource("2_model")]
+transform = Transform3D(0.45, 0, 0, 0, 0.45, 0, 0, 0, 0.45, 0, 0, 0)
+
+[node name="PS1" parent="Model/Mesh" unique_id=1777166207 instance=ExtResource("4_u6wux")]
