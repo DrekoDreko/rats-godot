@@ -18,7 +18,9 @@
 | Mouse | Look around |
 | Left button | Grab the rat |
 | Left button (with a rat in hand) | Strangle |
-| `Esc` | Release/recapture the mouse |
+| `1` `2` `3` | Switch weapon |
+| `E` | Use what you are looking at (the computer in the van) |
+| `Esc` | Release/recapture the mouse — and close the shop |
 
 With your hands full the same click that grabbed starts strangling, and the
 player walks slowly: with a rat struggling in your hands there is no running and
@@ -63,6 +65,68 @@ head start in which it cannot be re-grabbed.
 Hands are the only way to kill a rat for now. A weapon that settles it in a
 single blow just needs to inherit from `Weapon` and override `_use()`.
 
+### The belt
+
+The player carries three slots, swapped with `1`, `2` and `3`. At the foot of the
+screen they are three squares, in the shape everybody already knows from
+Minecraft: a dark cell each, and a bright frame around whichever one is in hand.
+There is no number written under them — the keys are `1`, `2` and `3` from left
+to right, and that is the whole of it.
+
+The hands are in the first square. The other two carry the traps bought at the
+computer, and until a box has been bought they behave exactly like an empty
+square: a loop on the belt with nothing hanging from it. An empty slot is a
+player with nothing in his hands — he walks and looks around the same way, and
+the click finds nothing to do.
+
+A weapon that comes out of a box counts what is left of it in the corner of its
+square, and the square goes dim when that count reaches zero. The belt follows
+the count while the player is standing there: buying with that slot already
+picked puts the weapon in his hand on the spot, and using the last one takes it
+away the same way, without anybody swapping anything.
+
+A weapon shows its `icon` in the square. While it has none, the belt writes its
+name there instead, which is what the hands do today.
+
+**With a rat kicking in your hand nothing gets swapped.** The same `is_busy()`
+that already takes away the running and the jumping locks the belt too, and the
+hotbar leaves the screen along with the crosshair while the strangling prompt is
+open.
+
+The belt is `scripts/weapons/inventory.gd`, and it does not own the weapons:
+every one of them goes on hanging off the player's head, where it can reach the
+camera and the capture point. What the belt takes care of is the *swap* — putting
+the last weapon away, with the swing halfway through and the shake it left in the
+camera, before the next one comes out. Hanging a new weapon on it means adding
+the node under `Head` and pointing a slot at it in `player.tscn`; no code.
+
+### What the player has to lose
+
+Over the three squares there is a bar, spanning exactly the width of them: the
+hundred points of flesh the player starts the shift with, and no number written
+anywhere — how far it has drained is the whole of what he is told. Like every
+other piece of this HUD it only mirrors what the player already knows — the
+count lives in `player.gd` and `take_damage()` is the one door into it, so a
+wound, a bandage or a respawn cannot leave the screen showing a health nobody
+has.
+
+The bar says how the beating is going by its colour: green while he is whole,
+the strangling prompt's own amber past the halfway mark, and its red down at the
+last quarter, where it also starts to breathe. Every fresh wound whitens it for
+a quarter of a second — with no number beside it, that whitening is what makes a
+hit read as a hit, and not as a bar that quietly got shorter.
+
+With a rat in hand it leaves the screen along with the hotbar and the crosshair,
+and for the same reason: it sits over the belt, and the belt is where the
+strangling prompt opens.
+
+**Nothing on the map bites yet.** The rats only run, so for now the bar is there
+waiting: whatever comes to hurt the player knocks on `take_damage()`, and the
+HUD hears of it by signal (`health_changed`, `damaged`). Running out of flesh is
+what falling off the map already was — `died` goes out for whoever wants to put
+an end-of-shift screen in the way, and then the player wakes up back where the
+shift started, whole, with everything he earned still in the wallet.
+
 ## The reward
 
 A dead rat is merchandise, and whoever buys it wants the whole animal. The price
@@ -89,7 +153,56 @@ escapes, of course, pays nothing at all.
 
 The one that holds the money is the `Wallet`, the project's only autoload — the
 map starts over, what was earned on it does not. It announces by signal
-(`money_changed`, `catch_recorded`) to whoever wants to show it on screen.
+(`money_changed`, `catch_recorded`), and who listens is `hud_money.gd`: the
+total in the top-right corner, and under it a passing notice with what the last
+animal paid and the death it died of.
+
+### The computer in the van
+
+At the back of the van there is a desk with a CRT, and it is the only place where
+the money turns back into something. The rear doors are swung wide open and a
+ramp runs up to the floor of the cargo bay; inside, looking at the machine puts
+`E — use the computer` on screen, and `E` opens the shop. `Esc` or **CLOSE** puts
+it away.
+
+While the shop is up the player is out of the map: the mouse comes loose to reach
+the buttons and the body stops answering to anything (`set_ui_open` in
+`player.gd`). That is not a nicety — the click that buys is the same left click
+that grabs a rat, and without the guard it would be spent snatching the camera
+back instead of pressing the button under the cursor. Esc is handled by the shop
+itself, so it never reaches the player's own mouse toggle.
+
+What is on the shelf is `resources/store/*.tres`, listed on the computer node in
+`scenes/shop_computer.tscn`: a name, a line of description, a price and how many
+units the money buys. Today it sells the **mousetrap** (three to a box, $25) and
+the **rat glue** (two trays, $40). A third thing on the shelf means duplicating a
+`.tres` and adding it to the list; no code, and the row shows up on screen on its
+own.
+
+The price leaves the `Wallet` (`spend()`) and the units land in the `Stock`, the
+project's second autoload, and for the same reason as the first: a box bought on
+one shift is still a box on the next. Money and stock are kept apart on purpose —
+the wallet counts what was earned, and nothing else.
+
+**The traps do not catch anything yet.** Bought, they hang on the belt, count
+down and empty out; what is missing is the object left on the floor that closes
+on the rat, with its `Death.Type.TRAP`, and it is built inside `TrapWeapon._use()`
+(`scripts/weapons/trap_weapon.gd`).
+
+### How the player reaches for things
+
+The player carries a short ray out of his camera (`Head/Camera/Interact`, 2.2 m)
+that only sees the *interactable* layer, so aiming at something costs one ray and
+never trips over the scenery or over a rat. Whatever he can put his hands on is
+an `Area3D` with `scripts/interaction/interactable.gd`: it says what the prompt
+reads and announces `used` when `E` comes, and what that means is the thing's own
+business. With a rat kicking in his hands there is nothing to reach for, and the
+prompt leaves the screen the same way the crosshair does.
+
+The area is not the object's body — it is the reachable face of it, the screen
+and the keyboard and not the desk they sit on. What stops the player walking
+through the desk is a static body of its own, on the scenery layer, like
+everything else solid in the map.
 
 ### The species
 
@@ -149,14 +262,27 @@ Blender installation just to run the game.
   the character and `rat.tscn` is the mob)
 - `scripts/` — GDScript scripts (`player.gd` handles first-person movement,
   `rat.gd` the rats' AI and the capture, `navigation.gd` bakes the mesh they walk
-  on, `rat_counter.gd` the HUD scoreboard and `hud_strangle.gd` the strangling
-  prompt)
-- `scripts/weapons/` — the player's weapons: `weapon.gd` is the base of them all
-  and `hands.gd` is the first one, the one that grabs and strangles
+  on, `rat_counter.gd` the HUD scoreboard, `hud_money.gd` the wallet on screen,
+  `hud_strangle.gd` the strangling prompt, `hud_hotbar.gd` the belt's three
+  slots, `hud_health.gd` the health bar over them, `hud_prompt.gd` the line that
+  says what `E` would do and `hud_shop.gd` the computer's screen)
+- `scripts/weapons/` — the player's weapons: `weapon.gd` is the base of them all,
+  `hands.gd` is the first one, the one that grabs and strangles, `trap_weapon.gd`
+  is the one that comes out of a box and runs out, and `inventory.gd` is the belt
+  that decides which one is out
+- `scripts/interaction/` — `interactable.gd`, the reachable face of anything the
+  player can put his hands on
+- `scripts/shop/` — `shop_computer.gd`, the machine in the van that carries the
+  catalogue
 - `scripts/economy/` — the money from the hunt: `death.gd` is the table of death
-  types, `rat_species.gd` is the mould of a breed of rat and `wallet.gd` is the
-  autoload that holds what was earned
+  types, `rat_species.gd` is the mould of a breed of rat, `store_item.gd` is a
+  line on the computer's catalogue, `wallet.gd` is the autoload that holds what
+  was earned and `stock.gd` the one that holds what was bought
 - `resources/species/` — the breeds of rat, one per file (`common_rat.tres`)
+- `resources/store/` — what the computer sells, one per file (`mousetrap.tres`,
+  `rat_glue.tres`)
+- `assets/computer/` — the desk, the CRT, the tower, the keyboard and the rest of
+  the machine in the van
 - `models/` — 3D models (`.glb`) and their import files
 - `mobs/rats/` — the rat model: `Rat_Fbx.fbx` (mesh, skeleton and animations), the
   four fur textures, the source `Rat.blend` and the post-import script
@@ -166,7 +292,15 @@ The map is a grey 60x60-unit square, walled in and filled with blocks, crates,
 columns, ramps and platforms made of simple geometric shapes — which are also the
 rats' hiding places.
 
-The physics layers are `1: scenery`, `2: player` and `3: rats`. The rats do not
-bump into the player or into each other; only the scenery stops them.
+Parked on it is the van, which has an interior now: a collision shell around the
+cargo bay (floor, sides, roof and a wall closing off the cab), the rear doors
+swung wide open and a ramp up to the floor, since the bay stands half a metre off
+the ground and the character does not climb a step on its own. The shell is in
+the `scenery` group like everything else solid, so the rats' navigation mesh
+knows about the van too.
+
+The physics layers are `1: scenery`, `2: player`, `3: rats` and
+`4: interactable`. The rats do not bump into the player or into each other; only
+the scenery stops them.
 
 The `.godot/` folder is generated by the engine and is not versioned.

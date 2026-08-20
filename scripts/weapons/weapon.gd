@@ -9,7 +9,9 @@ extends Node3D
 ##
 ## A weapon can be *busy*: while it is, the player cannot use another one nor
 ## move freely. The hands stay busy holding the rat; a hammer, for instance,
-## never would.
+## never would. Busy is also what keeps it on the player's belt: there is no
+## swapping weapons with a rat kicking in your hand (see
+## `scripts/weapons/inventory.gd`).
 ##
 ## Every weapon also declares *what death* it kills with (a `Death.Type`, see
 ## `scripts/economy/death.gd`) and passes that type to the rat when killing it —
@@ -28,6 +30,12 @@ signal caught(rat: Node3D)
 signal pressure_changed(fraction: float)
 ## Let go of the rat: `killed` says whether it died or got away.
 signal finished(killed: bool)
+
+## What the weapon is called on the player's belt.
+@export var display_name := "Weapon"
+## The picture that stands for it in the belt's square. While a weapon has none,
+## the belt writes its name in the square instead.
+@export var icon: Texture2D
 
 @export_group("Reach")
 @export var reach := 2.6
@@ -76,10 +84,34 @@ func try_use() -> void:
 func start_cooldown() -> void:
 	_cooldown_left = cooldown
 
+## Taken out of the belt: from here on it is the one the click reaches.
+func equip() -> void:
+	visible = true
+	set_process(true)
+
+## Put away. Everything the weapon was doing on screen stops here — the swing
+## halfway through, the shake it left in the camera — because from now on nobody
+## is going to run its `_process` to finish any of it. The cooldown stays where
+## it is on purpose: swapping slots is no way around the weapon's cadence.
+func unequip() -> void:
+	set_process(false)
+	if _swing_tween != null and _swing_tween.is_running():
+		_swing_tween.kill()
+	rotation = _initial_rotation
+	_clear_recoil()
+	visible = false
+
 ## True while the weapon is in the middle of something that ties the player
 ## down. Weapons that settle everything in one blow leave this as it is.
 func is_busy() -> bool:
 	return false
+
+## Whether the weapon can be taken out at all. The hands always can; a weapon
+## that runs out — a box of traps — says no once it is empty, and the belt then
+## treats its slot as the empty loop it has become
+## (`scripts/weapons/inventory.gd`).
+func available() -> bool:
+	return true
 
 ## Relay of the secondary action (the click, with the hands full) while the
 ## weapon is busy.
@@ -151,10 +183,14 @@ func _damp_recoil(delta: float) -> void:
 		# camera back in place, instead of leaving the view crooked forever over
 		# a thousandth.
 		if _recoil != Vector2.ZERO:
-			_recoil = Vector2.ZERO
-			camera.h_offset = 0.0
-			camera.v_offset = 0.0
+			_clear_recoil()
 		return
 	_recoil = _recoil.lerp(Vector2.ZERO, 1.0 - pow(recoil_damping, delta))
 	camera.h_offset = _recoil.x
 	camera.v_offset = _recoil.y
+
+## Ends the shake right where it is and gives the camera back straight.
+func _clear_recoil() -> void:
+	_recoil = Vector2.ZERO
+	camera.h_offset = 0.0
+	camera.v_offset = 0.0

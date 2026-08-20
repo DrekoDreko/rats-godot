@@ -25,45 +25,45 @@ const BLINKS := 6.0
 var _pressure := 0.0
 
 func _ready() -> void:
-    hide()
-    set_process(false)
-    # Wait one frame so the player is already in the tree.
-    await get_tree().process_frame
-    var player := get_tree().get_first_node_in_group("player")
-    if player == null:
-        return
-    player.capture_started.connect(_on_capture_started)
-    player.capture_progress.connect(_on_progress)
-    player.capture_finished.connect(_on_finished)
+	hide()
+	set_process(false)
+	# Wait one frame so the player is already in the tree.
+	await get_tree().process_frame
+	var player := get_tree().get_first_node_in_group("player")
+	if player == null:
+		return
+	player.capture_started.connect(_on_capture_started)
+	player.capture_progress.connect(_on_progress)
+	player.capture_finished.connect(_on_finished)
 
 func _process(_delta: float) -> void:
-    if _pressure > DANGER_PRESSURE:
-        button.modulate.a = 1.0
-        return
-    # Nearly escaping: the prompt blinks so the player hammers faster.
-    button.modulate.a = 0.35 + 0.65 * absf(sin(Time.get_ticks_msec() / 1000.0 * PI * BLINKS))
+	if _pressure > DANGER_PRESSURE:
+		button.modulate.a = 1.0
+		return
+	# Nearly escaping: the prompt blinks so the player hammers faster.
+	button.modulate.a = 0.35 + 0.65 * absf(sin(Time.get_ticks_msec() / 1000.0 * PI * BLINKS))
 
 func _on_capture_started(_rat: Node3D) -> void:
-    _pressure = 0.0
-    _update_colors()
-    show()
-    set_process(true)
-    if crosshair != null:
-        crosshair.hide()
+	_pressure = 0.0
+	_update_colors()
+	show()
+	set_process(true)
+	if crosshair != null:
+		crosshair.hide()
 
 func _on_progress(fraction: float) -> void:
-    _pressure = fraction
-    bar.value = fraction
-    _update_colors()
+	_pressure = fraction
+	bar.value = fraction
+	_update_colors()
 
 func _on_finished(_killed: bool) -> void:
-    hide()
-    set_process(false)
-    if crosshair != null:
-        crosshair.show()
+	hide()
+	set_process(false)
+	if crosshair != null:
+		crosshair.show()
 
 func _update_colors() -> void:
-    var danger := _pressure <= DANGER_PRESSURE
-    var color := DANGER_COLOR if danger else NORMAL_COLOR
-    button.add_theme_color_override("font_color", color)
-    bar.modulate = color
+	var danger := _pressure <= DANGER_PRESSURE
+	var color := DANGER_COLOR if danger else NORMAL_COLOR
+	button.add_theme_color_override("font_color", color)
+	bar.modulate = color

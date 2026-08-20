@@ -2,7 +2,17 @@ shader_type spatial;
 // `specular_phong` existed when this shader was written, but it left Godot in
 // 4.4: today only `specular_schlick_ggx` (the default) and `specular_disabled`
 // remain.
-render_mode vertex_lighting, skip_vertex_transform, diffuse_lambert_wrap;
+//
+// `cull_disabled` is here for the things the player walks *inside*. A model like
+// the van is a single shell with its faces looking outwards, so from the cargo
+// bay the walls are all back faces and the default culling throws them away: the
+// van turns to glass the moment you step into it. Drawing both sides costs a
+// little overdraw on geometry this simple and nothing at all on closed shapes,
+// which is what everything else in the map is. Lighting on the inside face comes
+// out of the outward normal — `vertex_lighting` settles it before anyone knows
+// which side is being drawn — and that is exactly the kind of wrong this look was
+// after anyway.
+render_mode vertex_lighting, skip_vertex_transform, diffuse_lambert_wrap, cull_disabled;
 
 // The hints changed names since 3.x too: `hint_black` became
 // `hint_default_black`, and the old `hint_black_albedo` split into

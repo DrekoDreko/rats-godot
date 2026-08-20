@@ -9,8 +9,7 @@ extends Node
 ##
 ## The one who credits is always the rat, when its hunt comes to an end (see
 ## `_pay_reward` in `rat.gd`). The price comes from here: species times the
-## death discount. The HUD, once it exists, only needs to listen to
-## `money_changed`.
+## death discount. On screen it is `hud_money.gd` that listens.
 
 ## The total changed. `gain` is what just came in.
 signal money_changed(total: int, gain: int)
@@ -21,9 +20,10 @@ signal catch_recorded(species: RatSpecies, death_type: Death.Type, value: int)
 var money := 0
 var catches := 0
 
-# While there is no HUD, this terminal notice is what shows the money coming in.
-# It goes away once the scoreboard reaches the screen.
-const LOG_TO_TERMINAL := true
+# In game the money shows up on the HUD (`hud_money.gd`). This terminal notice
+# stays behind as a debug switch, useful in the headless test benches, where
+# there is no screen to look at.
+const LOG_TO_TERMINAL := false
 
 ## A rat was delivered. Returns how much it paid.
 func collect(species: RatSpecies, death_type: Death.Type, size := 1.0) -> int:
@@ -39,6 +39,19 @@ func collect(species: RatSpecies, death_type: Death.Type, size := 1.0) -> int:
 	catch_recorded.emit(species, death_type, value)
 	money_changed.emit(money, value)
 	return value
+
+## Pays for something. Returns false when the money is not there, and in that
+## case nothing leaves the wallet. The gain goes out negative: whoever is on
+## screen only reads the total (`hud_money.gd`), and the notice of what came in
+## belongs to the catch, not to the spending.
+func spend(amount: int) -> bool:
+	if amount <= 0 or money < amount:
+		return false
+	money -= amount
+	if LOG_TO_TERMINAL:
+		print("-$%d — total $%d" % [amount, money])
+	money_changed.emit(money, -amount)
+	return true
 
 ## Wipes everything: the start of a shift, and the start of every test bench.
 func reset() -> void:
