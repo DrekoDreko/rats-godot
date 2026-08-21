@@ -1,0 +1,152 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/steam/lobby_screen.gd" id="1_lobby"]
+
+[sub_resource type="StyleBoxFlat" id="Style_lobby_panel"]
+bg_color = Color(0, 0, 0, 0.78)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.55, 0.55, 0.55, 0.75)
+
+[node name="Lobby" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_lobby")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.06, 0.06, 0.07, 1)
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 8
+
+[node name="Rows" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="Margin/Rows"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 20
+text = "RATS"
+
+[node name="Body" type="HBoxContainer" parent="Margin/Rows"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+
+[node name="Left" type="VBoxContainer" parent="Margin/Rows/Body"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="Create" type="Button" parent="Margin/Rows/Body/Left"]
+layout_mode = 2
+text = "CREATE LOBBY"
+
+[node name="JoinRow" type="HBoxContainer" parent="Margin/Rows/Body/Left"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Code" type="LineEdit" parent="Margin/Rows/Body/Left/JoinRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "lobby ID"
+
+[node name="Join" type="Button" parent="Margin/Rows/Body/Left/JoinRow"]
+custom_minimum_size = Vector2(48, 0)
+layout_mode = 2
+text = "JOIN"
+
+[node name="Refresh" type="Button" parent="Margin/Rows/Body/Left"]
+layout_mode = 2
+text = "REFRESH LIST"
+
+[node name="Lobbies" type="ItemList" parent="Margin/Rows/Body/Left"]
+layout_mode = 2
+size_flags_vertical = 3
+allow_reselect = true
+
+[node name="Right" type="PanelContainer" parent="Margin/Rows/Body"]
+custom_minimum_size = Vector2(180, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("Style_lobby_panel")
+
+[node name="Margin" type="MarginContainer" parent="Margin/Rows/Body/Right"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 6
+
+[node name="Column" type="VBoxContainer" parent="Margin/Rows/Body/Right/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Header" type="Label" parent="Margin/Rows/Body/Right/Margin/Column"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 8
+text = "PLAYERS"
+
+[node name="Players" type="VBoxContainer" parent="Margin/Rows/Body/Right/Margin/Column"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 1
+
+[node name="Copy" type="Button" parent="Margin/Rows/Body/Right/Margin/Column"]
+layout_mode = 2
+text = "COPY LOBBY ID"
+
+[node name="Footer" type="HBoxContainer" parent="Margin/Rows"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Leave" type="Button" parent="Margin/Rows/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "LEAVE LOBBY"
+
+[node name="Invite" type="Button" parent="Margin/Rows/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "INVITE FRIENDS"
+
+[node name="Play" type="Button" parent="Margin/Rows/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "PLAY SOLO"
+
+[node name="Status" type="Label" parent="Margin/Rows"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 0.6)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 8
+autowrap_mode = 2

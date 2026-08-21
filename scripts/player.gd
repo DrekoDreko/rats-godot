@@ -26,6 +26,12 @@ extends CharacterBody3D
 ## lets the mouse loose to click with and stops the body from answering to
 ## anything, which is the only way a click can reach a button instead of being
 ## spent grabbing the camera back.
+##
+## And he is being watched. In a lobby, everything the other players see of him
+## is read off two things — `animation_state()` and the `attacked` signal — by
+## the avatar that stands for him on their screens
+## (`scripts/steam/player_avatar.gd`). Nothing in this file knows that the wire
+## exists: somebody else reads him and puts him on it.
 
 signal attacked(hit: bool)
 ## Relays from the weapon to the HUD.
@@ -67,6 +73,9 @@ signal interactable_changed(interactable: Interactable)
 
 ## Vertical pitch limit of the camera (degrees), so it never goes upside down.
 const MAX_PITCH := 89.0
+## Below this much horizontal speed he is standing still as far as anybody
+## watching him is concerned — a hair of drift after a stop is not a walk.
+const IDLE_SPEED := 0.3
 ## Window in which a jump still works after leaving the ground.
 const COYOTE_TIME := 0.12
 ## Height at which the character is sent back to his starting point.
@@ -193,11 +202,42 @@ func _desired_direction() -> Vector3:
 	direction.y = 0.0
 	return direction.normalized()
 
+## Where the shift starts, and where a respawn brings him back to. The map puts
+## him on his spot once, on the way in — with three other people pressing PLAY on
+## the same starting point, somebody has to (`scripts/steam/player_avatars.gd`)
+## — and moving him without moving this would send him back inside a colleague
+## the first time he falls off the world.
+func set_spawn(spot: Vector3) -> void:
+	global_position = spot
+	_start_position = spot
+
 func respawn() -> void:
 	velocity = Vector3.ZERO
 	rotation.y = 0.0
 	head.rotation.x = 0.0
 	global_position = _start_position
+
+## What he looks like he is doing, for the benefit of the other players' screens
+## (`scripts/steam/player_avatar.gd`). It is read off what the body actually did
+## this frame and not off what was pressed: a player walking into a wall is
+## standing still, whatever his keyboard says, and that is what the man watching
+## him should see.
+##
+## The order is the order of what wins. A rat in the hands is the whole of what
+## he is doing, however he is moving; being off the ground beats being on it;
+## and the difference between walking and running is drawn halfway between the
+## two speeds, so the moment he crosses it is the moment he looks like it.
+func animation_state() -> PlayerAvatar.State:
+	if inventory.is_busy():
+		return PlayerAvatar.State.HOLDING
+	if not is_on_floor():
+		return PlayerAvatar.State.AIRBORNE
+	var speed := Vector2(velocity.x, velocity.z).length()
+	if speed < IDLE_SPEED:
+		return PlayerAvatar.State.IDLE
+	if speed > (walk_speed + run_speed) * 0.5:
+		return PlayerAvatar.State.RUNNING
+	return PlayerAvatar.State.WALKING
 
 # --- Hands on --------------------------------------------------------------
 

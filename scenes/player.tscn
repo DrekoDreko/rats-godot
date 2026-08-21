@@ -1,9 +1,9 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene format=3 uid="uid://bvvcrva6c1ve"]
 
-[ext_resource type="Script" path="res://scripts/player.gd" id="1_player"]
-[ext_resource type="Script" path="res://scripts/weapons/hands.gd" id="2_hands"]
-[ext_resource type="Script" path="res://scripts/weapons/inventory.gd" id="3_inventory"]
-[ext_resource type="Script" path="res://scripts/weapons/trap_weapon.gd" id="4_trap"]
+[ext_resource type="Script" uid="uid://b8ngq8c3emtyi" path="res://scripts/player.gd" id="1_player"]
+[ext_resource type="Script" uid="uid://cpie0sl72t3vp" path="res://scripts/weapons/hands.gd" id="2_hands"]
+[ext_resource type="Script" uid="uid://dximu67j2r1kf" path="res://scripts/weapons/inventory.gd" id="3_inventory"]
+[ext_resource type="Script" uid="uid://bcltbhkjypxhw" path="res://scripts/weapons/trap_weapon.gd" id="4_trap"]
 
 [sub_resource type="CapsuleShape3D" id="Shape_body"]
 radius = 0.4
@@ -26,64 +26,62 @@ roughness = 0.6
 material = SubResource("Mat_front")
 size = Vector3(0.25, 0.25, 0.45)
 
-[node name="Player" type="CharacterBody3D" groups=["player"]]
+[node name="Player" type="CharacterBody3D" unique_id=1784827134 groups=["player"]]
 collision_layer = 2
-collision_mask = 1
 script = ExtResource("1_player")
 
-[node name="Collision" type="CollisionShape3D" parent="."]
+[node name="Collision" type="CollisionShape3D" parent="." unique_id=496813555]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 shape = SubResource("Shape_body")
 
-[node name="Model" type="Node3D" parent="."]
+[node name="Model" type="Node3D" parent="." unique_id=1825946101]
 
-[node name="Body" type="MeshInstance3D" parent="Model"]
+[node name="Body" type="MeshInstance3D" parent="Model" unique_id=1717502883]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 cast_shadow = 3
 mesh = SubResource("Mesh_body")
 
-[node name="Front" type="MeshInstance3D" parent="Model"]
+[node name="Front" type="MeshInstance3D" parent="Model" unique_id=1418822884]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, -0.4)
 cast_shadow = 3
 mesh = SubResource("Mesh_front")
 
-[node name="Head" type="Node3D" parent="."]
+[node name="Head" type="Node3D" parent="." unique_id=984869629]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
 
-[node name="Camera" type="Camera3D" parent="Head"]
+[node name="Camera" type="Camera3D" parent="Head" unique_id=258756619]
 current = true
 fov = 80.0
-near = 0.05
 far = 500.0
 
-[node name="Interact" type="RayCast3D" parent="Head/Camera"]
+[node name="Interact" type="RayCast3D" parent="Head/Camera" unique_id=2081203818]
 target_position = Vector3(0, 0, -2.2)
 collision_mask = 8
-collide_with_bodies = false
 collide_with_areas = true
+collide_with_bodies = false
 
-[node name="Hands" type="Node3D" parent="Head"]
+[node name="Hands" type="Node3D" parent="Head" unique_id=266121770]
 transform = Transform3D(1, 0, 0, 0, 0.574, -0.819, 0, 0.819, 0.574, 0.33, -0.3, -0.3)
 script = ExtResource("2_hands")
 display_name = "Hands"
 
-[node name="Mousetrap" type="Node3D" parent="Head"]
+[node name="Mousetrap" type="Node3D" parent="Head" unique_id=282971065]
 transform = Transform3D(1, 0, 0, 0, 0.574, -0.819, 0, 0.819, 0.574, 0.3, -0.28, -0.35)
 script = ExtResource("4_trap")
+stock_id = "mousetrap"
 display_name = "Trap"
 cooldown = 0.6
-stock_id = "mousetrap"
 
-[node name="RatGlue" type="Node3D" parent="Head"]
+[node name="RatGlue" type="Node3D" parent="Head" unique_id=275034632]
 transform = Transform3D(1, 0, 0, 0, 0.574, -0.819, 0, 0.819, 0.574, 0.3, -0.28, -0.35)
 script = ExtResource("4_trap")
+stock_id = "rat_glue"
 display_name = "Glue"
 cooldown = 0.6
-stock_id = "rat_glue"
 
-[node name="CapturePoint" type="Node3D" parent="Head"]
+[node name="CapturePoint" type="Node3D" parent="Head" unique_id=276718476]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.05, -0.6)
 
-[node name="Inventory" type="Node" parent="Head"]
+[node name="Inventory" type="Node" parent="Head" unique_id=1147383766]
 script = ExtResource("3_inventory")
 slots = Array[NodePath]([NodePath("../Hands"), NodePath("../Mousetrap"), NodePath("../RatGlue")])

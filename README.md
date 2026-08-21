@@ -8,6 +8,10 @@
 2. Open Godot, click **Import** and pick this repository's `project.godot`.
 3. Run with `F5`.
 
+`F5` opens on the **lobby screen** (`scenes/lobby.tscn`), not on the map. With no
+Steam client running it says so and **PLAY SOLO** goes straight to the hunt, which
+is the normal development run. See [The lobby](#the-lobby).
+
 ## Controls
 
 | Key | Action |
@@ -256,10 +260,190 @@ discards the duplicate animations and marks the idle and the run as looping.
 project settings: without it Godot tries to open the `.blend` and demands a
 Blender installation just to run the game.
 
+## The lobby
+
+The game opens on a waiting room. **CREATE LOBBY** opens one on Steam and makes
+you its host; **REFRESH LIST** shows what is open and clicking a row fills in its
+ID; **JOIN** walks into whatever ID is in the box, pasted from a friend or picked
+off the list. Whoever is in the lobby shows up in the panel on the right, the
+host with a `*` against their name, and the list moves as people come and go.
+**PLAY** is the host's to press, and everybody goes into the map at once.
+
+Two things are up at the same time and it helps to keep them apart. The **Steam
+lobby** is the guest list — Valve holds it, it survives the map loading, and it
+is what the panel reads. The **`SteamMultiplayerPeer`** is the wire: Godot's own
+`SceneMultiplayer`, running over Steam's peer-to-peer, and what the player
+synchronisation will speak over. `scripts/steam/lobby_manager.gd` opens both at
+the same moment and closes both at the same moment, so nothing else in the game
+has to wonder which of the two is up.
+
+Who hosts is not decided in our code: it is whoever Steam says owns the lobby.
+The owner calls `host_with_lobby()` and comes out as peer 1 — the network
+authority — and everybody else calls `connect_to_lobby()` and dials them. There
+is no host migration, and on purpose: Steam hands a lobby to whoever is left when
+the owner walks out, but the connection does not follow, so the honest answer is
+to drop everyone back to this screen.
+
+Lobbies are **public**, which is what lets two accounts that have never met find
+each other in the list. The catch is the app ID: until RATS has one of its own
+the game borrows Valve's Spacewar (480), and a plain search on 480 comes back
+full of strangers testing their own games — ten of them, on the first try. So
+every lobby is stamped `game=rats` on creation and the browser filters on it. A
+lobby just created takes Steam a few seconds to reach the index, so an empty list
+right after **CREATE LOBBY** is Steam catching up, not a fault.
+
+Nothing Steam is asked here is answered on the spot. `create_lobby()` and
+`join_lobby()` returning true only means the request went out; the answer lands
+later on `lobby_entered` or, if it went wrong, on `lobby_failed` — one sentence,
+which the screen puts straight on its bottom line in red. A lobby that is full, a
+lobby that is gone, an ID that is not a lobby at all, a host that stops answering
+and Steam not being there in the first place all come out that way.
+
+### The others, in the map
+
+Press **PLAY** and everybody in the lobby lands in the same map — and everybody
+who is not you is walking around it as a red capsule with their Steam name
+floating over it. It is the very capsule you are wearing yourself, the one you
+never see because you are looking out of it, so the placeholder reads as *a
+player* rather than as a prop, and the yellow nub on its chest says which way he
+is facing and doubles as the arm he swings.
+
+What crosses the wire is three things, twenty times a second: where he is
+standing, which way he is facing and what he is doing. The facing is the yaw
+only — where his head is pointing is his own camera's business and nothing on
+your screen is drawn from it — and what he is doing is one of five states
+(*idle*, *walking*, *running*, *airborne*, *holding a rat*), which the character
+reads off his own body rather than off his keyboard: a player walking into a
+wall is standing still, whatever he is pressing, and that is what you should see.
+
+On top of that there is the click. Using whatever is in his hands — a grab, a
+trap going down — is not a state, it is a thing that happens and is over, so it
+goes across as an RPC (`PlayerAvatar.act`) rather than as a value that gets
+sampled: one click is one arm going out, on every screen at once, and a click
+that lands between two packets is never quietly dropped.
+
+**Nobody is smoothed by teleporting.** What arrives is a target and not a place:
+the capsule eases towards the last position that landed rather than jumping to
+it, at a rate that leaves it about a third of a metre behind a running player and
+lets it catch up the moment he stops. The one thing that is *not* eased is the
+long jump — anything further than four metres is a respawn or a hole in the wire,
+and sliding across the map to it would read as flying. A capsule is not drawn at
+all until the first packet says where its player is, because an undrawn one
+stands at the origin, which is a lie the moment somebody looks at it.
+
+The animation is the one part that is honestly a placeholder: a capsule has
+nothing to animate, so the body bobs as he walks, harder and faster as he runs,
+sits low while he has a rat in his hands and rides high while he is off the
+ground. When the real character model arrives, `_animate` is the one method to
+throw away — the state itself is already crossing.
+
+Everybody presses **PLAY** on the same starting point, which used to be fine
+because nobody moved and the capsules were parked in a ring around it. Now that
+the positions are real, each machine steps *its own* character onto a spot in
+that same ring on the way in — the peers sorted, ours found among them, the spot
+that falls to it taken — and the other screens see him walk out of the van from
+there like they see everything else about him. It is also where a respawn brings
+him back to, which is why it goes through `player.set_spawn()` and not through a
+bare move.
+
+#### Who owns what
+
+Every player owns his own body and nobody else's. The host is peer 1 and holds
+the lobby open, and that is all he holds: he has no more say over where you are
+standing than you have over where he is. That is what
+`set_multiplayer_authority(peer_id)` on each avatar says, and the
+`MultiplayerSynchronizer` under it obeys it in both directions — the machine that
+owns an avatar writes to it, everybody else reads.
+
+The consequence worth knowing is that there is one avatar per player *including
+you*. Godot replicates a node onto the node at the same path on the other
+machine, so the only way your position reaches anybody is for there to be a node
+on your machine that stands for you — the same node they have for you. So one
+goes up for every peer, named `Player<peer id>` on every machine, and yours is
+simply never drawn: you are already in the map as the character, and you are
+inside that capsule looking out of it. It reads `player.gd` every physics frame
+and never touches a packet by hand.
+
+Who puts them up is `scripts/steam/player_avatars.gd`, a node in `world.tscn`,
+and it is deliberately not in `LobbyManager`: the manager is an autoload that
+outlives the map and is up on the waiting-room screen too, where there is no
+world to put a capsule in. So the map is what listens, and the capsules die with
+it.
+
+What it listens to is the *wire* and not the guest list — `multiplayer.get_peers()`
+rather than `members_changed`. They are nearly the same list, and the wire is the
+truthful one: a player who is in the Steam lobby but not on the wire is a body
+nothing could ever move.
+
+Names come from the peers themselves. Every peer introduces itself to every other
+one the moment they are connected (`LobbyManager._introduce`), which happens on
+the waiting-room screen, long before the map opens; a name that lands after the
+capsule is already up lands *on* it, through `peer_identified`, without the
+capsule being taken down and put back up. It is asked of nobody — not of Steam,
+not of the transport — so a name can never come back as `[unknown]`, and nothing
+above the wire has to know what the wire is made of.
+
+Solo is untouched by all of it. With no lobby there is no peer, and with no peer
+this node puts nothing up and does nothing at all.
+
+### Testing it with two clients
+
+One machine cannot do it: Steam allows one running client per account. Two
+accounts on two machines, both with the game open:
+
+1. Both run the game and land on the lobby screen; the bottom line names the
+   account each one is signed in as.
+2. One presses **CREATE LOBBY**, then **COPY LOBBY ID** and sends the number
+   over — or **INVITE FRIENDS**, if they are on each other's lists.
+3. The other pastes it and presses **JOIN**, or waits a few seconds and presses
+   **REFRESH LIST** to find the row.
+4. Both panels should read `PLAYERS 2/4` with the same two names, the host's
+   marked. Closing one game takes that name off the other's list.
+5. The host presses **PLAY**. Both land in the map, and each sees one capsule
+   with the other's name on it, standing by the van.
+6. Walk. The capsule on the other screen walks with you — a little behind, never
+   in jumps — turns when you turn, bobs when you run and drops low while you have
+   a rat in your hands. Click, and its arm goes out on both screens at once.
+   Jump, and it leaves the ground.
+7. Closing one game takes that capsule off the other's map.
+
+`_test_lobby.gd` covers everything one account can reach on its own — the lobby
+opening, the stamp landing, coming out of it as peer 1 with the authority, the
+screen drawing the name, the browser finding it through the filter, and the three
+ways of getting it wrong. It needs the Steam client signed in:
+
+```
+godot --headless --script _test_lobby.gd
+```
+
+`_test_sync.gd` covers the half that comes after — the bodies in the map and
+everything that crosses the wire to move them — and needs no Steam and no second
+machine. It runs the thing one layer down: two `SceneMultiplayer`s over ENet on
+the loopback, each rooted at its own subtree, which is as close to two clients as
+one process gets. Steam is only ever the transport underneath, and the
+replication on top of it is the same either way.
+
+It checks that both sides put up one capsule per player under the same name and
+with the authority on the peer it stands for, that your own is never drawn and
+somebody else's is not drawn until the first packet lands, that a player walking
+on one side is a body walking — *following*, never teleporting, and catching up
+when he stops — on the other, that the state crosses and is played, that one
+click crosses as exactly one arm going out, that a late name lands on the capsule
+already standing there, and that somebody closing their game takes their capsule
+away. The last two steps drop the wire entirely and open the real map to check
+the solo case: nobody standing about, and the real character answering for
+himself.
+
+```
+godot --headless --script _test_sync.gd
+```
+
 ## Structure
 
-- `scenes/` — the game's scenes (`world.tscn` is the main scene, `player.tscn` is
-  the character and `rat.tscn` is the mob)
+- `scenes/` — the game's scenes (`lobby.tscn` is the main scene, the waiting room
+  the game opens on, `world.tscn` is the map, `player.tscn` is the character,
+  `player_avatar.tscn` is the capsule a player stands as on the other players'
+  screens and `rat.tscn` is the mob)
 - `scripts/` — GDScript scripts (`player.gd` handles first-person movement,
   `rat.gd` the rats' AI and the capture, `navigation.gd` bakes the mesh they walk
   on, `rat_counter.gd` the HUD scoreboard, `hud_money.gd` the wallet on screen,
@@ -274,6 +458,14 @@ Blender installation just to run the game.
   player can put his hands on
 - `scripts/shop/` — `shop_computer.gd`, the machine in the van that carries the
   catalogue
+- `scripts/steam/` — everything that talks to Steam: `steam_manager.gd` is the
+  autoload that brings the API up and keeps its callbacks flowing, and
+  `lobby_manager.gd` the autoload that holds the lobby, the multiplayer peer and
+  who each peer on it is; `lobby_screen.gd` is the waiting room drawn on
+  `scenes/lobby.tscn`, `player_avatars.gd` is the node in the map that puts up
+  one body per player on the wire and `player_avatar.gd` is one of those bodies,
+  the piece that reads the character on the machine it belongs to and follows the
+  wire on everybody else's
 - `scripts/economy/` — the money from the hunt: `death.gd` is the table of death
   types, `rat_species.gd` is the mould of a breed of rat, `store_item.gd` is a
   line on the computer's catalogue, `wallet.gd` is the autoload that holds what

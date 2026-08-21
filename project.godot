@@ -11,12 +11,14 @@ config_version=5
 [application]
 
 config/name="RATS"
-run/main_scene="res://scenes/world.tscn"
+run/main_scene="res://scenes/lobby.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
 
 [autoload]
 
+SteamManager="*res://scripts/steam/steam_manager.gd"
+LobbyManager="*res://scripts/steam/lobby_manager.gd"
 Wallet="*res://scripts/economy/wallet.gd"
 Stock="*res://scripts/economy/stock.gd"
 
@@ -28,6 +30,10 @@ window/size/window_width_override=1280
 window/size/window_height_override=720
 window/stretch/mode="viewport"
 window/stretch/aspect="expand"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/godotsteam/plugin.cfg")
 
 [filesystem]
 
