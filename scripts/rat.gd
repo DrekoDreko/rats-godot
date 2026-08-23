@@ -90,6 +90,22 @@ const EXIT_RANGE := 2.5
 const PATH_WEIGHT := 0.6
 ## Penalty for a path that grazes the player.
 const NEAR_MISS_PENALTY := 60.0
+## What a dead rat left rotting in a trap does to the ground around it. It is
+## heavier than the bonus for being out of sight (`HIDDEN_BONUS`) on purpose: a
+## rat would rather be seen than lie down next to a corpse.
+const FEAR_PENALTY := 40.0
+## What crossing that ground costs on the way somewhere else. Lighter than
+## standing in it: a rat in a hurry will run past what it would never sit in.
+const FEAR_CROSSING_PENALTY := 30.0
+## How far a foul spot's reach goes when it does not say (`fear_radius`).
+const DEFAULT_FEAR_RADIUS := 4.0
+## How often the map's foul spots are re-read. They do not move and are not made
+## often, so the rat reads them on a slow clock and every decision it makes in
+## between uses the list it already has.
+const FEAR_REFRESH := 0.5
+## How many times the wander re-rolls a destination that turned out to be foul
+## before giving up and standing still for a moment.
+const WANDER_TRIES := 4
 ## Time pushing against a corner before shaking sideways.
 const STUCK_TIME := 0.6
 ## Duration of the sidestep that unwedges the rat from the corner.
@@ -159,6 +175,15 @@ const STOW_OFFSET := Vector3(0.15, 0.05, -0.08)
 const STOW_VANISH := 0.62
 ## After escaping, it stays impossible to re-grab for a while.
 const IMMUNITY_TIME := 1.5
+## How much of the usual work a rat already stuck on the glue is worth. Pinned,
+## it has nothing to brace against and gives in in a fraction of the goes it
+## takes one caught loose on the floor. It is a *fraction of the effort*, and not
+## a number of squeezes, so that every weapon measuring its work in some number
+## of goes can scale that number by it without knowing what glue is.
+const PINNED_EFFORT := 0.35
+## How far the body rocks pulling against the glue, and how fast.
+const PIN_SHAKE := 0.12
+const PIN_CADENCE := 8.0
 ## The struggle of something held with nobody squeezing. It is never zero: it
 ## thrashes the whole time.
 const BASE_STRUGGLE := 0.35
@@ -219,6 +244,11 @@ var _has_target := false
 var _state_time := 0.0
 var _target_time := 0.0
 var _search_time := 0.0
+## The map's foul spots as the rat last read them, each an (x, y, z, radius). A
+## `Vector4` and not a dictionary because this is read from the hot paths and
+## rebuilt on a timer: the packed form costs no allocation per spot.
+var _fear_cache: Array[Vector4] = []
+var _fear_time := 0.0
 var _stuck_time := 0.0
 var _dodge_time := 0.0
 var _dodge_direction := Vector3.ZERO
@@ -245,6 +275,21 @@ var _jolt_spin := Vector3.ZERO
 var _kick_time := 0.0
 var _immune_time := 0.0
 
+## Stuck where it stands, the glue under its feet. It is deliberately *not* one
+## of the states: a pinned rat goes on being whatever it was and simply cannot
+## leave the spot, and that is what lets the hand still come and take it — off
+## the glue it becomes a capture like any other, with no state to unwind first.
+var _pinned := false
+## What is holding it down, so whatever holds it hears about the ending: killed
+## where it lay, or torn off by hand. Null with nothing holding it.
+var _pin: Node3D
+
+## Whatever has a claim on the body and will not let it vanish on its own clock.
+## It is the carcass's counterpart to `_pin`: the glue holds a rat that is still
+## alive, and this holds what is left of one that is not. Null for every rat that
+## dies loose on the floor, which is nearly all of them.
+var _holder: Node3D
+
 ## What it died of, and how big it is for one of its species: the two halves of
 ## the price. `_paid` is the latch that keeps the reward from landing twice.
 var _death_type := Death.Type.UNKNOWN
@@ -265,6 +310,8 @@ func _ready() -> void:
 	_previous_position = global_position
 	# Spreads the rats' decisions across different frames.
 	_search_time = randf() * SEARCH_INTERVAL
+	_fear_time = randf() * FEAR_REFRESH
+	_fear_cache = _fear_spots()
 	_pick_fur()
 	_play_idle()
 	# Each rat enters the animation at a different point of the cycle, otherwise
@@ -289,7 +336,25 @@ func _physics_process(delta: float) -> void:
 	if _state == State.CAPTURED:
 		return
 
+	# Stuck on the glue it neither runs nor decides anything: it stays where it
+	# was caught, pulling against its own feet. This comes before the fear
+	# machine on purpose — there is no sense reassessing a flight it cannot
+	# start, and a rat that spent the whole time trying to flee would be a rat
+	# wearing its running animation standing still.
+	if _pinned:
+		_struggle_in_place(delta)
+		_apply_gravity(delta)
+		move_and_slide()
+		return
+
 	_state_time += delta
+	# The map's bad ground, re-read on its own slow clock. Everything below —
+	# the state it talks itself into, the hideout it picks, the way it walks
+	# there — reads the list this leaves behind.
+	_fear_time -= delta
+	if _fear_time <= 0.0:
+		_fear_time = FEAR_REFRESH
+		_fear_cache = _fear_spots()
 	_reassess_state()
 
 	match _state:
@@ -328,13 +393,15 @@ func _process(delta: float) -> void:
 
 ## Takes a hit. With `max_health` 1 (the default) any hit kills. `type` is what
 ## death the weapon kills with, and it is what decides how much the body pays.
+## `leap` is the little hop the body makes as it goes: whatever kills a rat at
+## arm's length lets it jump, and whatever comes down on top of it does not.
 func take_damage(amount: int = 1, origin: Vector3 = INVALID_POINT,
-		type := Death.Type.UNKNOWN) -> void:
+		type := Death.Type.UNKNOWN, leap := 3.0) -> void:
 	if _state == State.DEAD or _state == State.CAPTURED:
 		return
 	_health -= amount
 	if _health <= 0:
-		_die(origin, 3.0, type)
+		_die(origin, leap, type)
 		return
 	_change_state(State.FLEEING)
 	if origin != INVALID_POINT:
@@ -359,6 +426,108 @@ func is_in_hand() -> bool:
 func body_center() -> Vector3:
 	return global_position + global_basis * BODY_CENTER
 
+# --- Stuck -----------------------------------------------------------------
+#
+# A rat that steps on the glue stops where it is. It does not die of it: it stays
+# there pulling against its own feet until somebody comes to finish it — and
+# whoever comes may finish it however he likes.
+#
+# That is the whole trade the glue offers against the mousetrap. The trap works
+# while the player is somewhere else and hands back a mangled animal
+# (`Death.Type.TRAP`); the glue does only half the job and hands back a rat that
+# cannot run, to be strangled whole at full price, or brained with whatever the
+# van sells next. The glue has no opinion on how it ends — it only holds.
+#
+# Being stuck is not one of the rat's states, and that is the point: it is
+# something that happens *to* a rat that goes on being whatever it was. Nothing
+# in the state machine knows about it, `take_damage` needs no exception for it,
+# and the hand can still take the animal off it without any state to unwind.
+
+## Stuck in place. `holder` is whatever is holding it down, and gets told through
+## `released()` when the rat dies or is torn off it.
+func pin(holder: Node3D = null) -> void:
+	if _state == State.DEAD or _state == State.CAPTURED or _pinned:
+		return
+	_pinned = true
+	_pin = holder
+	# It stops where it was caught, and whatever it was in the middle of — a path
+	# to a hideout, a crouch behind a crate — is over.
+	_clear_target()
+	velocity = Vector3.ZERO
+	model.scale = Vector3.ONE
+	animator.speed_scale = 1.0
+	_play_idle()
+
+## Let go of whatever was holding it down: killed where it lay, or torn off by a
+## hand that came for it. Whoever was holding it hears about it, once — a tray
+## with a rat's worth of fur pulled off it is not catching a second one.
+func unpin() -> void:
+	if not _pinned:
+		return
+	_pinned = false
+	var holder := _pin
+	_pin = null
+	model.rotation.z = 0.0
+	if holder != null and is_instance_valid(holder) and holder.has_method("released"):
+		holder.released(self)
+
+## Stuck in place and unable to leave. It is what a weapon asks before deciding
+## how much work the animal is going to be.
+func is_pinned() -> bool:
+	return _pinned
+
+## How much of a weapon's usual effort this rat is worth, from 0 to 1. A rat that
+## cannot get away was already beaten when it was picked up; one caught loose
+## costs the whole job. Every weapon that measures its work in *some number of
+## goes* scales that number by this, and none of them has to know what glue is.
+func effort() -> float:
+	return PINNED_EFFORT if _pinned else 1.0
+
+## The thrashing of something stuck: it pulls against the glue without ever
+## leaving the spot. The body rocks side to side and the legs stay still — a rat
+## wearing its run cycle going nowhere would read as a bug, not as a struggle.
+func _struggle_in_place(delta: float) -> void:
+	velocity.x = 0.0
+	velocity.z = 0.0
+	model.rotation.z = sin(_state_time * PIN_CADENCE) * PIN_SHAKE
+	model.scale = model.scale.lerp(Vector3.ONE, minf(delta * 6.0, 1.0))
+	_state_time += delta
+	_play_idle()
+
+# --- Carcass ---------------------------------------------------------------
+#
+# The other half of being held. `pin` above holds a rat that is still alive and
+# lets go of it the moment it stops being one; this holds what is left after,
+# and it is what keeps a body lying in the thing that killed it instead of
+# shrinking politely away on its own clock.
+
+## Somebody has a claim on this body before it is even a body. Whatever kills the
+## rat from here on, what is left of it stays where it fell until `holder` says
+## otherwise.
+##
+## It is asked for *before* the blow and never after: by the time the blow has
+## landed `_die()` has already started the vanishing, and a body on its way out
+## is a body nobody can call back.
+func claim_carcass(holder: Node3D) -> void:
+	# A rat in somebody's hand is already spoken for, and the hand leaves no
+	# carcass to hold on to.
+	if _state == State.CAPTURED:
+		return
+	_holder = holder
+
+## True while something out in the world is still holding on to this body.
+func is_held() -> bool:
+	return _holder != null and is_instance_valid(_holder)
+
+## Whoever was holding the body has finished with it — the trap it was lying in
+## has been cleaned out. It goes the way every other carcass goes, on the clock
+## it should have had all along.
+func release_carcass() -> void:
+	if _holder == null:
+		return
+	_holder = null
+	_vanish()
+
 # --- Capture ---------------------------------------------------------------
 #
 # The player grabs the rat, it is torn off the ground in an arc towards `point` —
@@ -377,6 +546,12 @@ func body_center() -> Vector3:
 func capture(point: Node3D) -> bool:
 	if _state == State.DEAD or _state == State.CAPTURED or _immune_time > 0.0:
 		return false
+
+	# Torn off whatever was holding it down. It happens before anything else so
+	# that from here on this is an ordinary capture with nothing left stuck to
+	# it — and whoever wants to know how beaten the animal already was has to ask
+	# before the grab, not after (`scripts/weapons/hands.gd`).
+	unpin()
 
 	_state = State.CAPTURED
 	_capture_phase = Capture.POUNCE
@@ -628,16 +803,21 @@ func _reassess_state() -> void:
 	# Hidden, it puts up with the player a lot closer before bolting again.
 	var hearing_limit := hidden_panic_radius if _state == State.HIDING else panic_radius
 	var scared := distance <= hearing_limit or (distance <= _current_alert_radius() and _sees_player())
+	# The other thing that gets a rat off the ground: standing where one of its
+	# own is lying dead. It hunts nobody and it does not move, so it never sends
+	# the rat anywhere in particular — it only makes it not want to be here, and
+	# the flight's own search is what finds it somewhere better.
+	var foul := _fear_at(global_position, _fear_cache) > 0.0
 
 	match _state:
 		State.WANDERING, State.IDLE:
-			if scared:
+			if scared or foul:
 				_change_state(State.FLEEING)
 		State.FLEEING:
-			if not scared and distance >= safe_radius:
+			if not scared and not foul and distance >= safe_radius:
 				_change_state(State.WANDERING)
 		State.HIDING:
-			if scared:
+			if scared or foul:
 				_change_state(State.FLEEING)
 			elif distance >= safe_radius and _state_time > 2.0:
 				_change_state(State.WANDERING)
@@ -702,6 +882,50 @@ func _process_flee(delta: float) -> void:
 func _process_hide(delta: float) -> void:
 	_move(Vector3.ZERO, 0.0, delta)
 	model.scale = model.scale.lerp(CROUCH_SCALE, minf(delta * 8.0, 1.0))
+
+# --- Fear ------------------------------------------------------------------
+#
+# Ground the rats will not have. A mousetrap that has gone off with a rat still
+# in it joins the `fear` group, and from then on it is a hole in the map as far
+# as the others are concerned — not a wall, which is the point: the flight can
+# still cross it when there is nowhere else to go, it simply never chooses to.
+#
+# It is a preference and deliberately not geometry. Baking it into the navigation
+# mesh would make the rats route politely around it the way they route around
+# crates, and a trap that quietly reshaped the floor is exactly what
+# `scripts/traps/trap.gd` warns against.
+
+## Everywhere in the map a rat has learned to hate, each packed as its position
+## and how far it reaches. It comes back empty for as long as nothing is foul,
+## which is nearly always — and that is what makes the whole thing free to ask
+## about when there is nothing to ask.
+func _fear_spots() -> Array[Vector4]:
+	var spots: Array[Vector4] = []
+	for node in get_tree().get_nodes_in_group("fear"):
+		var spot := node as Node3D
+		if spot == null:
+			continue
+		var reach := DEFAULT_FEAR_RADIUS
+		if spot.has_method("fear_radius"):
+			reach = spot.fear_radius()
+		var at := spot.global_position
+		spots.append(Vector4(at.x, at.y, at.z, reach))
+	return spots
+
+## How deep in the fear a point sits, from 0 on clean ground up to 1 at the heart
+## of it. It is a sum: two dead rats in the same corner make a corner twice as
+## bad as one.
+func _fear_at(point: Vector3, spots: Array[Vector4]) -> float:
+	var fear := 0.0
+	for spot in spots:
+		var reach := spot.w
+		if reach <= 0.0:
+			continue
+		var distance := _flat_distance(point, Vector3(spot.x, spot.y, spot.z))
+		if distance >= reach:
+			continue
+		fear += 1.0 - distance / reach
+	return fear
 
 # --- Hideout ---------------------------------------------------------------
 
@@ -808,6 +1032,10 @@ func _score_point(point: Vector3, player_eyes: Vector3, player_position: Vector3
 	var score := distance
 	if _blocked(player_eyes, point + Vector3.UP * EYE_HEIGHT):
 		score += HIDDEN_BONUS
+	# A blind spot with a dead rat in it is no blind spot at all. The penalty is
+	# steep but finite: cornered, with the player on one side and the smell on
+	# the other, a rat still picks the smell over standing still.
+	score -= _fear_at(point, _fear_cache) * FEAR_PENALTY
 	return score + _exits_from_point(point) * EXIT_BONUS
 
 ## How many of the four directions around the point are clear. A closed corner
@@ -830,17 +1058,31 @@ func _path_cost(path: PackedVector3Array, player_position: Vector3) -> float:
 	var length := 0.0
 	var closest := INF
 
+	# The worst any one foul spot gets brushed along the way, and not the sum of
+	# them: a walk that grazes the same corpse across five stretches of path was
+	# punished once by the map, not five times by the mesh's tessellation.
+	var foul := 0.0
+
 	for i in range(1, path.size()):
 		var from := Vector3(path[i - 1].x, 0.0, path[i - 1].z)
 		var to := Vector3(path[i].x, 0.0, path[i].z)
 		length += from.distance_to(to)
 		var graze := Geometry3D.get_closest_point_to_segment(flat_player, from, to)
 		closest = minf(closest, graze.distance_to(flat_player))
+		for spot in _fear_cache:
+			var reach := spot.w
+			if reach <= 0.0:
+				continue
+			var centre := Vector3(spot.x, 0.0, spot.z)
+			var brush := Geometry3D.get_closest_point_to_segment(centre, from, to)
+			var distance := brush.distance_to(centre)
+			if distance < reach:
+				foul = maxf(foul, 1.0 - distance / reach)
 
 	var cost := length * PATH_WEIGHT
 	if closest < panic_radius:
 		cost += NEAR_MISS_PENALTY
-	return cost
+	return cost + foul * FEAR_CROSSING_PENALTY
 
 ## The current hideout keeps working as long as the player neither reaches it
 ## with his eyes nor comes too close to it.
@@ -852,14 +1094,22 @@ func _hideout_still_works(player_eyes: Vector3) -> bool:
 	return _blocked(player_eyes, _target + Vector3.UP * EYE_HEIGHT)
 
 func _pick_wander_target() -> void:
-	var direction := Vector3(randf_range(-1.0, 1.0), 0.0, randf_range(-1.0, 1.0))
-	if direction.is_zero_approx():
-		direction = Vector3.FORWARD
-	var point := _navigable_point(global_position + direction.normalized() * randf_range(4.0, 12.0))
-	if point == INVALID_POINT:
-		_clear_target()
+	for attempt in WANDER_TRIES:
+		var direction := Vector3(randf_range(-1.0, 1.0), 0.0, randf_range(-1.0, 1.0))
+		if direction.is_zero_approx():
+			direction = Vector3.FORWARD
+		var point := _navigable_point(global_position + direction.normalized() * randf_range(4.0, 12.0))
+		if point == INVALID_POINT:
+			continue
+		# It will not stroll into a corner that smells of a dead rat. It rolls
+		# again rather than give up on the spot: a rat with no destination is a
+		# rat standing still, and standing still is what it is trying to stop
+		# doing.
+		if _fear_at(point, _fear_cache) > 0.0:
+			continue
+		_set_target(point)
 		return
-	_set_target(point)
+	_clear_target()
 
 # --- Navigation ------------------------------------------------------------
 
@@ -1116,6 +1366,10 @@ func _pay_reward() -> void:
 ## body makes as it takes the hit. Whatever dies strangled does not come through
 ## here: it vanishes at the player's waist, leaving no carcass.
 func _die(origin: Vector3, leap := 3.0, type := Death.Type.UNKNOWN) -> void:
+	# Whatever was holding it down has finished its job and hears about it here,
+	# before the body starts falling: a glue tray with a dead rat on it is a tray
+	# that has been used up.
+	unpin()
 	_state = State.DEAD
 	_record_death(type)
 	# Killed from a distance, the body falls and the job ended right there: it
@@ -1131,9 +1385,22 @@ func _die(origin: Vector3, leap := 3.0, type := Death.Type.UNKNOWN) -> void:
 	# frame.
 	animator.play(ANIM_DEATH, BLEND)
 
-	var tween := create_tween()
 	# Undoes the hideout crouch, if it died hidden.
+	var tween := create_tween()
 	tween.tween_property(model, "scale", Vector3.ONE, 0.2)
+
+	# A body somebody has a claim on does not go anywhere. It lies in the thing
+	# that killed it until whoever owns it is done — which, for a mousetrap, is
+	# the day the player comes and cleans it out (`release_carcass`).
+	if is_held():
+		return
+	_vanish()
+
+## The carcass going: it holds the ground a moment longer and then shrinks away.
+## Every rat killed at a distance ends here — the ones nobody claimed, on their
+## own clock, and the ones somebody did, on his.
+func _vanish() -> void:
+	var tween := create_tween()
 	tween.tween_interval(CARCASS_TIME)
 	tween.tween_property(model, "scale", Vector3(0.02, 0.02, 0.02), 0.3).set_ease(Tween.EASE_IN)
 	tween.tween_callback(queue_free)

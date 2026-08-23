@@ -75,14 +75,18 @@ func _process(delta: float) -> void:
 func try_use() -> void:
 	if _cooldown_left > 0.0:
 		return
-	_cooldown_left = cooldown
+	_cooldown_left = get_cooldown()
 	_use()
 
 ## Puts the weapon on cooldown without using it. It keeps the click that ended
 ## one job from running straight into the next, now that grabbing and strangling
 ## share the same button.
 func start_cooldown() -> void:
-	_cooldown_left = cooldown
+	_cooldown_left = get_cooldown()
+
+## Current cooldown duration, which can vary by weapon type and phase.
+func get_cooldown() -> float:
+	return cooldown
 
 ## Taken out of the belt: from here on it is the one the click reaches.
 func equip() -> void:
@@ -106,11 +110,34 @@ func unequip() -> void:
 func is_busy() -> bool:
 	return false
 
+## True while the weapon will not be put away, whether or not it is holding the
+## player down. The two come apart for the first time with the glue: laying a
+## strip of it is something the player does *while walking*, so he is not busy —
+## but he cannot reach for another weapon halfway through either, because a strip
+## abandoned between its two clicks is neither on the floor nor back in the box.
+##
+## Being busy is always reason enough; a weapon that wants the belt for some
+## other reason of its own says so here.
+func holds_belt() -> bool:
+	return is_busy()
+
+## Calls off whatever the weapon had started and not finished. Returns whether
+## there was in fact anything to call off, so whoever asked — the key that could
+## just as well have meant something else — knows whether it was spent here.
+func cancel() -> bool:
+	return false
+
 ## Whether the weapon can be taken out at all. The hands always can; a weapon
 ## that runs out — a box of traps — says no once it is empty, and the belt then
 ## treats its slot as the empty loop it has become
 ## (`scripts/weapons/inventory.gd`).
 func available() -> bool:
+	return true
+
+## Whether this weapon is an attack weapon (used to damage or kill rats).
+## Attack weapons are barred during the SURVEY phase (Card 12), while non-attack
+## utilities (traps, baits, patches, map, flashlight) remain available.
+func is_attack_weapon() -> bool:
 	return true
 
 ## Relay of the secondary action (the click, with the hands full) while the

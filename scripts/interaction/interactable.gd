@@ -21,6 +21,16 @@ signal used(by: Node3D)
 
 ## What the on-screen prompt reads, after the key: "E — use the computer".
 @export var prompt := "use"
+## How long the key has to be held down before it counts. Zero is a thing that
+## answers to a tap, which is what most of them are — the computer opens the
+## instant it is asked. Anything above zero is work: the player stands there with
+## his finger down and a bar on screen, and letting go throws it away.
+@export var hold_time := 0.0
+
+## Whether this is one of the slow ones. The player asks before deciding what a
+## press of the key even means (`player.gd: _update_hold`).
+func is_held_work() -> bool:
+	return hold_time > 0.0
 
 ## Hands on. It is the only door in: the player calls it, and the thing itself
 ## decides what that means.

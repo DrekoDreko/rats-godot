@@ -60,6 +60,7 @@ func _initialize() -> void:
 	Engine.max_fps = 60
 	_world = load("res://scenes/world.tscn").instantiate()
 	root.add_child(_world)
+	_seed_rats(6)
 	_player = _world.get_node("Player")
 	_head = _player.get_node("Head")
 	_hands = _player.get_node("Head/Hands")
@@ -315,3 +316,23 @@ func _closest() -> Node3D:
 
 func _flat(a: Vector3, b: Vector3) -> float:
 	return Vector2(a.x - b.x, a.z - b.z).length()
+
+
+## The world scene is the survey/hunt map now, so it ships with no rats: the host
+## spawns them from the contract when the hunt starts. A bench that needs loose
+## rats to grab puts its own out, which is also what keeps it from depending on
+## where the level dressing happened to leave them.
+func _seed_rats(count: int) -> void:
+	var packed := load("res://scenes/rat.tscn") as PackedScene
+	if packed == null:
+		return
+	var rats := _world.get_node_or_null("Rats")
+	if rats == null:
+		rats = Node3D.new()
+		rats.name = "Rats"
+		_world.add_child(rats)
+	for i in count:
+		var rat := packed.instantiate() as Node3D
+		rats.add_child(rat)
+		rat.name = "TestRat_%d" % (i + 1)
+		rat.global_position = Vector3(-2.0 + float(i) * 2.0, 0.1, 12.0)

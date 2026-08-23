@@ -3,15 +3,17 @@ extends HBoxContainer
 ## everybody already knows from Minecraft — a dark cell each, and a bright frame
 ## around whichever one is in hand.
 ##
-## It only mirrors the player's `Inventory`. A slot with a weapon in it shows
-## that weapon's icon, or its name while no art has arrived for it yet; an empty
-## slot is an empty square, which is the whole of what it has to say — there is
-## no number under it, and no dash inside it.
+## It only mirrors the player's `Inventory`. A square is empty until the weapon
+## whose place it is has been *bought*: no name, no icon and no number, because
+## a weapon the player does not own is not his to be told about. What he has
+## bought shows its icon, or its name while no art has arrived for it yet, with
+## how many are left in the corner (`scripts/weapons/trap_weapon.gd`) — and
+## spending the last one empties the square again, which is the same square it
+## was before the first purchase.
 ##
-## A weapon that comes out of a box (`scripts/weapons/trap_weapon.gd`) also
-## carries how many are left, in the corner of its square. That number is not the
-## same thing as an empty slot: the loop on the belt has something hanging from
-## it, the box is just empty, and the square goes dim to say so.
+## The hands are on no square. They were never bought, they cannot run out, and
+## `Q` is what brings them back (`scripts/weapons/inventory.gd`); with them out
+## the belt simply has nothing framed.
 ##
 ## The two frames are built here instead of being dressed in `world.tscn`
 ## because they are a pair: the picked one has to grow *outwards*
@@ -25,8 +27,6 @@ const BORDER_COLOR := Color(0.55, 0.55, 0.55, 0.75)
 const PICKED_BORDER_COLOR := Color(1, 1, 1, 1)
 const BORDER := 1
 const PICKED_BORDER := 2
-## How faded a square whose box has run out looks.
-const EMPTY_ALPHA := 0.4
 
 ## The cells, in the order they sit on the belt.
 @onready var _slots: Array[PanelContainer] = _gather_slots()
@@ -74,24 +74,26 @@ func _fill(inventory: Inventory) -> void:
 		if i >= inventory.slot_count():
 			slot.hide()
 			continue
+		# What has not been bought — or has run out — is not on the belt as far
+		# as the screen is concerned: the square goes back to being a square.
 		var weapon := inventory.weapon_in(i)
+		if weapon != null and not weapon.available():
+			weapon = null
 		var icon: TextureRect = slot.get_node("Icon")
 		var label: Label = slot.get_node("Name")
 		var count: Label = slot.get_node("Count")
 		icon.texture = null if weapon == null else weapon.icon
 		icon.visible = icon.texture != null
 		# No picture for this weapon yet: its name stands in for one. An empty
-		# slot gets neither — being an empty square is what it has to say.
+		# square gets neither — being empty is the whole of what it has to say.
 		label.text = "" if weapon == null else weapon.display_name
 		label.visible = weapon != null and icon.texture == null
 		_fill_count(count, weapon)
-		# A box with nothing left is still a weapon on the belt, only there is
-		# none of it to take out.
-		slot.modulate.a = EMPTY_ALPHA if weapon != null and not weapon.available() else 1.0
 		slot.show()
 
-## The corner number of a square. Only a weapon that comes out of a box has one;
-## the hands are the hands, and there is no counting them.
+## The corner number of a square. Only a weapon that comes out of a box has one,
+## and only while there is something in the box — the square of a weapon the
+## player does not own says nothing at all, zero included.
 func _fill_count(label: Label, weapon: Weapon) -> void:
 	var trap := weapon as TrapWeapon
 	if trap == null or trap.stock_id.is_empty():
@@ -101,6 +103,9 @@ func _fill_count(label: Label, weapon: Weapon) -> void:
 	label.text = str(Stock.count(trap.stock_id))
 	label.show()
 
+## Frames the square in hand. With the hands out the index is no slot
+## (`Inventory.HANDS_INDEX`) and nothing gets framed, which is exactly right:
+## what the player is holding is not on the belt.
 func _highlight(index: int) -> void:
 	for i in _slots.size():
 		_slots[i].add_theme_stylebox_override("panel", _picked if i == index else _normal)

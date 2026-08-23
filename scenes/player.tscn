@@ -3,7 +3,10 @@
 [ext_resource type="Script" uid="uid://b8ngq8c3emtyi" path="res://scripts/player.gd" id="1_player"]
 [ext_resource type="Script" uid="uid://cpie0sl72t3vp" path="res://scripts/weapons/hands.gd" id="2_hands"]
 [ext_resource type="Script" uid="uid://dximu67j2r1kf" path="res://scripts/weapons/inventory.gd" id="3_inventory"]
-[ext_resource type="Script" uid="uid://bcltbhkjypxhw" path="res://scripts/weapons/trap_weapon.gd" id="4_trap"]
+[ext_resource type="Script" path="res://scripts/weapons/mousetrap_weapon.gd" id="4_mousetrap"]
+[ext_resource type="Script" path="res://scripts/weapons/glue_weapon.gd" id="5_glue"]
+[ext_resource type="PackedScene" path="res://scenes/traps/mousetrap.tscn" id="6_mousetrap_scene"]
+[ext_resource type="PackedScene" path="res://scenes/traps/glue_trap.tscn" id="7_glue_scene"]
 
 [sub_resource type="CapsuleShape3D" id="Shape_body"]
 radius = 0.4
@@ -34,6 +37,14 @@ script = ExtResource("1_player")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 shape = SubResource("Shape_body")
 
+[node name="Ceiling" type="ShapeCast3D" parent="." unique_id=1093428771]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("Shape_body")
+target_position = Vector3(0, 0, 0)
+collision_mask = 1
+collide_with_areas = false
+enabled = false
+
 [node name="Model" type="Node3D" parent="." unique_id=1825946101]
 
 [node name="Body" type="MeshInstance3D" parent="Model" unique_id=1717502883]
@@ -60,6 +71,14 @@ collision_mask = 8
 collide_with_areas = true
 collide_with_bodies = false
 
+[node name="Flashlight" type="SpotLight3D" parent="Head/Camera" unique_id=2081203819]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, -0.2, -0.1)
+light_color = Color(1, 0.94, 0.82, 1)
+light_energy = 1.8
+spot_range = 16.0
+spot_angle = 38.0
+spot_attenuation = 1.2
+
 [node name="Hands" type="Node3D" parent="Head" unique_id=266121770]
 transform = Transform3D(1, 0, 0, 0, 0.574, -0.819, 0, 0.819, 0.574, 0.33, -0.3, -0.3)
 script = ExtResource("2_hands")
@@ -67,15 +86,18 @@ display_name = "Hands"
 
 [node name="Mousetrap" type="Node3D" parent="Head" unique_id=282971065]
 transform = Transform3D(1, 0, 0, 0, 0.574, -0.819, 0, 0.819, 0.574, 0.3, -0.28, -0.35)
-script = ExtResource("4_trap")
+script = ExtResource("4_mousetrap")
 stock_id = "mousetrap"
+salvage_fee = 2
+trap_scene = ExtResource("6_mousetrap_scene")
 display_name = "Trap"
 cooldown = 0.6
 
 [node name="RatGlue" type="Node3D" parent="Head" unique_id=275034632]
 transform = Transform3D(1, 0, 0, 0, 0.574, -0.819, 0, 0.819, 0.574, 0.3, -0.28, -0.35)
-script = ExtResource("4_trap")
+script = ExtResource("5_glue")
 stock_id = "rat_glue"
+trap_scene = ExtResource("7_glue_scene")
 display_name = "Glue"
 cooldown = 0.6
 
@@ -84,4 +106,5 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.05, -0.6)
 
 [node name="Inventory" type="Node" parent="Head" unique_id=1147383766]
 script = ExtResource("3_inventory")
-slots = Array[NodePath]([NodePath("../Hands"), NodePath("../Mousetrap"), NodePath("../RatGlue")])
+slots = Array[NodePath]([NodePath("../Mousetrap"), NodePath("../RatGlue")])
+hands_path = NodePath("../Hands")

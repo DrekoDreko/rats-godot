@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="StoreItem" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/economy/store_item.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = "pistol"
+display_name = "Pistol"
+description = "Fast, loud, and it ruins the body."
+kind = 0
+weapon_node = "Pistol"
+price = 120
+amount = 1

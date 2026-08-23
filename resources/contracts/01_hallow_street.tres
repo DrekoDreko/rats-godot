@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="Contract" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/session/contract.gd" id="1_contract"]
+[ext_resource type="Texture2D" path="res://resources/contracts/plans/01_hallow_street_plan.png" id="2_plan"]
+
+[resource]
+script = ExtResource("1_contract")
+id = "hallow_street"
+client_name = "Mrs. Odette Vance"
+address = "14 Hallow Street"
+notes = "Scratching under the kitchen floor. One room, one nest, nothing clever."
+house_scene = "res://scenes/world.tscn"
+floor_plan = ExtResource("2_plan")
+infestation = 4
+reward = 180
+difficulty = 1

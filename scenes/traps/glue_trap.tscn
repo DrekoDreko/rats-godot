@@ -1,0 +1,23 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/traps/glue_trap.gd" id="1_glue"]
+[ext_resource type="PackedScene" uid="uid://1gr6depnxjgx" path="res://assets/traps/glb/glue_tray.glb" id="2_model"]
+[ext_resource type="PackedScene" uid="uid://bgordf5uoxh7c" path="res://scenes/ps1.tscn" id="3_ps1"]
+
+[sub_resource type="BoxShape3D" id="Shape_tray"]
+size = Vector3(0.34, 0.06, 1.0)
+
+[node name="GlueTrap" type="Area3D"]
+script = ExtResource("1_glue")
+stock_id = "rat_glue"
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, 0)
+shape = SubResource("Shape_tray")
+
+[node name="Model" type="Node3D" parent="."]
+
+[node name="Mesh" parent="Model" instance=ExtResource("2_model")]
+transform = Transform3D(1.3077, 0, 0, 0, 1, 0, 0, 0, 1, -0.28769, 0, 0)
+
+[node name="PS1" parent="Model/Mesh" instance=ExtResource("3_ps1")]

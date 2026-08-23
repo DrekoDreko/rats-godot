@@ -76,6 +76,14 @@ func _ready() -> void:
 	else:
 		_say("Steam is not running — solo only.", ERROR_COLOR)
 
+	# A redirect from `NetworkGuard` — the host dropped while we were in a
+	# shift, and we have been sent home. The reason is what the player reads
+	# instead of the welcome line, and it is cleared so that a second lobby does
+	# not show yesterday's complaint.
+	if not NetworkGuard.pending_reason.is_empty():
+		_say(NetworkGuard.pending_reason, ERROR_COLOR)
+		NetworkGuard.pending_reason = ""
+
 	_refresh_controls()
 	_show_players(LobbyManager.list_players())
 

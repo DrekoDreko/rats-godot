@@ -62,8 +62,16 @@ const HOST_KEY := "host_name"
 const MAX_PLAYERS := 4
 ## How many lobbies the browser asks Steam for at a time.
 const MAX_RESULTS := 20
-## Where the hunt happens, once the host says go.
-const GAME_SCENE := "res://scenes/world.tscn"
+## Who the man playing on his own is, when Steam is not running to say. A real
+## SteamID64 is a 17-digit number starting at 76561..., so a one can never
+## collide with one — which is what lets everything downstream treat it as an
+## ordinary account without a special case.
+const SOLO_STEAM_ID := 1
+## Where a shift starts, once the host says go: the parked van, which is the
+## lobby phase (card 05). The hunt is three phases further on and is reached
+## through `PhaseManager`, not from here — this node's job ends at putting
+## everybody in the same van at the same moment.
+const GAME_SCENE := "res://scenes/lobby_van.tscn"
 ## What a peer is called before he has got round to saying. The same three dots
 ## an unsent Steam persona shows as, and for the same reason: it is a name that
 ## is on its way, not a name that is missing.
@@ -298,16 +306,42 @@ func invite_friends() -> bool:
 
 ## Into the map. The host says when, and everybody goes at once; with no lobby
 ## at all this is simply the game starting on its own.
+##
+## The lobby is left joinable here, and that is the change card 07 asks for: the
+## van *is* the lobby phase, so a friend invited from the radio on its wall has
+## to be able to walk in. What closes the door is the shift leaving the van, and
+## `close_to_newcomers` is what says so — called off the phase change rather than
+## off this button, so the door shuts on the one thing that actually means the
+## shift has started.
 func start_game() -> void:
 	if lobby_id == 0:
 		_enter_game()
 		return
 	if not is_host:
 		return
-	# Nobody walks in halfway through a hunt. The lobby stays alive — it is
-	# still the guest list — it just stops taking newcomers.
-	Steam.setLobbyJoinable(lobby_id, false)
 	_enter_game.rpc()
+
+
+## Stops Steam letting anybody else in. **Host only**, and called when the shift
+## leaves the van — the lobby stays alive, because it is still the guest list;
+## it just stops taking newcomers.
+##
+## It is belt and braces over `JoinGate`, which refuses a knock outside the lobby
+## phase whatever Steam did. The difference is where the man finds out: this way
+## he is told at Steam's own door, before his game has loaded anything, rather
+## than after connecting to a host who then turns him around.
+func close_to_newcomers() -> void:
+	if lobby_id == 0 or not is_host:
+		return
+	Steam.setLobbyJoinable(lobby_id, false)
+
+
+## Lets Steam send people in again. The other half of `close_to_newcomers`, for a
+## crew that comes back to the van at the end of a shift.
+func open_to_newcomers() -> void:
+	if lobby_id == 0 or not is_host:
+		return
+	Steam.setLobbyJoinable(lobby_id, true)
 
 # --- The lobby coming up and going down ------------------------------------
 
@@ -367,9 +401,70 @@ func _fail_and_leave(reason: String) -> void:
 
 ## Runs on every peer at once, host included (`call_local`), because the host
 ## walking into the map alone is exactly the bug this prevents.
+##
+## The crew is written into `SessionManager` on the way through, and it has to
+## happen here rather than in the van: the van reads the crew the frame it comes
+## up — to work out who stands on which spot — so a list that arrived after it
+## would put everybody on spot one.
+##
+## **The host builds the list and the clients are told it.** Up to card 07 every
+## machine built its own copy out of Steam's guest list, which worked because
+## everybody had the same guest list in the same order. It stops working the
+## moment somebody can arrive *after* the van is standing — which is the whole of
+## card 07 — because the men already in the van would have to notice him on their
+## own, off a guest list that changed under them. So there is one road in for
+## everybody now: the host fills his own crew, and each client knocks
+## (`JoinGate.knock`) and is handed the crew, the contract and the phase in a
+## single packet before it loads anything.
 @rpc("authority", "call_local", "reliable")
 func _enter_game() -> void:
+	if not is_host and lobby_id != 0:
+		# A client waits to be welcomed rather than seating itself. The knock has
+		# usually gone out already, on `connected_to_server`; this covers the
+		# client that was on the wire before there was anything to ask about, and
+		# a second knock is dropped rather than sent.
+		JoinGate.knock()
+		return
+
+	_fill_the_crew()
+	# The rule that no two men wear one colour is the host's to keep, so he says
+	# out loud who is wearing what. It costs a handful of packets once and
+	# corrects any machine whose list came out differently.
+	ColorManager.seat_everybody()
 	get_tree().change_scene_to_file(GAME_SCENE)
+
+
+## The Steam lobby's guest list, copied into the shift's own crew. **Host and
+## solo only** — a client's crew comes off the wire in one packet (`JoinGate`)
+## and never off its own reading of the guest list, so that there is one list and
+## not four that have to agree.
+##
+## It is a copy and not a reference on purpose: the guest list is Valve's and is
+## a list of accounts, while the crew is the game's and carries a colour, a
+## purse and a ready flag per man. This is the one place the two meet.
+##
+## A solo run has no lobby and so no guest list. Whoever is playing is still a
+## crew of one — and has to be, or the van has nobody to seat, the board has no
+## flag to move and `all_ready()` answers false forever. He is his own host, the
+## same way `PhaseManager.is_host()` already says he is.
+##
+## With Steam shut altogether his account number is zero, which the crew refuses
+## as "not a player" — rightly, since a zero off the wire is a peer that never
+## introduced itself. So the offline man is filed under `SOLO_STEAM_ID` instead:
+## a number no real account can have, which is what makes it safe to tell the
+## two apart, and which the board already falls back to finding by being the
+## only man in the van.
+func _fill_the_crew() -> void:
+	var crew := list_players()
+	if crew.is_empty():
+		var steam_id := SteamManager.get_steam_id()
+		SessionManager.register_player(
+			steam_id if steam_id != 0 else SOLO_STEAM_ID,
+			SteamManager.get_persona_name(), true)
+		return
+	for player in crew:
+		SessionManager.register_player(
+			int(player["steam_id"]), String(player["name"]), bool(player["is_host"]))
 
 # --- What Steam says back ---------------------------------------------------
 
@@ -471,6 +566,14 @@ func _on_server_disconnected() -> void:
 ## Steam starts the game with `+connect_lobby <id>` when an invite is accepted
 ## with the game closed. One frame of patience, so that the lobby screen is
 ## already listening when the answer — or the complaint — comes back.
+##
+## Nothing more is needed to land him in the van, and that is worth saying out
+## loud because card 07 asks for it as though it were a separate road: joining
+## opens the peer, the peer coming up makes `JoinGate` knock, and the welcome
+## carries the scene along with the crew. So a man who accepted an invite from
+## his desktop walks straight into the back of the van without ever seeing the
+## waiting-room screen, down exactly the same code as a man who was already in
+## the lobby list.
 func _join_from_command_line() -> void:
 	var id := _lobby_from_arguments(Steam.getLaunchCommandLine().split(" ", false))
 	if id == 0:

@@ -1,20 +1,25 @@
 [gd_scene format=3 uid="uid://3o1jdkd6gviy"]
 
-[ext_resource type="PackedScene" uid="uid://baae21uy7nxug" path="res://models/van.glb" id="1_wqn8j"]
+[ext_resource type="PackedScene" uid="uid://cnc3cxoy5gjim" path="res://models/box_van.glb" id="1_van"]
 [ext_resource type="Shader" uid="uid://bwmdy542q66bt" path="res://scripts/ps1.gdshader" id="2_kxyy5"]
-[ext_resource type="PackedScene" path="res://scenes/player.tscn" id="2_player"]
+[ext_resource type="PackedScene" uid="uid://bvvcrva6c1ve" path="res://scenes/player.tscn" id="2_player"]
 [ext_resource type="PackedScene" uid="uid://bgordf5uoxh7c" path="res://scenes/ps1.tscn" id="3_75jji"]
-[ext_resource type="PackedScene" uid="uid://dmlgy5o48488h" path="res://scenes/rat.tscn" id="4_rat"]
 [ext_resource type="Script" uid="uid://bk3mtd8wq1jyf" path="res://scripts/rat_counter.gd" id="5_counter"]
 [ext_resource type="Script" uid="uid://x5twjg1fjgnu" path="res://scripts/navigation.gd" id="6_navigation"]
 [ext_resource type="Script" uid="uid://6r0t5qiq00nh" path="res://scripts/hud_strangle.gd" id="7_strangle"]
 [ext_resource type="Script" uid="uid://c7w383s5alkcq" path="res://scripts/hud_money.gd" id="8_money"]
 [ext_resource type="Script" uid="uid://m4hmg2xirspk" path="res://scripts/hud_hotbar.gd" id="9_hotbar"]
 [ext_resource type="Script" uid="uid://bss1ad1ogrub7" path="res://scripts/hud_health.gd" id="10_health"]
-[ext_resource type="PackedScene" path="res://scenes/shop_computer.tscn" id="11_shop_pc"]
 [ext_resource type="Script" uid="uid://bgxxpnjqmrumj" path="res://scripts/hud_prompt.gd" id="12_prompt"]
 [ext_resource type="Script" uid="uid://cdgdmogklthnk" path="res://scripts/hud_shop.gd" id="13_shop"]
 [ext_resource type="Script" uid="uid://bv088710brpjr" path="res://scripts/steam/player_avatars.gd" id="14_players"]
+[ext_resource type="Script" uid="uid://po783g0faobf" path="res://scripts/hud_hold.gd" id="15_hold"]
+[ext_resource type="Script" uid="uid://p2qmhsntuqfu" path="res://scripts/house/house.gd" id="16_house"]
+[ext_resource type="Script" uid="uid://c1mwm2lhfbvo5" path="res://scripts/house/rat_hole.gd" id="17_hole"]
+[ext_resource type="Script" uid="uid://cgmykbygxdhqj" path="res://scripts/session/house_spawns.gd" id="18_spawns"]
+[ext_resource type="PackedScene" path="res://scenes/ready_station.tscn" id="19_ready"]
+[ext_resource type="PackedScene" path="res://scenes/hud_phase.tscn" id="20_hud_phase"]
+[ext_resource type="Script" uid="uid://ddlqj8ges01dg" path="res://scripts/map/map_table.gd" id="21_table"]
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_material"]
 sky_top_color = Color(0.36, 0.38, 0.41, 1)
@@ -48,7 +53,7 @@ roughness = 0.95
 material = SubResource("Mat_floor")
 size = Vector2(60, 60)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_xo05s"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_2lf6f"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.13, 0.13, 0.14, 1)
@@ -69,7 +74,7 @@ roughness = 0.95
 material = SubResource("Mat_wall")
 size = Vector3(68, 10, 4)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_dss4m"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_7iits"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.36, 0.36, 0.38, 1)
@@ -82,7 +87,7 @@ shader_parameter/alpha_scissor = 0.5
 [sub_resource type="BoxShape3D" id="Shape_wall_ns"]
 size = Vector3(68, 10, 4)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_7t5mc"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_oo54l"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.36, 0.36, 0.38, 1)
@@ -96,7 +101,7 @@ shader_parameter/alpha_scissor = 0.5
 material = SubResource("Mat_wall")
 size = Vector3(4, 10, 68)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_lakw3"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_kpybi"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.36, 0.36, 0.38, 1)
@@ -109,7 +114,7 @@ shader_parameter/alpha_scissor = 0.5
 [sub_resource type="BoxShape3D" id="Shape_wall_ew"]
 size = Vector3(4, 10, 68)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_pm21f"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ctatt"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.36, 0.36, 0.38, 1)
@@ -127,7 +132,7 @@ roughness = 0.9
 material = SubResource("Mat_block")
 size = Vector3(8, 14, 8)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_2lf6f"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_xgqkh"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.5, 0.5, 0.53, 1)
@@ -140,7 +145,7 @@ shader_parameter/alpha_scissor = 0.5
 [sub_resource type="BoxShape3D" id="Shape_block"]
 size = Vector3(8, 14, 8)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_7iits"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_munwf"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.5, 0.5, 0.53, 1)
@@ -150,7 +155,7 @@ shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_oo54l"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ts3gi"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.5, 0.5, 0.53, 1)
@@ -160,7 +165,7 @@ shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_kpybi"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_0nbtd"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.5, 0.5, 0.53, 1)
@@ -170,7 +175,7 @@ shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_ctatt"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_37qwj"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.5, 0.5, 0.53, 1)
@@ -180,7 +185,7 @@ shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_xgqkh"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_navra"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.5, 0.5, 0.53, 1)
@@ -198,7 +203,7 @@ roughness = 0.85
 material = SubResource("Mat_crate")
 size = Vector3(6, 6, 6)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_munwf"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_luhhm"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
@@ -210,63 +215,6 @@ shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="BoxShape3D" id="Shape_crate_medium"]
 size = Vector3(6, 6, 6)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_ts3gi"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_0nbtd"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_37qwj"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_navra"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="BoxMesh" id="Mesh_crate_small"]
-material = SubResource("Mat_crate")
-size = Vector3(3, 3, 3)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_luhhm"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="BoxShape3D" id="Shape_crate_small"]
-size = Vector3(3, 3, 3)
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_fh13f"]
 render_priority = 0
@@ -308,7 +256,64 @@ shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
+[sub_resource type="BoxMesh" id="Mesh_crate_small"]
+material = SubResource("Mat_crate")
+size = Vector3(3, 3, 3)
+
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_x2olw"]
+render_priority = 0
+shader = ExtResource("2_kxyy5")
+shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
+shader_parameter/jitter = 0.50000002375
+shader_parameter/jitter_z_coordinate = false
+shader_parameter/jitter_depth_independent = true
+shader_parameter/affine_texture_mapping = true
+shader_parameter/alpha_scissor = 0.5
+
+[sub_resource type="BoxShape3D" id="Shape_crate_small"]
+size = Vector3(3, 3, 3)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_817gm"]
+render_priority = 0
+shader = ExtResource("2_kxyy5")
+shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
+shader_parameter/jitter = 0.50000002375
+shader_parameter/jitter_z_coordinate = false
+shader_parameter/jitter_depth_independent = true
+shader_parameter/affine_texture_mapping = true
+shader_parameter/alpha_scissor = 0.5
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ggc52"]
+render_priority = 0
+shader = ExtResource("2_kxyy5")
+shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
+shader_parameter/jitter = 0.50000002375
+shader_parameter/jitter_z_coordinate = false
+shader_parameter/jitter_depth_independent = true
+shader_parameter/affine_texture_mapping = true
+shader_parameter/alpha_scissor = 0.5
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_l8ah6"]
+render_priority = 0
+shader = ExtResource("2_kxyy5")
+shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
+shader_parameter/jitter = 0.50000002375
+shader_parameter/jitter_z_coordinate = false
+shader_parameter/jitter_depth_independent = true
+shader_parameter/affine_texture_mapping = true
+shader_parameter/alpha_scissor = 0.5
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_e75v4"]
+render_priority = 0
+shader = ExtResource("2_kxyy5")
+shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
+shader_parameter/jitter = 0.50000002375
+shader_parameter/jitter_z_coordinate = false
+shader_parameter/jitter_depth_independent = true
+shader_parameter/affine_texture_mapping = true
+shader_parameter/alpha_scissor = 0.5
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_8u370"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
@@ -328,7 +333,7 @@ top_radius = 1.5
 bottom_radius = 1.5
 height = 8.0
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_817gm"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_rga7q"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.74, 0.74, 0.76, 1)
@@ -342,7 +347,7 @@ shader_parameter/alpha_scissor = 0.5
 height = 8.0
 radius = 1.5
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_ggc52"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_6oujy"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.74, 0.74, 0.76, 1)
@@ -352,7 +357,7 @@ shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_l8ah6"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_hi6a0"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.74, 0.74, 0.76, 1)
@@ -362,7 +367,7 @@ shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_e75v4"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_eo1xk"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.74, 0.74, 0.76, 1)
@@ -380,7 +385,7 @@ roughness = 0.9
 material = SubResource("Mat_ramp")
 size = Vector3(10, 1, 10)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_8u370"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_18clu"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.58, 0.56, 0.52, 1)
@@ -397,7 +402,7 @@ size = Vector3(10, 1, 10)
 material = SubResource("Mat_ramp")
 size = Vector3(6, 1, 14)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_rga7q"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_4wdv8"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.58, 0.56, 0.52, 1)
@@ -410,7 +415,7 @@ shader_parameter/alpha_scissor = 0.5
 [sub_resource type="BoxShape3D" id="Shape_ramp"]
 size = Vector3(6, 1, 14)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_6oujy"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_d46x8"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.58, 0.56, 0.52, 1)
@@ -420,7 +425,7 @@ shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_hi6a0"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_3l05q"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.58, 0.56, 0.52, 1)
@@ -440,414 +445,55 @@ agent_height = 0.8
 agent_radius = 0.25
 agent_max_climb = 0.2
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_eo1xk"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.54685426, 0.5271128, 0.5168811, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
+[sub_resource type="BoxShape3D" id="Shape_box_van_floor"]
+size = Vector3(3.2, 0.12, 7)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_18clu"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.54685426, 0.5271128, 0.5168811, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
+[sub_resource type="BoxShape3D" id="Shape_box_van_side"]
+size = Vector3(0.12, 2.4, 7)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_4wdv8"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.39588127, 0.39588127, 0.4100209, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
+[sub_resource type="BoxShape3D" id="Shape_box_van_end"]
+size = Vector3(3.2, 2.4, 0.12)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_d46x8"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.4492039, 0.43662706, 0.47312066, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
+[sub_resource type="BoxShape3D" id="Shape_box_van_roof"]
+size = Vector3(3.2, 0.12, 7)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_3l05q"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.4492039, 0.43662706, 0.47312066, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
+[sub_resource type="BoxShape3D" id="Shape_box_van_ramp"]
+size = Vector3(2, 0.12, 2.4)
+
+[sub_resource type="BoxShape3D" id="Shape_box_van_bench"]
+size = Vector3(0.44, 0.42, 2.4)
+
+[sub_resource type="BoxShape3D" id="Shape_reach_table"]
+size = Vector3(1.7, 1.2, 1.2)
+
+[sub_resource type="BoxMesh" id="Mesh_table_top"]
+size = Vector3(1.5, 0.08, 0.9)
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_x28ej"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.4492039, 0.43662706, 0.47312066, 1)
+shader_parameter/albedo_color = Color(0.26, 0.24, 0.21, 1)
 shader_parameter/jitter = 0.50000002375
 shader_parameter/jitter_z_coordinate = false
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
+
+[sub_resource type="PlaneMesh" id="Mesh_table_sheet"]
+size = Vector2(1.3, 0.76)
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_1jxku"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.4492039, 0.43662706, 0.47312066, 1)
+shader_parameter/albedo_color = Color(1, 1, 1, 1)
 shader_parameter/jitter = 0.50000002375
 shader_parameter/jitter_z_coordinate = false
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_1dgkn"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.33183005, 0.33183005, 0.3491902, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_e68xj"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.33183005, 0.33183005, 0.3491902, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_5hglh"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.86504203, 0.47312066, 0.43662706, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_qg546"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.50638646, 0.6799757, 0.7483791, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_pf35h"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.58383155, 0.58383155, 0.60124344, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_iexy4"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.58383155, 0.58383155, 0.60124344, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_npbic"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.86504203, 0.47312066, 0.43662706, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_e6ckp"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.50638646, 0.6799757, 0.7483791, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_mvg0v"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.86504203, 0.47312066, 0.43662706, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_h3odw"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.50638646, 0.6799757, 0.7483791, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_5hl1e"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.33183005, 0.33183005, 0.3491902, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_66tox"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.97769153, 0.9685766, 0.8962439, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_pq8jk"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.97769153, 0.9685766, 0.8962439, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_q57r8"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.33183005, 0.33183005, 0.3491902, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_4kmvx"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.33183005, 0.33183005, 0.3491902, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_myjip"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.33183005, 0.33183005, 0.3491902, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_5nedk"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.33183005, 0.33183005, 0.3491902, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_40xph"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.8433892, 0.33183005, 0.29337206, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_8lgfd"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.8433892, 0.33183005, 0.29337206, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_dyafi"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.2347951, 0.2347951, 0.24780053, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_r5yoc"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.76737565, 0.7735731, 0.785777, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_1m1ue"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.2347951, 0.2347951, 0.24780053, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_ntuqo"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.76737565, 0.7735731, 0.785777, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_ca4ee"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.2347951, 0.2347951, 0.24780053, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_qaasp"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.76737565, 0.7735731, 0.785777, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_1v02h"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.2347951, 0.2347951, 0.24780053, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_shehe"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.76737565, 0.7735731, 0.785777, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_l137e"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.50638646, 0.6799757, 0.7483791, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_ygn2i"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.50638646, 0.6799757, 0.7483791, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_swu3i"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.50638646, 0.6799757, 0.7483791, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_oexs8"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.50638646, 0.6799757, 0.7483791, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="BoxShape3D" id="Shape_van_floor"]
-size = Vector3(2.376, 0.1, 5.7)
-
-[sub_resource type="BoxShape3D" id="Shape_van_side"]
-size = Vector3(0.1, 2.225, 5.7)
-
-[sub_resource type="BoxShape3D" id="Shape_van_roof"]
-size = Vector3(2.476, 0.1, 5.7)
-
-[sub_resource type="BoxShape3D" id="Shape_van_front"]
-size = Vector3(2.376, 2.225, 0.1)
-
-[sub_resource type="BoxMesh" id="Mesh_van_ramp"]
-material = SubResource("Mat_ramp")
-size = Vector3(1.8, 0.25, 1.6)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_n78cu"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.58, 0.56, 0.52, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="BoxShape3D" id="Shape_van_ramp"]
-size = Vector3(1.8, 0.25, 1.6)
+[sub_resource type="BoxShape3D" id="Shape_table_body"]
+size = Vector3(1.5, 0.8, 0.9)
 
 [sub_resource type="LabelSettings" id="LabelSettings_jaeu2"]
 font_size = 8
@@ -864,6 +510,7 @@ border_width_bottom = 1
 border_color = Color(0.55, 0.55, 0.55, 0.75)
 
 [node name="World" type="Node3D" unique_id=896002135]
+script = ExtResource("16_house")
 
 [node name="PS1" parent="." unique_id=1777166208 instance=ExtResource("3_75jji")]
 
@@ -874,12 +521,30 @@ environment = SubResource("Environment")
 transform = Transform3D(0.8192, 0.4394, -0.3687, 0, 0.6428, 0.766, 0.5736, -0.6275, 0.5266, 0, 40, 0)
 light_energy = 1.1
 
+[node name="HallwayLight" type="OmniLight3D" parent="." unique_id=1609432493]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 14)
+light_color = Color(1, 0.88, 0.7, 1)
+light_energy = 1.2
+omni_range = 22.0
+
+[node name="KitchenLight" type="OmniLight3D" parent="." unique_id=2077346755]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 6, -12)
+light_color = Color(0.85, 0.9, 1, 1)
+light_energy = 1.1
+omni_range = 24.0
+
+[node name="LivingLight" type="OmniLight3D" parent="." unique_id=873892032]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 6, -12)
+light_color = Color(1, 0.82, 0.65, 1)
+light_energy = 1.2
+omni_range = 24.0
+
 [node name="Floor" type="StaticBody3D" parent="." unique_id=1458331643 groups=["scenery"]]
 
 [node name="Mesh" type="MeshInstance3D" parent="Floor" unique_id=804065504]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.005826831, -0.02224803, 0.010666132)
 mesh = SubResource("Mesh_floor")
-surface_material_override/0 = SubResource("ShaderMaterial_xo05s")
+surface_material_override/0 = SubResource("ShaderMaterial_2lf6f")
 
 [node name="Collision" type="CollisionShape3D" parent="Floor" unique_id=491786415]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, 0)
@@ -892,7 +557,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, -32)
 
 [node name="Mesh" type="MeshInstance3D" parent="Walls/North" unique_id=121092836]
 mesh = SubResource("Mesh_wall_ns")
-surface_material_override/0 = SubResource("ShaderMaterial_dss4m")
+surface_material_override/0 = SubResource("ShaderMaterial_7iits")
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/North" unique_id=598293181]
 shape = SubResource("Shape_wall_ns")
@@ -902,7 +567,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 32)
 
 [node name="Mesh" type="MeshInstance3D" parent="Walls/South" unique_id=527741498]
 mesh = SubResource("Mesh_wall_ns")
-surface_material_override/0 = SubResource("ShaderMaterial_7t5mc")
+surface_material_override/0 = SubResource("ShaderMaterial_oo54l")
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/South" unique_id=1546030304]
 shape = SubResource("Shape_wall_ns")
@@ -912,7 +577,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 32, 5, 0)
 
 [node name="Mesh" type="MeshInstance3D" parent="Walls/East" unique_id=1833253467]
 mesh = SubResource("Mesh_wall_ew")
-surface_material_override/0 = SubResource("ShaderMaterial_lakw3")
+surface_material_override/0 = SubResource("ShaderMaterial_kpybi")
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/East" unique_id=10548637]
 shape = SubResource("Shape_wall_ew")
@@ -922,7 +587,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -32, 5, 0)
 
 [node name="Mesh" type="MeshInstance3D" parent="Walls/West" unique_id=158373678]
 mesh = SubResource("Mesh_wall_ew")
-surface_material_override/0 = SubResource("ShaderMaterial_pm21f")
+surface_material_override/0 = SubResource("ShaderMaterial_ctatt")
 
 [node name="Collision" type="CollisionShape3D" parent="Walls/West" unique_id=221313045]
 shape = SubResource("Shape_wall_ew")
@@ -934,7 +599,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 7, -18)
 
 [node name="Mesh" type="MeshInstance3D" parent="Obstacles/Block1" unique_id=440270789]
 mesh = SubResource("Mesh_block")
-surface_material_override/0 = SubResource("ShaderMaterial_2lf6f")
+surface_material_override/0 = SubResource("ShaderMaterial_xgqkh")
 
 [node name="Collision" type="CollisionShape3D" parent="Obstacles/Block1" unique_id=1706966893]
 shape = SubResource("Shape_block")
@@ -944,7 +609,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 7, -14)
 
 [node name="Mesh" type="MeshInstance3D" parent="Obstacles/Block2" unique_id=1228591245]
 mesh = SubResource("Mesh_block")
-surface_material_override/0 = SubResource("ShaderMaterial_7iits")
+surface_material_override/0 = SubResource("ShaderMaterial_munwf")
 
 [node name="Collision" type="CollisionShape3D" parent="Obstacles/Block2" unique_id=1275610450]
 shape = SubResource("Shape_block")
@@ -954,7 +619,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 7, -2)
 
 [node name="Mesh" type="MeshInstance3D" parent="Obstacles/Block3" unique_id=467064409]
 mesh = SubResource("Mesh_block")
-surface_material_override/0 = SubResource("ShaderMaterial_oo54l")
+surface_material_override/0 = SubResource("ShaderMaterial_ts3gi")
 
 [node name="Collision" type="CollisionShape3D" parent="Obstacles/Block3" unique_id=1217289156]
 shape = SubResource("Shape_block")
@@ -964,7 +629,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 7, 8)
 
 [node name="Mesh" type="MeshInstance3D" parent="Obstacles/Block4" unique_id=1119446617]
 mesh = SubResource("Mesh_block")
-surface_material_override/0 = SubResource("ShaderMaterial_kpybi")
+surface_material_override/0 = SubResource("ShaderMaterial_0nbtd")
 
 [node name="Collision" type="CollisionShape3D" parent="Obstacles/Block4" unique_id=1738412547]
 shape = SubResource("Shape_block")
@@ -973,10 +638,12 @@ shape = SubResource("Shape_block")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 7, 21)
 
 [node name="Mesh" type="MeshInstance3D" parent="Obstacles/Block5" unique_id=606991865]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.193013, 0, 0)
 mesh = SubResource("Mesh_block")
-surface_material_override/0 = SubResource("ShaderMaterial_ctatt")
+surface_material_override/0 = SubResource("ShaderMaterial_37qwj")
 
 [node name="Collision" type="CollisionShape3D" parent="Obstacles/Block5" unique_id=2063749164]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.219114, 0, 0)
 shape = SubResource("Shape_block")
 
 [node name="Block6" type="StaticBody3D" parent="Obstacles" unique_id=1083788107]
@@ -984,7 +651,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23, 7, 20)
 
 [node name="Mesh" type="MeshInstance3D" parent="Obstacles/Block6" unique_id=917722258]
 mesh = SubResource("Mesh_block")
-surface_material_override/0 = SubResource("ShaderMaterial_xgqkh")
+surface_material_override/0 = SubResource("ShaderMaterial_navra")
 
 [node name="Collision" type="CollisionShape3D" parent="Obstacles/Block6" unique_id=852850727]
 shape = SubResource("Shape_block")
@@ -994,7 +661,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 3, 4)
 
 [node name="Mesh" type="MeshInstance3D" parent="Obstacles/MediumCrate1" unique_id=1332259129]
 mesh = SubResource("Mesh_crate_medium")
-surface_material_override/0 = SubResource("ShaderMaterial_munwf")
+surface_material_override/0 = SubResource("ShaderMaterial_luhhm")
 
 [node name="Collision" type="CollisionShape3D" parent="Obstacles/MediumCrate1" unique_id=176553507]
 shape = SubResource("Shape_crate_medium")
@@ -1007,7 +674,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, -10)
 
 [node name="Mesh" type="MeshInstance3D" parent="Obstacles/MediumCrate3" unique_id=1829870488]
 mesh = SubResource("Mesh_crate_medium")
-surface_material_override/0 = SubResource("ShaderMaterial_ts3gi")
+surface_material_override/0 = SubResource("ShaderMaterial_fh13f")
 
 [node name="Collision" type="CollisionShape3D" parent="Obstacles/MediumCrate3" unique_id=229303002]
 shape = SubResource("Shape_crate_medium")
@@ -1017,7 +684,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 3, 9)
 
 [node name="Mesh" type="MeshInstance3D" parent="Obstacles/MediumCrate4" unique_id=344111394]
 mesh = SubResource("Mesh_crate_medium")
-surface_material_override/0 = SubResource("ShaderMaterial_0nbtd")
+surface_material_override/0 = SubResource("ShaderMaterial_rup4s")
 
 [node name="Collision" type="CollisionShape3D" parent="Obstacles/MediumCrate4" unique_id=509667385]
 shape = SubResource("Shape_crate_medium")
@@ -1027,7 +694,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 3, -26)
 
 [node name="Mesh" type="MeshInstance3D" parent="Obstacles/MediumCrate5" unique_id=487964584]
 mesh = SubResource("Mesh_crate_medium")
-surface_material_override/0 = SubResource("ShaderMaterial_37qwj")
+surface_material_override/0 = SubResource("ShaderMaterial_4kbfs")
 
 [node name="Collision" type="CollisionShape3D" parent="Obstacles/MediumCrate5" unique_id=267366674]
 shape = SubResource("Shape_crate_medium")
@@ -1037,7 +704,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26, 3, -14)
 
 [node name="Mesh" type="MeshInstance3D" parent="Obstacles/MediumCrate6" unique_id=787955527]
 mesh = SubResource("Mesh_crate_medium")
-surface_material_override/0 = SubResource("ShaderMaterial_navra")
+surface_material_override/0 = SubResource("ShaderMaterial_f17e3")
 
 [node name="Collision" type="CollisionShape3D" parent="Obstacles/MediumCrate6" unique_id=1603652664]
 shape = SubResource("Shape_crate_medium")
@@ -1047,7 +714,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 1.5, 8)
 
 [node name="Mesh" type="MeshInstance3D" parent="Obstacles/SmallCrate1" unique_id=535117309]
 mesh = SubResource("Mesh_crate_small")
-surface_material_override/0 = SubResource("ShaderMaterial_luhhm")
+surface_material_override/0 = SubResource("ShaderMaterial_x2olw")
 
 [node name="Collision" type="CollisionShape3D" parent="Obstacles/SmallCrate1" unique_id=407910446]
 shape = SubResource("Shape_crate_small")
@@ -1057,7 +724,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 1.5, -2)
 
 [node name="Mesh" type="MeshInstance3D" parent="Obstacles/SmallCrate2" unique_id=1136459400]
 mesh = SubResource("Mesh_crate_small")
-surface_material_override/0 = SubResource("ShaderMaterial_fh13f")
+surface_material_override/0 = SubResource("ShaderMaterial_817gm")
 
 [node name="Collision" type="CollisionShape3D" parent="Obstacles/SmallCrate2" unique_id=1498286255]
 shape = SubResource("Shape_crate_small")
@@ -1067,7 +734,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 1.5, 20)
 
 [node name="Mesh" type="MeshInstance3D" parent="Obstacles/SmallCrate3" unique_id=27468951]
 mesh = SubResource("Mesh_crate_small")
-surface_material_override/0 = SubResource("ShaderMaterial_rup4s")
+surface_material_override/0 = SubResource("ShaderMaterial_ggc52")
 
 [node name="Collision" type="CollisionShape3D" parent="Obstacles/SmallCrate3" unique_id=844510079]
 shape = SubResource("Shape_crate_small")
@@ -1077,7 +744,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 1.5, 2)
 
 [node name="Mesh" type="MeshInstance3D" parent="Obstacles/SmallCrate4" unique_id=1122574622]
 mesh = SubResource("Mesh_crate_small")
-surface_material_override/0 = SubResource("ShaderMaterial_4kbfs")
+surface_material_override/0 = SubResource("ShaderMaterial_l8ah6")
 
 [node name="Collision" type="CollisionShape3D" parent="Obstacles/SmallCrate4" unique_id=2109681861]
 shape = SubResource("Shape_crate_small")
@@ -1087,7 +754,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 17, 1.5, -8)
 
 [node name="Mesh" type="MeshInstance3D" parent="Obstacles/SmallCrate5" unique_id=1083450558]
 mesh = SubResource("Mesh_crate_small")
-surface_material_override/0 = SubResource("ShaderMaterial_f17e3")
+surface_material_override/0 = SubResource("ShaderMaterial_e75v4")
 
 [node name="Collision" type="CollisionShape3D" parent="Obstacles/SmallCrate5" unique_id=812576796]
 shape = SubResource("Shape_crate_small")
@@ -1097,7 +764,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 1.5, 20)
 
 [node name="Mesh" type="MeshInstance3D" parent="Obstacles/SmallCrate6" unique_id=608548599]
 mesh = SubResource("Mesh_crate_small")
-surface_material_override/0 = SubResource("ShaderMaterial_x2olw")
+surface_material_override/0 = SubResource("ShaderMaterial_8u370")
 
 [node name="Collision" type="CollisionShape3D" parent="Obstacles/SmallCrate6" unique_id=1708760894]
 shape = SubResource("Shape_crate_small")
@@ -1107,7 +774,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 4, -21)
 
 [node name="Mesh" type="MeshInstance3D" parent="Obstacles/Column1" unique_id=1531192281]
 mesh = SubResource("Mesh_column")
-surface_material_override/0 = SubResource("ShaderMaterial_817gm")
+surface_material_override/0 = SubResource("ShaderMaterial_rga7q")
 
 [node name="Collision" type="CollisionShape3D" parent="Obstacles/Column1" unique_id=1617692389]
 shape = SubResource("Shape_column")
@@ -1117,7 +784,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 4, -21)
 
 [node name="Mesh" type="MeshInstance3D" parent="Obstacles/Column2" unique_id=1635043667]
 mesh = SubResource("Mesh_column")
-surface_material_override/0 = SubResource("ShaderMaterial_ggc52")
+surface_material_override/0 = SubResource("ShaderMaterial_6oujy")
 
 [node name="Collision" type="CollisionShape3D" parent="Obstacles/Column2" unique_id=1801258575]
 shape = SubResource("Shape_column")
@@ -1127,7 +794,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 4, -26)
 
 [node name="Mesh" type="MeshInstance3D" parent="Obstacles/Column3" unique_id=1781048997]
 mesh = SubResource("Mesh_column")
-surface_material_override/0 = SubResource("ShaderMaterial_l8ah6")
+surface_material_override/0 = SubResource("ShaderMaterial_hi6a0")
 
 [node name="Collision" type="CollisionShape3D" parent="Obstacles/Column3" unique_id=1734182116]
 shape = SubResource("Shape_column")
@@ -1137,7 +804,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 4, -26)
 
 [node name="Mesh" type="MeshInstance3D" parent="Obstacles/Column4" unique_id=566670278]
 mesh = SubResource("Mesh_column")
-surface_material_override/0 = SubResource("ShaderMaterial_e75v4")
+surface_material_override/0 = SubResource("ShaderMaterial_eo1xk")
 
 [node name="Collision" type="CollisionShape3D" parent="Obstacles/Column4" unique_id=1584500374]
 shape = SubResource("Shape_column")
@@ -1147,7 +814,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 4, 9)
 
 [node name="Mesh" type="MeshInstance3D" parent="Obstacles/Platform1" unique_id=175169350]
 mesh = SubResource("Mesh_platform")
-surface_material_override/0 = SubResource("ShaderMaterial_8u370")
+surface_material_override/0 = SubResource("ShaderMaterial_18clu")
 
 [node name="Collision" type="CollisionShape3D" parent="Obstacles/Platform1" unique_id=1193985580]
 shape = SubResource("Shape_platform")
@@ -1157,7 +824,7 @@ transform = Transform3D(1, 0, 0, 0, 0.9397, -0.342, 0, 0.342, 0.9397, 15, 1.75, 
 
 [node name="Mesh" type="MeshInstance3D" parent="Obstacles/Ramp1" unique_id=405142041]
 mesh = SubResource("Mesh_ramp")
-surface_material_override/0 = SubResource("ShaderMaterial_rga7q")
+surface_material_override/0 = SubResource("ShaderMaterial_4wdv8")
 
 [node name="Collision" type="CollisionShape3D" parent="Obstacles/Ramp1" unique_id=1931259616]
 shape = SubResource("Shape_ramp")
@@ -1167,7 +834,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 4, -9)
 
 [node name="Mesh" type="MeshInstance3D" parent="Obstacles/Platform2" unique_id=1357574642]
 mesh = SubResource("Mesh_platform")
-surface_material_override/0 = SubResource("ShaderMaterial_6oujy")
+surface_material_override/0 = SubResource("ShaderMaterial_d46x8")
 
 [node name="Collision" type="CollisionShape3D" parent="Obstacles/Platform2" unique_id=948259020]
 shape = SubResource("Shape_platform")
@@ -1177,7 +844,7 @@ transform = Transform3D(1, 0, 0, 0, 0.9397, 0.342, 0, -0.342, 0.9397, -15, 1.75,
 
 [node name="Mesh" type="MeshInstance3D" parent="Obstacles/Ramp2" unique_id=160702179]
 mesh = SubResource("Mesh_ramp")
-surface_material_override/0 = SubResource("ShaderMaterial_hi6a0")
+surface_material_override/0 = SubResource("ShaderMaterial_3l05q")
 
 [node name="Collision" type="CollisionShape3D" parent="Obstacles/Ramp2" unique_id=1740421227]
 shape = SubResource("Shape_ramp")
@@ -1186,192 +853,176 @@ shape = SubResource("Shape_ramp")
 navigation_mesh = SubResource("Nav_mesh")
 script = ExtResource("6_navigation")
 
-[node name="van" parent="." unique_id=840043182 instance=ExtResource("1_wqn8j")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0, 2)
+[node name="Van" parent="." unique_id=391910572 groups=["scenery"] instance=ExtResource("1_van")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.214491, 0, 22)
 
-[node name="Int_Console" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="0" unique_id=1598482076]
-surface_material_override/0 = SubResource("ShaderMaterial_eo1xk")
+[node name="PS1" parent="Van" unique_id=1644828936 instance=ExtResource("3_75jji")]
 
-[node name="Int_Dashboard" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="1" unique_id=716474858]
-surface_material_override/0 = SubResource("ShaderMaterial_18clu")
+[node name="Shell" type="StaticBody3D" parent="Van" unique_id=656369829 groups=["scenery"]]
+collision_mask = 0
 
-[node name="Int_Floor" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="2" unique_id=1167735732]
-surface_material_override/0 = SubResource("ShaderMaterial_4wdv8")
+[node name="Floor" type="CollisionShape3D" parent="Van/Shell" unique_id=585685999]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.562, 0)
+shape = SubResource("Shape_box_van_floor")
 
-[node name="Int_Seat_L_Back" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="3" unique_id=1231431422]
-surface_material_override/0 = SubResource("ShaderMaterial_d46x8")
+[node name="SideL" type="CollisionShape3D" parent="Van/Shell" unique_id=998773326]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.66, 1.82, 0)
+shape = SubResource("Shape_box_van_side")
 
-[node name="Int_Seat_L_Base" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="4" unique_id=1296734805]
-surface_material_override/0 = SubResource("ShaderMaterial_3l05q")
+[node name="SideR" type="CollisionShape3D" parent="Van/Shell" unique_id=1938843341]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.66, 1.82, 0)
+shape = SubResource("Shape_box_van_side")
 
-[node name="Int_Seat_R_Back" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="5" unique_id=1803052186]
+[node name="Bulkhead" type="CollisionShape3D" parent="Van/Shell" unique_id=766684695]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.82, -3.46)
+shape = SubResource("Shape_box_van_end")
+
+[node name="Roof" type="CollisionShape3D" parent="Van/Shell" unique_id=574141313]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.08, 0)
+shape = SubResource("Shape_box_van_roof")
+
+[node name="Ramp" type="CollisionShape3D" parent="Van/Shell" unique_id=1711596389]
+transform = Transform3D(1, 0, 0, 0, 0.9661, -0.2582, 0, 0.2582, 0.9661, 0, 0.2665, 4.6476)
+shape = SubResource("Shape_box_van_ramp")
+
+[node name="BenchL" type="CollisionShape3D" parent="Van/Shell" unique_id=1960690024]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.38, 0.83, -1.4)
+shape = SubResource("Shape_box_van_bench")
+
+[node name="BenchR" type="CollisionShape3D" parent="Van/Shell" unique_id=282354128]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.38, 0.83, -1.4)
+shape = SubResource("Shape_box_van_bench")
+
+[node name="Lamps" type="Node3D" parent="Van" unique_id=787649715]
+
+[node name="Front" type="OmniLight3D" parent="Van/Lamps" unique_id=873849921]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0073542595, 2.85, -2.6090755)
+light_color = Color(1, 0.93, 0.76, 1)
+light_energy = 1.35
+omni_range = 4.6
+omni_attenuation = 1.6
+
+[node name="Rear" type="OmniLight3D" parent="Van/Lamps" unique_id=1962062245]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.85, 1.9)
+light_color = Color(1, 0.9, 0.72, 1)
+light_energy = 1.1
+omni_range = 4.2
+omni_attenuation = 1.6
+
+[node name="Doorway" type="OmniLight3D" parent="Van/Lamps" unique_id=1511558452]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 4.2)
+light_color = Color(0.95, 0.88, 0.7, 1)
+light_energy = 0.65
+omni_range = 3.4
+
+[node name="MapTable" type="Area3D" parent="Van" unique_id=2031069548 groups=["map_station"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, -2.75)
+collision_layer = 8
+collision_mask = 0
+monitoring = false
+script = ExtResource("21_table")
+prompt = "study the plan"
+
+[node name="Reach" type="CollisionShape3D" parent="Van/MapTable" unique_id=287089748]
+shape = SubResource("Shape_reach_table")
+
+[node name="Top" type="MeshInstance3D" parent="Van/MapTable" unique_id=527485078]
+mesh = SubResource("Mesh_table_top")
 surface_material_override/0 = SubResource("ShaderMaterial_x28ej")
 
-[node name="Int_Seat_R_Base" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="6" unique_id=355171584]
+[node name="PlanSurface" type="MeshInstance3D" parent="Van/MapTable" unique_id=1531959553]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0.04, 0)
+mesh = SubResource("Mesh_table_sheet")
 surface_material_override/0 = SubResource("ShaderMaterial_1jxku")
 
-[node name="Int_Wheel_Column" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="7" unique_id=1569637635]
-surface_material_override/0 = SubResource("ShaderMaterial_1dgkn")
+[node name="Lamp" type="OmniLight3D" parent="Van/MapTable" unique_id=1833651015]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0.2)
+light_color = Color(0.9, 0.86, 0.7, 1)
+light_energy = 0.4
+omni_range = 1.8
 
-[node name="Int_Wheel_Rim" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="8" unique_id=704959162]
-surface_material_override/0 = SubResource("ShaderMaterial_e68xj")
+[node name="Open" type="AudioStreamPlayer3D" parent="Van/MapTable" unique_id=729672593]
+unit_size = 3.0
+max_distance = 12.0
 
-[node name="Van_Body" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="9" unique_id=1434501884]
-surface_material_override/0 = SubResource("ShaderMaterial_5hglh")
-surface_material_override/1 = SubResource("ShaderMaterial_qg546")
+[node name="Refused" type="AudioStreamPlayer3D" parent="Van/MapTable" unique_id=1858088481]
+unit_size = 3.0
+max_distance = 12.0
 
-[node name="Van_Bumper_Front" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="10" unique_id=740140208]
-surface_material_override/0 = SubResource("ShaderMaterial_pf35h")
-
-[node name="Van_Bumper_Rear" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="11" unique_id=358997332]
-surface_material_override/0 = SubResource("ShaderMaterial_iexy4")
-
-[node name="Van_Door_Rear_L" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="12" unique_id=1613940427]
-transform = Transform3D(-0.4226, 0, -0.9063, 0, 1, 0, 0.9063, 0, -0.4226, -1.25, 0.0399632, -3.25)
-surface_material_override/0 = SubResource("ShaderMaterial_npbic")
-
-[node name="Van_Door_Window_L" parent="van/Van_Root/Van_Door_Rear_L" index="0" unique_id=1850969227]
-surface_material_override/0 = SubResource("ShaderMaterial_e6ckp")
-
-[node name="Van_Door_Rear_R" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="13" unique_id=182106008]
-transform = Transform3D(-0.4226, 0, 0.9063, 0, 1, 0, -0.9063, 0, -0.4226, 1.25, 0.0399632, -3.25)
-surface_material_override/0 = SubResource("ShaderMaterial_mvg0v")
-
-[node name="Van_Door_Window_R" parent="van/Van_Root/Van_Door_Rear_R" index="0" unique_id=523412841]
-surface_material_override/0 = SubResource("ShaderMaterial_h3odw")
-
-[node name="Van_Grille" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="14" unique_id=1926270355]
-surface_material_override/0 = SubResource("ShaderMaterial_5hl1e")
-
-[node name="Van_Headlight_L" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="15" unique_id=315782381]
-surface_material_override/0 = SubResource("ShaderMaterial_66tox")
-
-[node name="Van_Headlight_R" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="16" unique_id=26345235]
-surface_material_override/0 = SubResource("ShaderMaterial_pq8jk")
-
-[node name="Van_Mirror_L" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="17" unique_id=1495907604]
-surface_material_override/0 = SubResource("ShaderMaterial_q57r8")
-
-[node name="Van_Mirror_R" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="18" unique_id=897214133]
-surface_material_override/0 = SubResource("ShaderMaterial_4kmvx")
-
-[node name="Van_Skirt_L" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="19" unique_id=11085473]
-surface_material_override/0 = SubResource("ShaderMaterial_myjip")
-
-[node name="Van_Skirt_R" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="20" unique_id=848229621]
-surface_material_override/0 = SubResource("ShaderMaterial_5nedk")
-
-[node name="Van_Taillight_L" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="21" unique_id=1360821574]
-surface_material_override/0 = SubResource("ShaderMaterial_40xph")
-
-[node name="Van_Taillight_R" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="22" unique_id=1819392409]
-surface_material_override/0 = SubResource("ShaderMaterial_8lgfd")
-
-[node name="Van_Wheel_FL" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="23" unique_id=924648323]
-surface_material_override/0 = SubResource("ShaderMaterial_dyafi")
-surface_material_override/1 = SubResource("ShaderMaterial_r5yoc")
-
-[node name="Van_Wheel_FR" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="24" unique_id=1276231185]
-surface_material_override/0 = SubResource("ShaderMaterial_1m1ue")
-surface_material_override/1 = SubResource("ShaderMaterial_ntuqo")
-
-[node name="Van_Wheel_RL" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="25" unique_id=1389351692]
-surface_material_override/0 = SubResource("ShaderMaterial_ca4ee")
-surface_material_override/1 = SubResource("ShaderMaterial_qaasp")
-
-[node name="Van_Wheel_RR" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="26" unique_id=76293431]
-surface_material_override/0 = SubResource("ShaderMaterial_1v02h")
-surface_material_override/1 = SubResource("ShaderMaterial_shehe")
-
-[node name="Van_Window_Front_L" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="27" unique_id=1135130462]
-surface_material_override/0 = SubResource("ShaderMaterial_l137e")
-
-[node name="Van_Window_Front_R" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="28" unique_id=1732920519]
-surface_material_override/0 = SubResource("ShaderMaterial_ygn2i")
-
-[node name="Van_Window_Rear_L" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="29" unique_id=2040474049]
-surface_material_override/0 = SubResource("ShaderMaterial_swu3i")
-
-[node name="Van_Window_Rear_R" parent="van/Van_Root" parent_id_path=PackedInt32Array(840043182, 1368951641) index="30" unique_id=1038037153]
-surface_material_override/0 = SubResource("ShaderMaterial_oexs8")
-
-[node name="Shell" type="StaticBody3D" parent="van" unique_id=1176811058 groups=["scenery"]]
+[node name="Body" type="StaticBody3D" parent="Van/MapTable" unique_id=1066818664 groups=["scenery"]]
 collision_mask = 0
 
-[node name="Floor" type="CollisionShape3D" parent="van/Shell" unique_id=625276678]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.498, -0.4)
-shape = SubResource("Shape_van_floor")
+[node name="Collision" type="CollisionShape3D" parent="Van/MapTable/Body" unique_id=1768062950]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.4, 0)
+shape = SubResource("Shape_table_body")
 
-[node name="SideL" type="CollisionShape3D" parent="van/Shell" unique_id=1321051862]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.238, 1.6605, -0.4)
-shape = SubResource("Shape_van_side")
+[node name="ReadyStation" parent="Van" unique_id=613290001 instance=ExtResource("19_ready")]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -1.55, 1.62, 2.35)
 
-[node name="SideR" type="CollisionShape3D" parent="van/Shell" unique_id=1506327192]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.238, 1.6605, -0.4)
-shape = SubResource("Shape_van_side")
+[node name="Spawns" type="Node3D" parent="." unique_id=335772048]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0, 27.5)
+script = ExtResource("18_spawns")
 
-[node name="Roof" type="CollisionShape3D" parent="van/Shell" unique_id=95460327]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.823, -0.4)
-shape = SubResource("Shape_van_roof")
+[node name="FrontDoor1" type="Marker3D" parent="Spawns" unique_id=1421365148]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0.1, 0)
 
-[node name="Front" type="CollisionShape3D" parent="van/Shell" unique_id=2120446382]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6605, 2.5)
-shape = SubResource("Shape_van_front")
+[node name="FrontDoor2" type="Marker3D" parent="Spawns" unique_id=1366862167]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 0.1, 0)
 
-[node name="Ramp" type="StaticBody3D" parent="van" unique_id=1795304106 groups=["scenery"]]
-transform = Transform3D(1, 0, 0, 0, 0.9311, 0.3649, 0, -0.3649, 0.9311, 0, 0.158, -3.929)
-collision_mask = 0
+[node name="FrontDoor3" type="Marker3D" parent="Spawns" unique_id=1305067559]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 0.1, 1.6)
 
-[node name="Mesh" type="MeshInstance3D" parent="van/Ramp" unique_id=906081962]
-cast_shadow = 3
-mesh = SubResource("Mesh_van_ramp")
-surface_material_override/0 = SubResource("ShaderMaterial_n78cu")
-
-[node name="Collision" type="CollisionShape3D" parent="van/Ramp" unique_id=551961045]
-shape = SubResource("Shape_van_ramp")
-
-[node name="ShopComputer" parent="van" unique_id=1002942641 instance=ExtResource("11_shop_pc")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.548, 0.5)
-
-[node name="PS1" parent="van" unique_id=1777166207 instance=ExtResource("3_75jji")]
+[node name="FrontDoor4" type="Marker3D" parent="Spawns" unique_id=2127760512]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 0.1, 1.6)
 
 [node name="Player" parent="." unique_id=541805088 instance=ExtResource("2_player")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 4)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0.68, 24)
 
 [node name="Players" type="Node3D" parent="." unique_id=1407872889]
 script = ExtResource("14_players")
 
+[node name="Traps" type="Node3D" parent="." unique_id=84269803]
+
 [node name="Rats" type="Node3D" parent="." unique_id=1730976301]
 
-[node name="Rat1" parent="Rats" unique_id=336481594 instance=ExtResource("4_rat")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.1, 12)
+[node name="RatHoles" type="Node3D" parent="." unique_id=1309894906]
 
-[node name="Rat2" parent="Rats" unique_id=1788396856 instance=ExtResource("4_rat")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 0.1, 1)
+[node name="HoleKitchen1" type="Node3D" parent="RatHoles" unique_id=2072346131]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -29, 0.1, -22)
+script = ExtResource("17_hole")
+hole_name = "Kitchen Pantry Crack"
 
-[node name="Rat3" parent="Rats" unique_id=1549134091 instance=ExtResource("4_rat")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.1, -16)
+[node name="HoleKitchen2" type="Node3D" parent="RatHoles" unique_id=663764086]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0.1, -29)
+script = ExtResource("17_hole")
+hole_name = "Kitchen Sink Pipe Hole"
 
-[node name="Rat4" parent="Rats" unique_id=1728053416 instance=ExtResource("4_rat")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 0.1, 2)
+[node name="HoleLiving1" type="Node3D" parent="RatHoles" unique_id=121458224]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 29, 0.1, -18)
+script = ExtResource("17_hole")
+hole_name = "Living Room Baseboard Hole"
 
-[node name="Rat5" parent="Rats" unique_id=593484386 instance=ExtResource("4_rat")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 0.1, -12)
+[node name="HoleLiving2" type="Node3D" parent="RatHoles" unique_id=761773168]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0.1, -29)
+script = ExtResource("17_hole")
+hole_name = "Fireplace Hearth Flue"
 
-[node name="Rat6" parent="Rats" unique_id=808009004 instance=ExtResource("4_rat")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0.1, 14)
+[node name="HoleHallway" type="Node3D" parent="RatHoles" unique_id=1452135018]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -29, 0.1, 9)
+script = ExtResource("17_hole")
+hole_name = "Hallway Stair Baseboard"
 
-[node name="Rat7" parent="Rats" unique_id=212291970 instance=ExtResource("4_rat")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0.1, -20)
+[node name="HoleBackRoom" type="Node3D" parent="RatHoles" unique_id=2084282109]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 29, 0.1, 16)
+script = ExtResource("17_hole")
+hole_name = "Back Room Vent"
 
-[node name="Rat8" parent="Rats" unique_id=1009427670 instance=ExtResource("4_rat")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.1, -27)
+[node name="Geometry" type="Node3D" parent="." unique_id=646313865]
 
-[node name="Rat9" parent="Rats" unique_id=1752097958 instance=ExtResource("4_rat")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0.1, 6)
+[node name="Audio" type="Node" parent="." unique_id=664511605]
 
-[node name="Rat10" parent="Rats" unique_id=494732994 instance=ExtResource("4_rat")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0.1, 26)
+[node name="Screech" type="AudioStreamPlayer" parent="Audio" unique_id=882571525]
+volume_db = -6.0
 
 [node name="HUD" type="CanvasLayer" parent="." unique_id=1294235576]
 
@@ -1391,6 +1042,7 @@ Left button — grab the rat
 Left button (holding) — strangle
 1 2 3 — switch weapon
 E — use the computer
+E (holding) — clean a sprung trap ($2 to set it again)
 Esc — release the mouse"
 label_settings = SubResource("LabelSettings_jaeu2")
 
@@ -1630,6 +1282,47 @@ text = "hammer to strangle"
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="Hold" type="Control" parent="HUD" unique_id=2006033597]
+layout_mode = 3
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -150.0
+offset_top = -96.0
+offset_right = 150.0
+offset_bottom = -52.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+script = ExtResource("15_hold")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HUD/Hold" unique_id=1947672325]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 4
+alignment = 2
+
+[node name="Label" type="Label" parent="HUD/Hold/VBoxContainer" unique_id=163608909]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+text = "clean the trap"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Bar" type="ProgressBar" parent="HUD/Hold/VBoxContainer" unique_id=1553451398]
+custom_minimum_size = Vector2(0, 10)
+layout_mode = 2
+max_value = 1.0
+show_percentage = false
+
 [node name="Prompt" type="Label" parent="HUD" unique_id=1493470610]
 anchors_preset = 8
 anchor_left = 0.5
@@ -1720,4 +1413,4 @@ theme_override_constants/separation = 4
 layout_mode = 2
 text = "CLOSE"
 
-[editable path="van"]
+[node name="HUD_Phase" parent="." unique_id=1677183090 instance=ExtResource("20_hud_phase")]

@@ -6,8 +6,9 @@ extends SceneTree
 ##
 ## What is checked here is the whole round trip of a purchase: a wallet that
 ## cannot pay buys nothing and the button says so, a wallet that can pay hands
-## the units over, the slot that was an empty loop on the belt fills up on the
-## spot, and using the last one takes the weapon away again. The screen itself is
+## the units over, the square that was blank on the belt fills up on the spot —
+## name and count at once, because a weapon nobody owns has neither — and using
+## the last one empties it again. The screen itself is
 ## checked where it counts — that it takes the player out of the map while it is
 ## up, and gives him back when it closes.
 
@@ -16,9 +17,18 @@ const WAIT := 8
 ## What the mousetrap costs, and how many it hands over. It is read off the
 ## resource so the bench does not go stale when the price moves.
 const ITEM_PATH := "res://resources/store/mousetrap.tres"
+## Which loop of the belt the mousetrap hangs from. The hands are on none of
+## them, so the first slot is the first thing there is to buy.
+const TRAP_SLOT := 0
+## Where the player stands to actually put a trap down. It is the map's own
+## starting point, which is open floor by construction.
+const FLOOR_STATION := Vector3(0.0, 0.1, 4.0)
+## How far down the head is tipped to aim at the floor in front of him.
+const LOOK_DOWN := -0.9
 
 var _world: Node3D
 var _player: CharacterBody3D
+var _head: Node3D
 var _inventory: Node
 var _hotbar: Control
 var _shop: Control
@@ -42,6 +52,7 @@ func _initialize() -> void:
 	_world = load("res://scenes/world.tscn").instantiate()
 	root.add_child(_world)
 	_player = _world.get_node("Player")
+	_head = _player.get_node("Head")
 	_inventory = _player.get_node("Head/Inventory")
 	_trap = _player.get_node("Head/Mousetrap")
 	_hotbar = _world.get_node("HUD/Hotbar")
@@ -72,8 +83,8 @@ func _physics_process(_delta: float) -> bool:
 
 # --- Steps -----------------------------------------------------------------
 
-## Nothing bought yet: the shop is off screen, the wallet is empty and the second
-## slot is a loop with an empty box hanging from it.
+## Nothing bought yet: the shop is off screen, the wallet is empty and the
+## trap's square is as blank as the two beside it.
 func _check_start() -> bool:
 	if _clock < WAIT:
 		return false
@@ -90,9 +101,11 @@ func _check_start() -> bool:
 	_expect(not _shop.visible, "the shop should start off screen")
 	_expect(not _player.is_ui_open(), "the player should start in the map")
 	_expect(_stock.count(_item.id) == 0, "the shift should start with an empty box")
-	_expect(_inventory.equip(1), "the trap's slot should be reachable")
-	_expect(_inventory.current() == null, "an empty box holds nothing")
-	_expect(_inventory.equip(0), "it should be possible to go back to the hands")
+	_expect(_inventory.equip(TRAP_SLOT), "the trap's slot should be reachable")
+	_expect(_inventory.current() == null, "a weapon nobody bought holds nothing")
+	_expect(_name_in(TRAP_SLOT) == "", "an unbought square should say nothing, and says \"%s\"" % _name_in(TRAP_SLOT))
+	_expect(_count_in(TRAP_SLOT) == "", "an unbought square should count nothing, and counts \"%s\"" % _count_in(TRAP_SLOT))
+	_expect(_inventory.equip_hands(), "Q should bring the hands back")
 	return _advance()
 
 ## A wallet that cannot pay buys nothing, and it is turned down before the money
@@ -128,32 +141,43 @@ func _check_buys() -> bool:
 	_expect(_stock.count(_item.id) == amount, "the units should land in the stock")
 	return _advance()
 
-## The slot that was empty a moment ago now has the weapon in it, and the square
-## on screen counts what is in the box.
+## The square that was blank a moment ago now has the weapon in it: its name,
+## and what is left in the box in the corner.
 func _check_reaches_the_belt() -> bool:
 	if _clock < WAIT:
 		return false
-	_expect(_inventory.equip(1), "the trap's slot should still be reachable")
+	_expect(_inventory.equip(TRAP_SLOT), "the trap's slot should still be reachable")
 	_expect(_inventory.current() == _trap, "the bought trap should be in hand")
 	_expect(_trap.available(), "a full box is a weapon that can be taken out")
-	_expect(_count_in(1) == str(_item.amount), "the square should count %d, and counts \"%s\"" % [
-		_item.amount, _count_in(1),
+	_expect(_name_in(TRAP_SLOT) == _trap.display_name, "the square should read \"%s\", and reads \"%s\"" % [
+		_trap.display_name, _name_in(TRAP_SLOT),
+	])
+	_expect(_count_in(TRAP_SLOT) == str(_item.amount), "the square should count %d, and counts \"%s\"" % [
+		_item.amount, _count_in(TRAP_SLOT),
 	])
 	return _advance()
 
-## Every use takes one out, and the last one takes the weapon with it: the slot
-## goes back to being an empty loop without anybody swapping anything.
+## Every use takes one out, and the last one takes the weapon with it: the
+## square goes blank again without anybody swapping anything.
 func _check_runs_out() -> bool:
 	if _clock < WAIT:
 		return false
+	# A trap is put down on the *floor*, and a click with nowhere to put one
+	# spends nothing (`scripts/weapons/mousetrap_weapon.gd`). The player is
+	# standing at the computer with a desk in front of him, so he is moved onto
+	# open floor and made to look down at it before the box is emptied.
+	_player.global_position = FLOOR_STATION
+	_player.rotation = Vector3.ZERO
+	_head.rotation.x = LOOK_DOWN
 	var amount: int = _item.amount
 	for i in amount:
 		_inventory.try_use()
 	_expect(_stock.count(_item.id) == 0, "the box should be empty after %d uses" % amount)
 	_expect(not _trap.available(), "an empty box is not a weapon that can be taken out")
-	_expect(_inventory.index() == 1, "running out should not move the belt")
+	_expect(_inventory.index() == TRAP_SLOT, "running out should not move the belt")
 	_expect(_inventory.current() == null, "the empty box should leave the hands")
-	_expect(_count_in(1) == "0", "the square should count zero, and counts \"%s\"" % _count_in(1))
+	_expect(_name_in(TRAP_SLOT) == "", "the square should go blank, and reads \"%s\"" % _name_in(TRAP_SLOT))
+	_expect(_count_in(TRAP_SLOT) == "", "the square should count nothing, and counts \"%s\"" % _count_in(TRAP_SLOT))
 	# One more click on an empty box does nothing, and least of all goes negative.
 	_inventory.try_use()
 	_expect(_stock.count(_item.id) == 0, "a click on an empty box should buy nobody anything")
@@ -191,6 +215,13 @@ func _count_in(index: int) -> String:
 	var slot: PanelContainer = _hotbar.get_node("Slot%d" % (index + 1))
 	var count: Label = slot.get_node("Count")
 	return count.text
+
+## What a hotbar square is calling its weapon, which is nothing at all while
+## there is no weapon in it.
+func _name_in(index: int) -> String:
+	var slot: PanelContainer = _hotbar.get_node("Slot%d" % (index + 1))
+	var label: Label = slot.get_node("Name")
+	return label.text
 
 func _advance() -> bool:
 	_step += 1

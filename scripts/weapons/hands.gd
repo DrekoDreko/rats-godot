@@ -48,6 +48,11 @@ const DEATH_TYPE := Death.Type.STRANGULATION
 var _rat: Node3D
 var _pressure := 0.0
 var _empty_time := 0.0
+## How much of the usual strangling this rat is worth, read at the moment of the
+## grab. It is latched and not asked for again on purpose: taking the animal off
+## the glue is what un-sticks it, so by the time it is in the hand it no longer
+## remembers having been stuck (`rat.gd: capture()`).
+var _effort := 1.0
 
 func _ready() -> void:
 	super()
@@ -81,10 +86,14 @@ func _use() -> void:
 	used.emit(target != null)
 	if target == null:
 		return
+	# Read *before* the grab: the capture is what tears the rat off the glue, and
+	# after it the animal has no memory of having been stuck.
+	var effort: float = target.effort() if target.has_method("effort") else 1.0
 	if not target.capture(capture_point):
 		return
 
 	_rat = target
+	_effort = effort
 	_pressure = 0.0
 	_empty_time = 0.0
 	_add_recoil(GRAB_RECOIL)
@@ -92,12 +101,19 @@ func _use() -> void:
 	pressure_changed.emit(0.0)
 
 ## One squeeze of the neck.
+##
+## How many it takes is the hands' rule, but the animal gets a say in it: one
+## that was already caught when it was picked up — stuck on the glue, and
+## tomorrow whatever else holds a rat down — gives in in a fraction of the
+## squeezes. The hands never learn what glue is; they only ask the rat how much
+## of the usual work it is worth (`rat.gd: effort()`).
 func press_secondary() -> void:
 	if not _is_holding():
 		return
 	_rat.squeeze()
 	_add_recoil(SQUEEZE_RECOIL)
-	_set_pressure(_pressure + 1.0 / maxf(1.0, float(squeezes_to_kill)))
+	var goes := maxf(1.0, float(squeezes_to_kill) * _effort)
+	_set_pressure(_pressure + 1.0 / goes)
 	if _pressure >= 1.0:
 		_release(true)
 
@@ -121,6 +137,7 @@ func _release(killed: bool) -> void:
 	_rat = null
 	_pressure = 0.0
 	_empty_time = 0.0
+	_effort = 1.0
 	if killed:
 		rat.die_in_hands(DEATH_TYPE)
 		# The rat died mid-hammering and more clicks are still coming in behind:

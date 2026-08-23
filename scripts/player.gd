@@ -1,7 +1,8 @@
 extends CharacterBody3D
 ## First-person character.
-## WASD/arrows move relative to where the player is looking, Shift runs, Space
-## jumps, the mouse looks around and the left button uses the current weapon.
+## WASD/arrows move relative to where the player is looking, Shift runs, Ctrl
+## crouches, Space jumps, the mouse looks around and the left button uses the
+## current weapon.
 ##
 ## The player does not know how to kill a rat: the weapon hanging off his head
 ## does (`scripts/weapons/`). Today that is the pair of hands, which grabs the
@@ -10,8 +11,9 @@ extends CharacterBody3D
 ## the animal struggling in his hand.
 ##
 ## Which weapon that is, is the belt's business (`scripts/weapons/inventory.gd`):
-## `1`, `2` and `3` swap slots, and the player talks to the belt instead of to
-## any one weapon — so a slot with nothing in it is a click that finds nothing
+## `1`, `2` and `3` swap slots, `Q` puts the hands back — they take no slot,
+## because they were never bought — and the player talks to the belt instead of
+## to any one weapon, so a slot with nothing in it is a click that finds nothing
 ## to do, and not a crash.
 ##
 ## The player also has flesh to lose (`take_damage`), and it is the only door
@@ -38,8 +40,9 @@ signal attacked(hit: bool)
 signal capture_started(rat: Node3D)
 signal capture_progress(fraction: float)
 signal capture_finished(killed: bool)
-## Swapped slots. `weapon` comes in null on an empty slot. It is what the hotbar
-## listens to.
+## Swapped slots. `weapon` comes in null on an empty slot, and `index` comes in
+## `Inventory.HANDS_INDEX` with the hands out — no square to frame. It is what
+## the hotbar listens to.
 signal weapon_changed(index: int, weapon: Weapon)
 ## The flesh changed, wound or bandage alike. It is what the health bar listens
 ## to, and it goes out on the healing at respawn too, so nothing on screen is
@@ -54,12 +57,22 @@ signal died()
 ## What the player could put his hands on right now, or null with nothing in
 ## front of him. It is what the on-screen prompt listens to.
 signal interactable_changed(interactable: Interactable)
+## Hands on something slow. Not everything answers to a tap: a fouled trap has to
+## be stood over and cleaned out, and while that is going on there is a bar on
+## screen instead of a prompt (`scripts/hud_hold.gd`).
+signal hold_started(interactable: Interactable)
+signal hold_progress(fraction: float)
+## Finger up, eyes away, or the job done. `completed` tells the two apart.
+signal hold_finished(completed: bool)
 
 @export_group("Movement")
 @export var walk_speed := 6.0
 @export var run_speed := 10.5
 ## Speed with a rat struggling in the hands: enough to walk, not to hunt.
 @export var holding_speed := 3.5
+## Speed crouched. Slower than a rat's wander, which is the point of it: it buys
+## quiet, not ground.
+@export var crouch_speed := 2.8
 @export var acceleration := 52.0
 @export var deceleration := 68.0
 @export var jump_height := 1.5
@@ -78,23 +91,50 @@ const MAX_PITCH := 89.0
 const IDLE_SPEED := 0.3
 ## Window in which a jump still works after leaving the ground.
 const COYOTE_TIME := 0.12
+## How much of his height is left when he is down: the capsule and the head both
+## come to this fraction of what they are standing up.
+const CROUCH_SCALE := 0.55
+## How fast he goes down and comes back up, in fractions of the way per second.
+## Fast enough to duck under something on the move, slow enough to be a movement
+## and not a change of camera.
+const CROUCH_SPEED := 9.0
 ## Height at which the character is sent back to his starting point.
 const MIN_HEIGHT := -20.0
 
 @onready var head: Node3D = $Head
 @onready var camera: Camera3D = $Head/Camera
 @onready var inventory: Inventory = $Head/Inventory
+@onready var collision: CollisionShape3D = $Collision
+## The room over his head, asked only when he wants it back: it is the standing
+## capsule put where the standing capsule would go, and anything it touches is a
+## ceiling he cannot get up through.
+@onready var ceiling: ShapeCast3D = $Ceiling
 ## The reach of the hands for things that are not rats. It only sees the
 ## interactable layer, so it never trips over the scenery or over an animal.
 @onready var interact_ray: RayCast3D = $Head/Camera/Interact
+@onready var flashlight: SpotLight3D = get_node_or_null(^"Head/Camera/Flashlight") as SpotLight3D
 
 var _start_position: Vector3
 var _air_time := 0.0
+## How far down he is, from 0 standing to 1 fully crouched. It is a fraction and
+## not a flag because the body moves through it: everything that depends on his
+## height is read off this and follows it down.
+var _crouch := 0.0
+## Standing height of the capsule and of the head, read once off the scene so
+## that moving either in the editor moves the crouch with it.
+var _stand_height := 0.0
+var _stand_head := 0.0
+var _stand_collision_y := 0.0
 ## What is left of `max_health`. Zero is a dead player, and only for the instant
 ## it takes to send him back to the start.
 var _health := 0
 ## What is in front of him, or null. Only what changes is announced.
 var _focused: Interactable
+## The slow thing he is working on, and how long he has been at it. Null with his
+## finger off the key, and null the instant he looks away — there is no such thing
+## as half a cleaned trap waiting for him to come back to it.
+var _hold_target: Interactable
+var _hold_time := 0.0
 ## A screen has the player: the mouse is loose on it and the body is out of the
 ## game until it closes.
 var _ui_open := false
@@ -102,6 +142,14 @@ var _ui_open := false
 func _ready() -> void:
 	_start_position = global_position
 	_health = max_health
+	# The shape is duplicated before a single frame is drawn: the one in the scene
+	# is shared with the ceiling cast — and with every other player in a lobby —
+	# and shrinking it in place would crouch all of them at once.
+	var shape := collision.shape as CapsuleShape3D
+	collision.shape = shape.duplicate()
+	_stand_height = shape.height
+	_stand_collision_y = collision.position.y
+	_stand_head = head.position.y
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	# Every weapon on the belt is wired up once, and not the one in hand at each
 	# swap: a weapon that is put away never reaches `_use()`, so it never has
@@ -127,6 +175,13 @@ func _unhandled_input(event: InputEvent) -> void:
 			deg_to_rad(-MAX_PITCH),
 			deg_to_rad(MAX_PITCH)
 		)
+	# Before the mouse toggle, because the two share Esc: a strip of glue half
+	# laid is the first thing Esc can mean, and only once there is none of it
+	# does the key go back to meaning what it usually means. The belt answers
+	# whether there was in fact anything to call off, so nothing is swallowed on
+	# a weapon that had nothing going on.
+	elif event.is_action_pressed("cancel") and inventory.cancel():
+		pass
 	elif event.is_action_pressed("toggle_mouse"):
 		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -140,7 +195,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		else:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	elif event.is_action_pressed("interact") and _focused != null:
-		_focused.use(self)
+		# The slow ones are not used on the press: the press is only the start of
+		# the holding, and the holding is counted where the frames are
+		# (`_update_hold`).
+		if not _focused.is_held_work():
+			_focused.use(self)
 	elif event.is_action_pressed("attack"):
 		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 			inventory.try_use()
@@ -150,10 +209,14 @@ func _unhandled_input(event: InputEvent) -> void:
 	else:
 		_handle_slot_keys(event)
 
-## `1`, `2` and `3`: the belt. Unlike the click, this one works with the mouse
-## loose too — it is a key, and it is not fighting anybody over the camera. The
-## belt itself is what turns the swap down with a rat in hand.
+## `1`, `2` and `3`: the belt. `Q`: the hands, which are on no slot and are
+## always there to come back to. Unlike the click, these work with the mouse
+## loose too — they are keys, and they are not fighting anybody over the camera.
+## The belt itself is what turns the swap down with a rat in hand.
 func _handle_slot_keys(event: InputEvent) -> void:
+	if event.is_action_pressed("hands"):
+		inventory.equip_hands()
+		return
 	for i in inventory.slot_count():
 		if event.is_action_pressed("slot_%d" % (i + 1)):
 			inventory.equip(i)
@@ -161,6 +224,8 @@ func _handle_slot_keys(event: InputEvent) -> void:
 
 func _physics_process(delta: float) -> void:
 	_update_focus()
+	_update_hold(delta)
+	_update_crouch(delta)
 	var busy := inventory.is_busy()
 
 	if is_on_floor():
@@ -169,8 +234,10 @@ func _physics_process(delta: float) -> void:
 		_air_time += delta
 		velocity.y -= gravity * delta
 
-	# With the hands full there is no jumping: holding the rat is work enough.
-	if not busy and not _ui_open and Input.is_action_just_pressed("jump") and _air_time <= COYOTE_TIME:
+	# With the hands full there is no jumping: holding the rat is work enough. Nor
+	# from down on his knees — pressing jump while crouched only lets go of the
+	# crouch, and the jump belongs to whoever is standing when he presses it.
+	if not busy and not _ui_open and not is_crouching() and Input.is_action_just_pressed("jump") and _air_time <= COYOTE_TIME:
 		velocity.y = sqrt(2.0 * gravity * jump_height)
 		_air_time = COYOTE_TIME + 1.0
 
@@ -185,10 +252,19 @@ func _physics_process(delta: float) -> void:
 	if global_position.y < MIN_HEIGHT:
 		respawn()
 
+## How fast he is trying to go. The order is the order of what wins: a rat in the
+## hands is the slowest thing there is, and being down beats wanting to run —
+## there is no sprinting on your knees, and holding Shift while crouched does
+## nothing at all.
+##
+## Between standing and crouched it is not one speed or the other but the way
+## from one to the other, because that is what his body is doing: going down
+## slows him as he goes down, and standing up gives it back as he comes up.
 func _target_speed(busy: bool) -> float:
 	if busy:
 		return holding_speed
-	return run_speed if Input.is_action_pressed("run") else walk_speed
+	var upright := run_speed if Input.is_action_pressed("run") else walk_speed
+	return lerpf(upright, crouch_speed, _crouch)
 
 ## Movement direction on the XZ plane, relative to where the character faces.
 func _desired_direction() -> Vector3:
@@ -202,6 +278,55 @@ func _desired_direction() -> Vector3:
 	direction.y = 0.0
 	return direction.normalized()
 
+# --- Down on his knees ------------------------------------------------------
+
+## Ctrl held is the whole of the asking, and the answer is not always yes: what
+## he wants goes one way, and what there is room for goes the other. Under a
+## table there is no standing up, so letting go of Ctrl leaves him down until he
+## walks out from under it — which is the one rule here that is not simply
+## following the key.
+##
+## The crouch travels rather than switching, and everything that reads off his
+## height reads off the travel: the capsule, the head the camera hangs from and
+## the speed all follow the same fraction, so at no point is he a short body
+## with a tall head or a crouching body running.
+func _update_crouch(delta: float) -> void:
+	var wanted := not _ui_open and Input.is_action_pressed("crouch")
+	if not wanted and _crouch > 0.0 and _is_blocked_above():
+		wanted = true
+	var target := 1.0 if wanted else 0.0
+	if is_equal_approx(_crouch, target):
+		# Already all the way there. Snapped rather than left a hair off, so that
+		# a body which is standing is standing exactly as the scene drew him.
+		_crouch = target
+	else:
+		_crouch = move_toward(_crouch, target, CROUCH_SPEED * delta)
+	_apply_crouch()
+
+## Puts the fraction on the body. The capsule shrinks from the top down — its
+## middle comes down by half of what its height loses — because his feet stay on
+## the floor: growing it about its own centre would push him through it.
+func _apply_crouch() -> void:
+	var height := lerpf(_stand_height, _stand_height * CROUCH_SCALE, _crouch)
+	var shape := collision.shape as CapsuleShape3D
+	shape.height = height
+	collision.position.y = _stand_collision_y - (_stand_height - height) * 0.5
+	head.position.y = lerpf(_stand_head, _stand_head * CROUCH_SCALE, _crouch)
+
+## Is there a ceiling in the way of standing back up? The cast is the standing
+## capsule put where the standing capsule would sit, asked once and only when he
+## is trying to get up — a shape cast left running every frame is a cost paid for
+## an answer nobody wanted.
+func _is_blocked_above() -> bool:
+	ceiling.position.y = _stand_collision_y
+	ceiling.force_shapecast_update()
+	return ceiling.is_colliding()
+
+## Down, or on his way down. Anything asking whether he is crouched wants this
+## and not the fraction: halfway to the floor is already too low to jump from.
+func is_crouching() -> bool:
+	return _crouch > 0.0
+
 ## Where the shift starts, and where a respawn brings him back to. The map puts
 ## him on his spot once, on the way in — with three other people pressing PLAY on
 ## the same starting point, somebody has to (`scripts/steam/player_avatars.gd`)
@@ -211,10 +336,20 @@ func set_spawn(spot: Vector3) -> void:
 	global_position = spot
 	_start_position = spot
 
+## The spot a respawn brings him back to. Worth asking for rather than assuming
+## where he stood at load: the map moves it on the way in.
+func spawn_point() -> Vector3:
+	return _start_position
+
 func respawn() -> void:
 	velocity = Vector3.ZERO
 	rotation.y = 0.0
 	head.rotation.x = 0.0
+	# On his feet again. Waking up back at the van still folded in half — because
+	# the ceiling he died under is nowhere near him now — would leave him low
+	# until he thought to press Ctrl and let go of it.
+	_crouch = 0.0
+	_apply_crouch()
 	global_position = _start_position
 
 ## What he looks like he is doing, for the benefit of the other players' screens
@@ -225,13 +360,17 @@ func respawn() -> void:
 ##
 ## The order is the order of what wins. A rat in the hands is the whole of what
 ## he is doing, however he is moving; being off the ground beats being on it;
-## and the difference between walking and running is drawn halfway between the
-## two speeds, so the moment he crosses it is the moment he looks like it.
+## being down on his knees beats being on his feet, moving or not, because it is
+## the pose and not the pace that the man watching him needs to see; and the
+## difference between walking and running is drawn halfway between the two
+## speeds, so the moment he crosses it is the moment he looks like it.
 func animation_state() -> PlayerAvatar.State:
 	if inventory.is_busy():
 		return PlayerAvatar.State.HOLDING
 	if not is_on_floor():
 		return PlayerAvatar.State.AIRBORNE
+	if is_crouching():
+		return PlayerAvatar.State.CROUCHING
 	var speed := Vector2(velocity.x, velocity.z).length()
 	if speed < IDLE_SPEED:
 		return PlayerAvatar.State.IDLE
@@ -251,6 +390,60 @@ func _update_focus() -> void:
 	if found == _focused:
 		return
 	_focused = found
+	interactable_changed.emit(_focused)
+
+## The slow jobs: the ones he has to stand there and do. He keeps the key down
+## and the work goes up; he lets go, looks away, opens a screen or gets a rat in
+## his hands, and it is all thrown away.
+##
+## Only one of those endings is written out below. The rest arrive for free
+## through `_focused`, which `_update_focus` has already cleared this frame for
+## every one of those reasons — which is why this runs immediately after it.
+func _update_hold(delta: float) -> void:
+	var target := _focused
+	if target != null and not target.is_held_work():
+		target = null
+	if target == null or _ui_open or not Input.is_action_pressed("interact"):
+		_cancel_hold()
+		return
+
+	# Looking from one slow thing straight to another starts the second from
+	# nothing: what he did to the first buys him no time on it.
+	if _hold_target != target:
+		_cancel_hold()
+		_hold_target = target
+		hold_started.emit(target)
+
+	_hold_time += delta
+	var fraction := clampf(_hold_time / target.hold_time, 0.0, 1.0)
+	hold_progress.emit(fraction)
+	if fraction < 1.0:
+		return
+
+	# Done. The counter is cleared before the thing is told, because being told
+	# is very often the last moment it exists (`scripts/traps/mousetrap.gd`).
+	_hold_target = null
+	_hold_time = 0.0
+	hold_finished.emit(true)
+	_announce_focus()
+	target.use(self)
+
+## Drops whatever slow job was going, if there was one. Saying so twice would put
+## the bar back on screen after it had already left.
+func _cancel_hold() -> void:
+	if _hold_target == null:
+		return
+	_hold_target = null
+	_hold_time = 0.0
+	hold_finished.emit(false)
+	_announce_focus()
+
+## Says again what is in front of him, unchanged. The prompt is drawn only when
+## what he is looking at *changes* (`scripts/hud_prompt.gd`), and letting go of a
+## slow job halfway is not a change — he is still standing over the same trap.
+## Without this the line he needs in order to start again would stay off the
+## screen for as long as he kept looking at it.
+func _announce_focus() -> void:
 	interactable_changed.emit(_focused)
 
 ## Hands a screen the player, or gives him back. Whoever opens one is the one who
@@ -319,3 +512,14 @@ func _die() -> void:
 	respawn()
 	_health = max_health
 	health_changed.emit(_health, max_health)
+
+## Toggles the player's flashlight on or off.
+func toggle_flashlight() -> void:
+	if flashlight != null:
+		flashlight.visible = not flashlight.visible
+
+## Enables or disables the player's flashlight.
+func set_flashlight(enabled: bool) -> void:
+	if flashlight != null:
+		flashlight.visible = enabled
+

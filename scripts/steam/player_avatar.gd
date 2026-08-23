@@ -33,8 +33,9 @@ extends Node3D
 ##
 ## The state is the whole of the animation there is to play, the character being
 ## a capsule: it bobs as he walks, harder and faster as he runs, sits low while
-## he has a rat in his hands and rides high while he is off the ground. When the
-## real model arrives, `_animate` is the one thing here to throw away.
+## he has a rat in his hands, lower still while he is down on his knees, and
+## rides high while he is off the ground. When the real model arrives, `_animate`
+## is the one thing here to throw away.
 ##
 ## What it asks of the character it stands for is two things and no more:
 ## `animation_state()` and an `attacked` signal. That is the whole contract, and
@@ -55,6 +56,10 @@ enum State {
 	AIRBORNE,
 	## A rat in his hands, which is why he is walking so slowly.
 	HOLDING,
+	## Down on his knees, moving or not. It is the pose that matters here and not
+	## the pace: a crouching man creeping and a crouching man waiting look the
+	## same from across the room, and both of them are hunting.
+	CROUCHING,
 }
 
 ## The one-off things, the ones with no state to be in: they happen, everybody
@@ -85,7 +90,14 @@ const POSE_SMOOTHING := 18.0
 var peer_id := 0
 ## Who this stands for, as Steam counts people. Handed over by the crowd, which
 ## had it from the peer himself (see `LobbyManager.steam_id_of_peer`).
-var steam_id := 0
+##
+## It is also what the overalls are painted from, so setting it repaints them.
+## Safe before the node is in the tree, like `player_name` and for the same
+## reason: the crowd knows who this is a moment before the node is a node.
+var steam_id := 0:
+	set(value):
+		steam_id = value
+		_repaint()
 
 ## The name floating over the capsule. Safe to set before the node is in the
 ## tree — the label picks it up on the way in — because whoever puts one of
@@ -121,7 +133,13 @@ var _bob := 0.0
 var _front_rest := 0.0
 var _swing: Tween
 
+## The overalls' own material, made private on the way up so that dressing one
+## man does not dress the whole van in his colour — the scene hands the same
+## `StandardMaterial3D` to every capsule otherwise.
+var _body_material: StandardMaterial3D
+
 @onready var _model: Node3D = $Model
+@onready var _body: MeshInstance3D = $Model/Body
 @onready var _front: Node3D = $Model/Front
 @onready var _tag: Label3D = $Name
 @onready var _sync: MultiplayerSynchronizer = $Sync
@@ -130,6 +148,13 @@ var _swing: Tween
 func _ready() -> void:
 	_tag.text = player_name
 	_front_rest = _front.position.z
+	_body_material = _own_body_material()
+	# The colour is read from `SessionManager` and never kept here, so that a
+	# body is wearing what the crew says he is wearing rather than what he was
+	# wearing when this node went up. What changes it is the host, and this
+	# hears about it the same way every other panel in the game does.
+	ColorManager.color_changed.connect(_on_color_changed)
+	_repaint()
 	# Not drawn yet either way: ours is never drawn at all, and anybody else's
 	# waits for the wire to say where he is.
 	visible = false
@@ -206,8 +231,8 @@ func _on_synchronized() -> void:
 
 
 ## The animation, such as a capsule can have one: a bob for the walk, a bigger
-## and faster one for the run, a crouch for the rat in his hands and a lift for
-## the ground not being under him.
+## and faster one for the run, a dip for the rat in his hands, a deeper one for
+## the crouch and a lift for the ground not being under him.
 func _animate(delta: float) -> void:
 	var cycle := 0.0
 	var height := 0.0
@@ -223,9 +248,43 @@ func _animate(delta: float) -> void:
 			settle = 0.06
 		State.HOLDING:
 			settle = -0.12
+		State.CROUCHING:
+			settle = -0.35
 	_bob = fmod(_bob + delta * cycle, 1.0) if cycle > 0.0 else 0.0
 	var pose := settle + sin(_bob * TAU) * height
 	_model.position.y = lerpf(_model.position.y, pose, 1.0 - exp(-POSE_SMOOTHING * delta))
+
+
+## Somebody's colour was settled. Only ours is worth a repaint, and asking which
+## is cheaper than repainting four capsules every time one man picks.
+func _on_color_changed(changed_id: int, _color: Color) -> void:
+	if changed_id == steam_id:
+		_repaint()
+
+
+## The overalls, in whatever colour the crew says this man is wearing. Called on
+## the way up, whenever the Steam ID is filled in — which for a peer whose
+## introduction is still in the air happens after the capsule is already up — and
+## whenever the host settles a colour.
+##
+## A man the crew has never heard of keeps the colour the scene was built in.
+## That is not a fallback so much as the honest answer: there is nothing to read,
+## and grey would be a claim about him.
+func _repaint() -> void:
+	if _body_material == null or steam_id == 0 or not SessionManager.has_player(steam_id):
+		return
+	_body_material.albedo_color = SessionManager.color(steam_id)
+
+
+## A private copy of the capsule's material, for the reason above.
+func _own_body_material() -> StandardMaterial3D:
+	if _body == null:
+		return null
+	var source := _body.get_active_material(0) as StandardMaterial3D
+	var copy: StandardMaterial3D = source.duplicate() if source != null \
+		else StandardMaterial3D.new()
+	_body.set_surface_override_material(0, copy)
+	return copy
 
 
 ## The nub on the chest goes out and comes back. It is the placeholder for an

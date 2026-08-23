@@ -1,0 +1,652 @@
+[gd_scene load_steps=42 format=3]
+
+[ext_resource type="PackedScene" uid="uid://cnc3cxoy5gjim" path="res://models/box_van.glb" id="1_van"]
+[ext_resource type="PackedScene" uid="uid://bgordf5uoxh7c" path="res://scenes/ps1.tscn" id="2_ps1"]
+[ext_resource type="PackedScene" uid="uid://bvvcrva6c1ve" path="res://scenes/player.tscn" id="3_player"]
+[ext_resource type="PackedScene" path="res://scenes/ready_station.tscn" id="4_ready"]
+[ext_resource type="PackedScene" path="res://scenes/hud_phase.tscn" id="5_hud_phase"]
+[ext_resource type="Script" uid="uid://b5fi6sleuhdk1" path="res://scripts/session/van_spawns.gd" id="6_spawns"]
+[ext_resource type="Script" uid="uid://b7h3dlip6ueyi" path="res://scripts/session/contract_board.gd" id="7_board"]
+[ext_resource type="Script" uid="uid://bv088710brpjr" path="res://scripts/steam/player_avatars.gd" id="8_avatars"]
+[ext_resource type="Script" uid="uid://bgxxpnjqmrumj" path="res://scripts/hud_prompt.gd" id="9_prompt"]
+[ext_resource type="Script" uid="uid://c5txs44n7kkuu" path="res://scripts/session/pending_station.gd" id="10_pending"]
+[ext_resource type="Script" path="res://scripts/travel/van_travel.gd" id="11_travel"]
+[ext_resource type="Script" path="res://scripts/travel/road_scroll.gd" id="12_road"]
+[ext_resource type="Script" path="res://scripts/travel/cabin_shake.gd" id="13_shake"]
+[ext_resource type="Script" path="res://scripts/shop/shop_shelf.gd" id="14_shelf"]
+[ext_resource type="Script" path="res://scripts/map/map_table.gd" id="15_table"]
+
+[sub_resource type="ProceduralSkyMaterial" id="Sky_material"]
+sky_top_color = Color(0.09, 0.1, 0.14, 1)
+sky_horizon_color = Color(0.19, 0.2, 0.24, 1)
+ground_bottom_color = Color(0.05, 0.05, 0.06, 1)
+ground_horizon_color = Color(0.16, 0.16, 0.19, 1)
+
+[sub_resource type="Sky" id="Sky"]
+sky_material = SubResource("Sky_material")
+
+[sub_resource type="Environment" id="Environment"]
+background_mode = 2
+sky = SubResource("Sky")
+ambient_light_source = 3
+ambient_light_color = Color(0.5, 0.53, 0.62, 1)
+ambient_light_energy = 0.16
+fog_enabled = true
+fog_mode = 1
+fog_light_color = Color(0.12, 0.13, 0.17, 1)
+fog_density = 1.0
+fog_depth_begin = 14.0
+fog_depth_end = 46.0
+
+[sub_resource type="StandardMaterial3D" id="Mat_ground"]
+albedo_color = Color(0.11, 0.11, 0.12, 1)
+roughness = 0.95
+uv1_scale = Vector3(6, 24, 1)
+
+[sub_resource type="PlaneMesh" id="Mesh_ground"]
+material = SubResource("Mat_ground")
+size = Vector2(30, 96)
+
+[sub_resource type="StandardMaterial3D" id="Mat_paint"]
+shading_mode = 0
+albedo_color = Color(0.72, 0.68, 0.42, 1)
+
+[sub_resource type="BoxMesh" id="Mesh_pole"]
+size = Vector3(0.18, 5.5, 0.18)
+
+[sub_resource type="StandardMaterial3D" id="Mat_pole"]
+albedo_color = Color(0.24, 0.23, 0.21, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="Mesh_arm"]
+size = Vector3(1.1, 0.1, 0.1)
+
+[sub_resource type="BoxMesh" id="Mesh_bulb"]
+size = Vector3(0.4, 0.14, 0.3)
+
+[sub_resource type="StandardMaterial3D" id="Mat_bulb"]
+shading_mode = 0
+albedo_color = Color(1, 0.85, 0.55, 1)
+emission_enabled = true
+emission = Color(1, 0.85, 0.55, 1)
+emission_energy_multiplier = 1.6
+
+[sub_resource type="BoxMesh" id="Mesh_fence"]
+size = Vector3(0.1, 1.6, 8.0)
+
+[sub_resource type="StandardMaterial3D" id="Mat_fence"]
+albedo_color = Color(0.2, 0.21, 0.2, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="Mesh_house"]
+size = Vector3(6.0, 4.4, 7.0)
+
+[sub_resource type="StandardMaterial3D" id="Mat_house"]
+albedo_color = Color(0.17, 0.16, 0.17, 1)
+roughness = 0.95
+
+[sub_resource type="BoxShape3D" id="Shape_van_floor"]
+size = Vector3(3.2, 0.12, 7.0)
+
+[sub_resource type="BoxShape3D" id="Shape_van_side"]
+size = Vector3(0.12, 2.4, 7.0)
+
+[sub_resource type="BoxShape3D" id="Shape_van_end"]
+size = Vector3(3.2, 2.4, 0.12)
+
+[sub_resource type="BoxShape3D" id="Shape_van_roof"]
+size = Vector3(3.2, 0.12, 7.0)
+
+[sub_resource type="BoxShape3D" id="Shape_bench"]
+size = Vector3(0.44, 0.42, 2.4)
+
+[sub_resource type="BoxMesh" id="Mesh_shutter"]
+size = Vector3(2.3, 2.1, 0.08)
+
+[sub_resource type="StandardMaterial3D" id="Mat_shutter"]
+albedo_color = Color(0.26, 0.25, 0.23, 1)
+roughness = 0.8
+
+[sub_resource type="BoxShape3D" id="Shape_reach_shelf"]
+size = Vector3(1.4, 1.1, 0.55)
+
+[sub_resource type="BoxShape3D" id="Shape_shelf_body"]
+size = Vector3(1.3, 1.0, 0.34)
+
+[sub_resource type="BoxMesh" id="Mesh_shelf"]
+size = Vector3(1.3, 1.0, 0.32)
+
+[sub_resource type="StandardMaterial3D" id="Mat_shelf"]
+albedo_color = Color(0.23, 0.22, 0.2, 1)
+roughness = 0.85
+
+[sub_resource type="BoxMesh" id="Mesh_shelf_board"]
+size = Vector3(1.24, 0.04, 0.3)
+
+[sub_resource type="StandardMaterial3D" id="Mat_shelf_board"]
+albedo_color = Color(0.34, 0.31, 0.26, 1)
+roughness = 0.9
+
+[sub_resource type="BoxMesh" id="Mesh_good"]
+size = Vector3(0.19, 0.15, 0.16)
+
+[sub_resource type="StandardMaterial3D" id="Mat_good_broom"]
+albedo_color = Color(0.62, 0.55, 0.35, 1)
+roughness = 0.9
+
+[sub_resource type="StandardMaterial3D" id="Mat_good_bait"]
+albedo_color = Color(0.55, 0.42, 0.24, 1)
+roughness = 0.9
+
+[sub_resource type="StandardMaterial3D" id="Mat_good_mousetrap"]
+albedo_color = Color(0.68, 0.58, 0.42, 1)
+roughness = 0.85
+
+[sub_resource type="StandardMaterial3D" id="Mat_good_patch"]
+albedo_color = Color(0.44, 0.45, 0.47, 1)
+roughness = 0.8
+
+[sub_resource type="StandardMaterial3D" id="Mat_good_bat"]
+albedo_color = Color(0.5, 0.36, 0.2, 1)
+roughness = 0.85
+
+[sub_resource type="StandardMaterial3D" id="Mat_good_glue"]
+albedo_color = Color(0.83, 0.78, 0.3, 1)
+roughness = 0.7
+
+[sub_resource type="StandardMaterial3D" id="Mat_good_shock"]
+albedo_color = Color(0.26, 0.3, 0.42, 1)
+roughness = 0.6
+
+[sub_resource type="StandardMaterial3D" id="Mat_good_pistol"]
+albedo_color = Color(0.2, 0.2, 0.22, 1)
+roughness = 0.5
+
+[sub_resource type="BoxShape3D" id="Shape_reach_table"]
+size = Vector3(1.3, 0.7, 1.0)
+
+[sub_resource type="BoxShape3D" id="Shape_table_body"]
+size = Vector3(1.2, 0.86, 0.8)
+
+[sub_resource type="BoxMesh" id="Mesh_table_top"]
+size = Vector3(1.2, 0.07, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="Mat_table"]
+albedo_color = Color(0.31, 0.27, 0.22, 1)
+roughness = 0.9
+
+[sub_resource type="StandardMaterial3D" id="Mat_table_sheet"]
+resource_local_to_scene = true
+shading_mode = 0
+texture_filter = 0
+
+[sub_resource type="QuadMesh" id="Mesh_table_sheet"]
+material = SubResource("Mat_table_sheet")
+size = Vector2(0.8, 0.55)
+
+[sub_resource type="ViewportTexture" id="Tex_wall"]
+viewport_path = NodePath("Stations/WallContract/Sheet/Viewport")
+
+[sub_resource type="StandardMaterial3D" id="Mat_wall_sheet"]
+resource_local_to_scene = true
+shading_mode = 0
+albedo_texture = SubResource("Tex_wall")
+texture_filter = 0
+
+[sub_resource type="QuadMesh" id="Mesh_wall_sheet"]
+material = SubResource("Mat_wall_sheet")
+size = Vector2(0.62, 0.86)
+
+[node name="VanTravel" type="Node3D"]
+script = ExtResource("11_travel")
+
+[node name="PS1" parent="." instance=ExtResource("2_ps1")]
+
+[node name="Environment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment")
+
+[node name="Moon" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.7071, 0.4082, -0.5774, 0, 0.8165, 0.5774, 0.7071, -0.4082, 0.5774, 0, 12, 0)
+light_color = Color(0.62, 0.68, 0.88, 1)
+light_energy = 0.2
+
+[node name="Road" type="Node3D" parent="."]
+script = ExtResource("12_road")
+
+[node name="Ground" type="MeshInstance3D" parent="Road"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.02, -20)
+mesh = SubResource("Mesh_ground")
+
+[node name="Kerb" type="MeshInstance3D" parent="Road"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -20)
+mesh = SubResource("Mesh_ground")
+surface_material_override/0 = SubResource("Mat_paint")
+visible = false
+
+[node name="Props" type="Node3D" parent="Road"]
+
+[node name="PoleL1" type="Node3D" parent="Road/Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.4, 2.75, 22)
+
+[node name="Post" type="MeshInstance3D" parent="Road/Props/PoleL1"]
+mesh = SubResource("Mesh_pole")
+surface_material_override/0 = SubResource("Mat_pole")
+
+[node name="Arm" type="MeshInstance3D" parent="Road/Props/PoleL1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 2.6, 0)
+mesh = SubResource("Mesh_arm")
+surface_material_override/0 = SubResource("Mat_pole")
+
+[node name="Bulb" type="MeshInstance3D" parent="Road/Props/PoleL1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1, 2.52, 0)
+mesh = SubResource("Mesh_bulb")
+surface_material_override/0 = SubResource("Mat_bulb")
+
+[node name="Lamp" type="OmniLight3D" parent="Road/Props/PoleL1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1, 2.3, 0)
+light_color = Color(1, 0.85, 0.55, 1)
+light_energy = 2.2
+omni_range = 9.0
+omni_attenuation = 1.8
+
+[node name="PoleL2" type="Node3D" parent="Road/Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.4, 2.75, -18)
+
+[node name="Post" type="MeshInstance3D" parent="Road/Props/PoleL2"]
+mesh = SubResource("Mesh_pole")
+surface_material_override/0 = SubResource("Mat_pole")
+
+[node name="Arm" type="MeshInstance3D" parent="Road/Props/PoleL2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 2.6, 0)
+mesh = SubResource("Mesh_arm")
+surface_material_override/0 = SubResource("Mat_pole")
+
+[node name="Bulb" type="MeshInstance3D" parent="Road/Props/PoleL2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1, 2.52, 0)
+mesh = SubResource("Mesh_bulb")
+surface_material_override/0 = SubResource("Mat_bulb")
+
+[node name="Lamp" type="OmniLight3D" parent="Road/Props/PoleL2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1, 2.3, 0)
+light_color = Color(1, 0.85, 0.55, 1)
+light_energy = 2.2
+omni_range = 9.0
+omni_attenuation = 1.8
+
+[node name="PoleR1" type="Node3D" parent="Road/Props"]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 7.4, 2.75, 2)
+
+[node name="Post" type="MeshInstance3D" parent="Road/Props/PoleR1"]
+mesh = SubResource("Mesh_pole")
+surface_material_override/0 = SubResource("Mat_pole")
+
+[node name="Arm" type="MeshInstance3D" parent="Road/Props/PoleR1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 2.6, 0)
+mesh = SubResource("Mesh_arm")
+surface_material_override/0 = SubResource("Mat_pole")
+
+[node name="Bulb" type="MeshInstance3D" parent="Road/Props/PoleR1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1, 2.52, 0)
+mesh = SubResource("Mesh_bulb")
+surface_material_override/0 = SubResource("Mat_bulb")
+
+[node name="Lamp" type="OmniLight3D" parent="Road/Props/PoleR1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1, 2.3, 0)
+light_color = Color(1, 0.85, 0.55, 1)
+light_energy = 2.2
+omni_range = 9.0
+omni_attenuation = 1.8
+
+[node name="FenceL1" type="MeshInstance3D" parent="Road/Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.2, 0.8, 12)
+mesh = SubResource("Mesh_fence")
+surface_material_override/0 = SubResource("Mat_fence")
+
+[node name="FenceL2" type="MeshInstance3D" parent="Road/Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.2, 0.8, -28)
+mesh = SubResource("Mesh_fence")
+surface_material_override/0 = SubResource("Mat_fence")
+
+[node name="FenceR1" type="MeshInstance3D" parent="Road/Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9.2, 0.8, -8)
+mesh = SubResource("Mesh_fence")
+surface_material_override/0 = SubResource("Mat_fence")
+
+[node name="HouseL1" type="MeshInstance3D" parent="Road/Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 2.2, -4)
+mesh = SubResource("Mesh_house")
+surface_material_override/0 = SubResource("Mat_house")
+
+[node name="HouseR1" type="MeshInstance3D" parent="Road/Props"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 2.2, -34)
+mesh = SubResource("Mesh_house")
+surface_material_override/0 = SubResource("Mat_house")
+
+[node name="Van" parent="." instance=ExtResource("1_van")]
+
+[node name="PS1" parent="Van" instance=ExtResource("2_ps1")]
+
+[node name="Shell" type="StaticBody3D" parent="Van" groups=["scenery"]]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Floor" type="CollisionShape3D" parent="Van/Shell"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.562, 0)
+shape = SubResource("Shape_van_floor")
+
+[node name="SideL" type="CollisionShape3D" parent="Van/Shell"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.66, 1.82, 0)
+shape = SubResource("Shape_van_side")
+
+[node name="SideR" type="CollisionShape3D" parent="Van/Shell"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.66, 1.82, 0)
+shape = SubResource("Shape_van_side")
+
+[node name="Bulkhead" type="CollisionShape3D" parent="Van/Shell"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.82, -3.46)
+shape = SubResource("Shape_van_end")
+
+[node name="Roof" type="CollisionShape3D" parent="Van/Shell"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.08, 0)
+shape = SubResource("Shape_van_roof")
+
+[node name="Tailgate" type="CollisionShape3D" parent="Van/Shell"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.82, 3.54)
+shape = SubResource("Shape_van_end")
+
+[node name="BenchL" type="CollisionShape3D" parent="Van/Shell"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.38, 0.83, -1.4)
+shape = SubResource("Shape_bench")
+
+[node name="BenchR" type="CollisionShape3D" parent="Van/Shell"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.38, 0.83, -1.4)
+shape = SubResource("Shape_bench")
+
+[node name="Shutter" type="MeshInstance3D" parent="Van"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.67, 3.46)
+mesh = SubResource("Mesh_shutter")
+surface_material_override/0 = SubResource("Mat_shutter")
+
+[node name="Lamps" type="Node3D" parent="Van"]
+
+[node name="Front" type="OmniLight3D" parent="Van/Lamps"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.85, -1.9)
+light_color = Color(1, 0.93, 0.76, 1)
+light_energy = 1.35
+omni_range = 4.6
+omni_attenuation = 1.6
+
+[node name="Rear" type="OmniLight3D" parent="Van/Lamps"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.85, 1.9)
+light_color = Color(1, 0.9, 0.72, 1)
+light_energy = 0.9
+omni_range = 4.2
+omni_attenuation = 1.6
+
+[node name="CabinShake" type="Node" parent="."]
+script = ExtResource("13_shake")
+
+[node name="Audio" type="Node" parent="."]
+
+[node name="Engine" type="AudioStreamPlayer" parent="Audio"]
+volume_db = -6.0
+
+[node name="Radio" type="AudioStreamPlayer" parent="Audio"]
+volume_db = -18.0
+
+[node name="Stations" type="Node3D" parent="."]
+
+[node name="Shop" type="Area3D" parent="Stations" groups=["shop_station"]]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -1.5, 1.55, 0.9)
+collision_layer = 8
+collision_mask = 0
+monitoring = false
+script = ExtResource("14_shelf")
+prompt = "browse the shelf"
+
+[node name="Reach" type="CollisionShape3D" parent="Stations/Shop"]
+shape = SubResource("Shape_reach_shelf")
+
+[node name="Cabinet" type="MeshInstance3D" parent="Stations/Shop"]
+mesh = SubResource("Mesh_shelf")
+surface_material_override/0 = SubResource("Mat_shelf")
+
+[node name="BoardTop" type="MeshInstance3D" parent="Stations/Shop"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.28, 0.02)
+mesh = SubResource("Mesh_shelf_board")
+surface_material_override/0 = SubResource("Mat_shelf_board")
+
+[node name="BoardMid" type="MeshInstance3D" parent="Stations/Shop"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.02, 0.02)
+mesh = SubResource("Mesh_shelf_board")
+surface_material_override/0 = SubResource("Mat_shelf_board")
+
+[node name="BoardLow" type="MeshInstance3D" parent="Stations/Shop"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.32, 0.02)
+mesh = SubResource("Mesh_shelf_board")
+surface_material_override/0 = SubResource("Mat_shelf_board")
+
+[node name="Goods" type="Node3D" parent="Stations/Shop"]
+
+[node name="Broom" type="MeshInstance3D" parent="Stations/Shop/Goods"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.42, 0.38, 0.02)
+mesh = SubResource("Mesh_good")
+surface_material_override/0 = SubResource("Mat_good_broom")
+
+[node name="Bait" type="MeshInstance3D" parent="Stations/Shop/Goods"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 0.38, 0.02)
+mesh = SubResource("Mesh_good")
+surface_material_override/0 = SubResource("Mat_good_bait")
+
+[node name="Mousetrap" type="MeshInstance3D" parent="Stations/Shop/Goods"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.42, 0.38, 0.02)
+mesh = SubResource("Mesh_good")
+surface_material_override/0 = SubResource("Mat_good_mousetrap")
+
+[node name="HolePatch" type="MeshInstance3D" parent="Stations/Shop/Goods"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.42, 0.08, 0.02)
+mesh = SubResource("Mesh_good")
+surface_material_override/0 = SubResource("Mat_good_patch")
+
+[node name="BaseballBat" type="MeshInstance3D" parent="Stations/Shop/Goods"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 0.08, 0.02)
+mesh = SubResource("Mesh_good")
+surface_material_override/0 = SubResource("Mat_good_bat")
+
+[node name="RatGlue" type="MeshInstance3D" parent="Stations/Shop/Goods"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.42, 0.08, 0.02)
+mesh = SubResource("Mesh_good")
+surface_material_override/0 = SubResource("Mat_good_glue")
+
+[node name="ShockStick" type="MeshInstance3D" parent="Stations/Shop/Goods"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.42, -0.22, 0.02)
+mesh = SubResource("Mesh_good")
+surface_material_override/0 = SubResource("Mat_good_shock")
+
+[node name="Pistol" type="MeshInstance3D" parent="Stations/Shop/Goods"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, -0.22, 0.02)
+mesh = SubResource("Mesh_good")
+surface_material_override/0 = SubResource("Mat_good_pistol")
+
+[node name="Lamp" type="OmniLight3D" parent="Stations/Shop"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.68, 0.34)
+light_color = Color(0.9, 0.88, 0.78, 1)
+light_energy = 0.25
+omni_range = 1.7
+
+[node name="Refused" type="AudioStreamPlayer3D" parent="Stations/Shop"]
+unit_size = 3.0
+max_distance = 12.0
+
+[node name="Press" type="AudioStreamPlayer3D" parent="Stations/Shop"]
+unit_size = 3.0
+max_distance = 12.0
+
+[node name="Body" type="StaticBody3D" parent="Stations/Shop" groups=["scenery"]]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="Stations/Shop/Body"]
+shape = SubResource("Shape_shelf_body")
+
+[node name="MapTable" type="Area3D" parent="Stations" groups=["map_station"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, -2.75)
+collision_layer = 8
+collision_mask = 0
+monitoring = false
+script = ExtResource("15_table")
+prompt = "study the plan"
+
+[node name="Reach" type="CollisionShape3D" parent="Stations/MapTable"]
+shape = SubResource("Shape_reach_table")
+
+[node name="Top" type="MeshInstance3D" parent="Stations/MapTable"]
+mesh = SubResource("Mesh_table_top")
+surface_material_override/0 = SubResource("Mat_table")
+
+[node name="PlanSurface" type="MeshInstance3D" parent="Stations/MapTable"]
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0.04, 0)
+mesh = SubResource("Mesh_table_sheet")
+
+[node name="Lamp" type="OmniLight3D" parent="Stations/MapTable"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0.2)
+light_color = Color(0.9, 0.86, 0.7, 1)
+light_energy = 0.4
+omni_range = 1.8
+
+[node name="Open" type="AudioStreamPlayer3D" parent="Stations/MapTable"]
+unit_size = 3.0
+max_distance = 12.0
+
+[node name="Refused" type="AudioStreamPlayer3D" parent="Stations/MapTable"]
+unit_size = 3.0
+max_distance = 12.0
+
+[node name="Body" type="StaticBody3D" parent="Stations/MapTable" groups=["scenery"]]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="Stations/MapTable/Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.4, 0)
+shape = SubResource("Shape_table_body")
+
+[node name="ReadyStation" parent="Stations" instance=ExtResource("4_ready")]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -1.55, 1.62, 2.35)
+
+[node name="WallContract" type="Node3D" parent="Stations"]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 1.55, 1.86, 1.4)
+script = ExtResource("7_board")
+
+[node name="Sheet" type="MeshInstance3D" parent="Stations/WallContract"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.03)
+mesh = SubResource("Mesh_wall_sheet")
+
+[node name="Viewport" type="SubViewport" parent="Stations/WallContract/Sheet"]
+disable_3d = true
+transparent_bg = true
+size = Vector2i(180, 250)
+render_target_update_mode = 4
+
+[node name="Back" type="ColorRect" parent="Stations/WallContract/Sheet/Viewport"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.83, 0.82, 0.75, 1)
+
+[node name="Margin" type="MarginContainer" parent="Stations/WallContract/Sheet/Viewport"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="Rows" type="VBoxContainer" parent="Stations/WallContract/Sheet/Viewport/Margin"]
+mouse_filter = 2
+theme_override_constants/separation = 2
+
+[node name="Plan" type="TextureRect" parent="Stations/WallContract/Sheet/Viewport/Margin/Rows"]
+custom_minimum_size = Vector2(0, 96)
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Lamp" type="OmniLight3D" parent="Stations/WallContract"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.62, 0.42)
+light_color = Color(0.9, 0.86, 0.7, 1)
+light_energy = 0.5
+omni_range = 1.8
+
+[node name="Spawns" type="Node3D" parent="."]
+script = ExtResource("6_spawns")
+
+[node name="Spot1" type="Marker3D" parent="Spawns"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.75, 0.65, 2.45)
+
+[node name="Spot2" type="Marker3D" parent="Spawns"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.75, 0.65, 2.45)
+
+[node name="Spot3" type="Marker3D" parent="Spawns"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.75, 0.65, 0.35)
+
+[node name="Spot4" type="Marker3D" parent="Spawns"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.75, 0.65, 0.35)
+
+[node name="Player" parent="." instance=ExtResource("3_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.75, 0.65, 2.45)
+
+[node name="Players" type="Node3D" parent="."]
+script = ExtResource("8_avatars")
+spawn_radius = 0.9
+
+[node name="HUDPhase" parent="." instance=ExtResource("5_hud_phase")]
+
+[node name="HUD" type="CanvasLayer" parent="."]
+
+[node name="Prompt" type="Label" parent="HUD"]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -100.0
+offset_top = -46.0
+offset_right = 100.0
+offset_bottom = -32.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 8
+horizontal_alignment = 1
+script = ExtResource("9_prompt")
+
+[node name="Crosshair" type="Label" parent="HUD"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -4.0
+offset_top = -6.0
+offset_right = 4.0
+offset_bottom = 6.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 1, 1, 0.75)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 8
+text = "+"
+horizontal_alignment = 1
+vertical_alignment = 1

@@ -1,0 +1,40 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/traps/mousetrap.gd" id="1_mousetrap"]
+[ext_resource type="PackedScene" uid="uid://bnvjp3slad03s" path="res://assets/traps/glb/mousetrap.glb" id="2_model"]
+[ext_resource type="PackedScene" uid="uid://bgordf5uoxh7c" path="res://scenes/ps1.tscn" id="3_ps1"]
+[ext_resource type="Script" uid="uid://db45gro2y2gvh" path="res://scripts/interaction/interactable.gd" id="4_handle"]
+
+[sub_resource type="BoxShape3D" id="Shape_pan"]
+size = Vector3(0.363, 0.187, 0.264)
+
+[sub_resource type="BoxShape3D" id="Shape_handle"]
+size = Vector3(0.5, 0.32, 0.4)
+
+[node name="Mousetrap" type="Area3D"]
+script = ExtResource("1_mousetrap")
+stock_id = "mousetrap"
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.0935, 0)
+shape = SubResource("Shape_pan")
+
+[node name="Model" type="Node3D" parent="."]
+
+[node name="Mesh" parent="Model" instance=ExtResource("2_model")]
+transform = Transform3D(1.65, 0, 0, 0, 1.65, 0, 0, 0, 1.65, 0.363, 0, 0)
+
+[node name="PS1" parent="Model/Mesh" instance=ExtResource("3_ps1")]
+
+[node name="Handle" type="Area3D" parent="."]
+collision_layer = 8
+collision_mask = 0
+monitoring = false
+script = ExtResource("4_handle")
+prompt = "clean the trap"
+hold_time = 2.5
+
+[node name="Reach" type="CollisionShape3D" parent="Handle"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.16, 0)
+shape = SubResource("Shape_handle")
+disabled = true

@@ -1,7 +1,7 @@
 extends SceneTree
-## Inventory test bench: the belt of three slots, the swap with `1`, `2` and `3`,
-## and the one rule that holds it — with a rat kicking in the hand nothing gets
-## swapped.
+## Inventory test bench: the belt of two slots, the swap with `1` and `2`, the
+## hands that `Q` always brings back, and the one rule that holds the whole
+## thing — with a rat kicking in the hand nothing gets swapped.
 ##
 ## Run with: godot --headless --script _test_inventory.gd
 ##
@@ -11,9 +11,11 @@ extends SceneTree
 ## that does not exist is a swap that is turned down without taking the belt
 ## with it.
 ##
-## The other two slots carry the traps bought at the computer, and nothing has
-## been bought here: an empty box is exactly the empty slot this bench was
-## written for, and the square on screen says so with a zero.
+## The slots carry weapons bought at the computer, and nothing has been bought
+## here: every square is as empty as the day the van was handed over — no name,
+## no number — and the shift starts on the hands, which are on no square at all.
+## The blueprint is not among them: it is a fixture of the van's map table, not
+## an item on the belt.
 
 ## Frames of slack between one step and the next.
 const WAIT := 8
@@ -21,6 +23,11 @@ const WAIT := 8
 const STATION := Vector3(0.0, 0.0, 1.6)
 ## Height of the aim point on the rat — the same one the weapon uses.
 const TARGET_HEIGHT := 0.2
+## What the belt reads while the hands are out (`Inventory.HANDS_INDEX`). It is
+## copied here instead of read off the class: naming `Inventory` from a bench
+## drags its script into the compile that happens before the autoloads exist,
+## and `Stock` is not there yet to be found.
+const HANDS_INDEX := -1
 
 var _world: Node3D
 var _player: CharacterBody3D
@@ -40,6 +47,7 @@ func _initialize() -> void:
 	Engine.max_fps = 60
 	_world = load("res://scenes/world.tscn").instantiate()
 	root.add_child(_world)
+	_seed_rats(4)
 	_player = _world.get_node("Player")
 	_head = _player.get_node("Head")
 	_hands = _player.get_node("Head/Hands")
@@ -62,7 +70,8 @@ func _physics_process(_delta: float) -> bool:
 
 # --- Steps -----------------------------------------------------------------
 
-## The belt starts on the hands, with them out and the other two put away.
+## The shift starts on the hands, with them out, every slot put away and no
+## square framed — the hands are on none of them.
 func _check_start() -> bool:
 	if _clock < WAIT:
 		return false
@@ -70,23 +79,26 @@ func _check_start() -> bool:
 	if _player.weapon_changed.get_connections().is_empty():
 		return false
 	print("--- the belt has %d slots ---" % _inventory.slot_count())
-	_expect(_inventory.slot_count() == 3, "the belt should have three slots")
-	_expect(_inventory.index() == 0, "it should start on the first slot")
+	_expect(_inventory.slot_count() == 2, "the belt should have two slots")
+	_expect(_inventory.hands_out(), "the shift should start on the hands")
+	_expect(_inventory.index() == HANDS_INDEX, "the hands are on no slot")
 	_expect(_inventory.current() == _hands, "the hands should be the ones in hand")
 	_expect(_hands.is_processing(), "the equipped hands should be processing")
 	_expect(_hands.visible, "the equipped hands should be visible")
-	_expect(_inventory.weapons().size() == 3, "three weapons should be on the belt")
-	_check_hotbar(0, "at the start")
+	_expect(_inventory.weapons().size() == 3, "the hands and two weapons should be carried")
+	_check_hotbar(HANDS_INDEX, "at the start")
 	return _advance()
 
-## A slot with an empty box: the hands go away, the click finds nothing to do and
-## the player goes back to running — nothing in his hands is nothing holding him.
+## A slot whose weapon was never bought: the hands go away, the click finds
+## nothing to do and the player goes back to running — nothing in his hands is
+## nothing holding him. `Q` is what gets them back.
 func _check_empty_slot() -> bool:
 	if _clock < WAIT:
 		return false
 	_expect(_inventory.equip(1), "it should be possible to swap to the empty slot")
 	_expect(_inventory.index() == 1, "the belt should be on the second slot")
-	_expect(_inventory.current() == null, "a weapon with an empty box holds nothing")
+	_expect(not _inventory.hands_out(), "a slot out is not the hands out")
+	_expect(_inventory.current() == null, "a weapon nobody bought holds nothing")
 	_expect(not _hands.is_processing(), "the stowed hands should stop processing")
 	_expect(not _hands.visible, "the stowed hands should leave the screen")
 	_expect(not _inventory.is_busy(), "an empty slot is never busy")
@@ -102,13 +114,15 @@ func _check_empty_slot() -> bool:
 
 	_check_hotbar(1, "on the empty slot")
 
-	_expect(_inventory.equip(0), "it should be possible to go back to the hands")
+	_expect(_inventory.equip_hands(), "Q should bring the hands back")
+	_expect(_inventory.hands_out(), "the hands should be the ones out again")
 	_expect(_hands.is_processing(), "the hands should process again once out")
-	_check_hotbar(0, "back on the hands")
+	_expect(not _inventory.equip_hands(), "the hands already out should be refused")
+	_check_hotbar(HANDS_INDEX, "back on the hands")
 	return _advance()
 
-## With the rat in hand the belt locks: neither an empty slot nor the slot the
-## player is already on takes the hands away from him.
+## With the rat in hand the belt locks: neither a slot nor `Q` takes the hands
+## away from him — they are the ones that are full.
 func _check_locked_while_busy() -> bool:
 	if _clock < WAIT:
 		return false
@@ -120,8 +134,9 @@ func _check_locked_while_busy() -> bool:
 	print("--- rat in hand (%s) ---" % _rat.name)
 	_expect(_inventory.is_busy(), "the belt should read as busy with the rat in hand")
 	_expect(not _inventory.equip(1), "the swap should be refused with the rat in hand")
-	_expect(not _inventory.equip(2), "no slot should be reachable with the rat in hand")
-	_expect(_inventory.index() == 0, "the refused swap should leave the belt where it was")
+	_expect(not _inventory.equip(0), "no slot should be reachable with the rat in hand")
+	_expect(not _inventory.equip_hands(), "Q should find the hands already full")
+	_expect(_inventory.hands_out(), "the refused swap should leave the belt where it was")
 	_expect(_inventory.current() == _hands, "the hands should stay in hand")
 	_expect(_hands.is_processing(), "the busy hands should go on processing")
 	_expect(not _hotbar.visible, "the hotbar should leave the screen with the rat in hand")
@@ -134,9 +149,9 @@ func _check_free_after_kill() -> bool:
 	if _inventory.is_busy():
 		print("FAIL: the rat did not die after %d squeezes" % (_hands.squeezes_to_kill + 2))
 		return _finish()
-	_expect(_inventory.equip(2), "the belt should open again once the hands are free")
-	_expect(_inventory.index() == 2, "the belt should be on the third slot")
-	_expect(_inventory.current() == null, "the third slot's box is empty too")
+	_expect(_inventory.equip(1), "the belt should open again once the hands are free")
+	_expect(_inventory.index() == 1, "the belt should be back on the second slot")
+	_expect(_inventory.current() == null, "the second slot has no weapon on it either")
 	return _advance()
 
 ## A slot that does not exist, and the one already out: refused, and the belt
@@ -144,10 +159,12 @@ func _check_free_after_kill() -> bool:
 func _check_out_of_range() -> bool:
 	if _clock < WAIT:
 		return false
-	_expect(not _inventory.equip(7), "a slot past the end should be refused")
-	_expect(not _inventory.equip(-1), "a slot before the start should be refused")
-	_expect(not _inventory.equip(2), "the slot already out should be refused")
-	_expect(_inventory.index() == 2, "the refused swaps should leave the belt where it was")
+	_expect(not _inventory.equip(2), "a slot past the end should be refused")
+	_expect(not _inventory.equip(7), "a slot far past the end should be refused")
+	_expect(not _inventory.equip(HANDS_INDEX), "a slot before the start should be refused")
+	_expect(not _inventory.equip(-2), "the hands are on no index to be reached by")
+	_expect(not _inventory.equip(1), "the slot already out should be refused")
+	_expect(_inventory.index() == 1, "the refused swaps should leave the belt where it was")
 	_expect(_hotbar.visible, "the hotbar should come back once the hands are empty")
 	return _advance()
 
@@ -159,27 +176,22 @@ func _expect(condition: bool, what: String) -> void:
 	print("FAIL: %s" % what)
 	_failures += 1
 
-## What the hotbar is showing: a square per slot, the weapon's name standing in
-## for the icon it does not have yet, the count of a box in the corner of the
-## ones that come out of a box, and the thicker frame around the one in hand.
+## What the hotbar is showing: a square per slot, empty while nobody has bought
+## what goes in it — no name and no number, not even a zero — and the thicker
+## frame around the one in hand, which no square wears while the hands are out.
 func _check_hotbar(index: int, when: String) -> void:
-	var expected := ["Hands", "Trap", "Glue"]
-	# Nothing has been bought in this bench: both boxes read zero, and the hands
-	# have no count at all.
-	var counts := ["", "0", "0"]
-	for i in expected.size():
+	for i in _inventory.slot_count():
 		var slot: PanelContainer = _hotbar.get_node("Slot%d" % (i + 1))
 		var label: Label = slot.get_node("Name")
 		var count: Label = slot.get_node("Count")
-		_expect(label.text == expected[i], "slot %d should read \"%s\" %s, and reads \"%s\"" % [
-			i + 1, expected[i], when, label.text,
+		_expect(label.text == "", "slot %d should read nothing %s, and reads \"%s\"" % [
+			i + 1, when, label.text,
 		])
-		_expect(label.visible == (expected[i] != ""), "slot %d: an empty square shows nothing %s" % [
-			i + 1, when,
+		_expect(not label.visible, "slot %d: an unbought square shows nothing %s" % [i + 1, when])
+		_expect(count.text == "", "slot %d should count nothing %s, and counts \"%s\"" % [
+			i + 1, when, count.text,
 		])
-		_expect(count.text == counts[i], "slot %d should count \"%s\" %s, and counts \"%s\"" % [
-			i + 1, counts[i], when, count.text,
-		])
+		_expect(not count.visible, "slot %d: an unbought square counts nothing %s" % [i + 1, when])
 		_expect(is_equal_approx(slot.size.x, slot.size.y), "slot %d should be a square, and is %.0fx%.0f %s" % [
 			i + 1, slot.size.x, slot.size.y, when,
 		])
@@ -222,3 +234,23 @@ func _closest() -> Node3D:
 
 func _flat(a: Vector3, b: Vector3) -> float:
 	return Vector2(a.x - b.x, a.z - b.z).length()
+
+
+## The world scene is the survey/hunt map now, so it ships with no rats: the host
+## spawns them from the contract when the hunt starts. A bench that needs loose
+## rats to grab puts its own out, which is also what keeps it from depending on
+## where the level dressing happened to leave them.
+func _seed_rats(count: int) -> void:
+	var packed := load("res://scenes/rat.tscn") as PackedScene
+	if packed == null:
+		return
+	var rats := _world.get_node_or_null("Rats")
+	if rats == null:
+		rats = Node3D.new()
+		rats.name = "Rats"
+		_world.add_child(rats)
+	for i in count:
+		var rat := packed.instantiate() as Node3D
+		rats.add_child(rat)
+		rat.name = "TestRat_%d" % (i + 1)
+		rat.global_position = Vector3(-2.0 + float(i) * 2.0, 0.1, 12.0)

@@ -44,6 +44,7 @@ func _initialize() -> void:
 	Engine.max_fps = 60
 	_world = load("res://scenes/world.tscn").instantiate()
 	root.add_child(_world)
+	_seed_rats(4)
 	_player = _world.get_node("Player")
 	_head = _player.get_node("Head")
 	_inventory = _player.get_node("Head/Inventory")
@@ -136,6 +137,10 @@ func _check_death() -> bool:
 	_expect(not _bar.is_processing(), "healed, the bar should stop breathing")
 	var wallet: Node = root.get_node_or_null("Wallet")
 	var money_before: int = wallet.money
+	# Read where he actually starts rather than where he stood at setup: the map's
+	# `HouseSpawns` puts him on a front-door marker a frame later, and that spot —
+	# not the one baked into the scene — is what a respawn brings him back to.
+	_start = _player.spawn_point()
 	_player.global_position = _start + Vector3(4.0, 0.0, 4.0)
 	_player.take_damage(999)
 	_expect(_deaths == 1, "running out of flesh should announce a death")
@@ -220,3 +225,23 @@ func _closest() -> Node3D:
 
 func _flat(a: Vector3, b: Vector3) -> float:
 	return Vector2(a.x - b.x, a.z - b.z).length()
+
+
+## The world scene is the survey/hunt map now, so it ships with no rats: the host
+## spawns them from the contract when the hunt starts. A bench that needs loose
+## rats to grab puts its own out, which is also what keeps it from depending on
+## where the level dressing happened to leave them.
+func _seed_rats(count: int) -> void:
+	var packed := load("res://scenes/rat.tscn") as PackedScene
+	if packed == null:
+		return
+	var rats := _world.get_node_or_null("Rats")
+	if rats == null:
+		rats = Node3D.new()
+		rats.name = "Rats"
+		_world.add_child(rats)
+	for i in count:
+		var rat := packed.instantiate() as Node3D
+		rats.add_child(rat)
+		rat.name = "TestRat_%d" % (i + 1)
+		rat.global_position = Vector3(-2.0 + float(i) * 2.0, 0.1, 12.0)

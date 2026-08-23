@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="Contract" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/session/contract.gd" id="1_contract"]
+[ext_resource type="Texture2D" path="res://resources/contracts/plans/02_marrow_lane_plan.png" id="2_plan"]
+
+[resource]
+script = ExtResource("1_contract")
+id = "marrow_lane"
+client_name = "Halloway & Son, Grocers"
+address = "8 Marrow Lane, rear stockroom"
+notes = "They have been in the sacks for a month. Two floors, and the holes run between them."
+house_scene = "res://scenes/world.tscn"
+floor_plan = ExtResource("2_plan")
+infestation = 12
+reward = 420
+difficulty = 3

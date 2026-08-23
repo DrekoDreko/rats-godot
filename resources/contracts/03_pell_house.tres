@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="Contract" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/session/contract.gd" id="1_contract"]
+[ext_resource type="Texture2D" path="res://resources/contracts/plans/03_pell_house_plan.png" id="2_plan"]
+
+[resource]
+script = ExtResource("1_contract")
+id = "pell_house"
+client_name = "The Pell Estate"
+address = "Pell House, off the old mill road"
+notes = "Empty since the spring and they own the whole warren. Bring everything."
+house_scene = "res://scenes/world.tscn"
+floor_plan = ExtResource("2_plan")
+infestation = 24
+reward = 900
+difficulty = 5

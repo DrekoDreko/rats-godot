@@ -1,0 +1,95 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://scripts/session/ready_station.gd" id="1_station"]
+
+[sub_resource type="BoxShape3D" id="Shape_reach"]
+size = Vector3(0.5, 0.5, 0.22)
+
+[sub_resource type="BoxShape3D" id="Shape_body"]
+size = Vector3(0.46, 0.46, 0.09)
+
+[sub_resource type="BoxMesh" id="Mesh_housing"]
+size = Vector3(0.46, 0.46, 0.08)
+
+[sub_resource type="StandardMaterial3D" id="Material_housing"]
+albedo_color = Color(0.22, 0.2, 0.18, 1)
+
+[sub_resource type="BoxMesh" id="Mesh_plate"]
+size = Vector3(0.3, 0.3, 0.03)
+
+[sub_resource type="StandardMaterial3D" id="Material_plate"]
+shading_mode = 0
+albedo_color = Color(1, 0.133, 0.133, 1)
+emission_enabled = true
+emission = Color(1, 0.133, 0.133, 1)
+
+[sub_resource type="BoxMesh" id="Mesh_bulb"]
+size = Vector3(0.05, 0.05, 0.025)
+
+[sub_resource type="StandardMaterial3D" id="Material_bulb"]
+shading_mode = 0
+albedo_color = Color(0.078, 0.039, 0.039, 1)
+emission_enabled = true
+
+[node name="ReadyStation" type="Area3D" groups=["ready_station"]]
+collision_layer = 8
+collision_mask = 0
+monitoring = false
+script = ExtResource("1_station")
+prompt = "ready up"
+
+[node name="Reach" type="CollisionShape3D" parent="."]
+shape = SubResource("Shape_reach")
+
+[node name="Housing" type="MeshInstance3D" parent="."]
+mesh = SubResource("Mesh_housing")
+surface_material_override/0 = SubResource("Material_housing")
+
+[node name="Plate" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.04, -0.05)
+mesh = SubResource("Mesh_plate")
+surface_material_override/0 = SubResource("Material_plate")
+
+[node name="Crew" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.155, -0.05)
+
+[node name="Bulb1" type="MeshInstance3D" parent="Crew"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.105, 0, 0)
+mesh = SubResource("Mesh_bulb")
+surface_material_override/0 = SubResource("Material_bulb")
+
+[node name="Bulb2" type="MeshInstance3D" parent="Crew"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.035, 0, 0)
+mesh = SubResource("Mesh_bulb")
+surface_material_override/0 = SubResource("Material_bulb")
+
+[node name="Bulb3" type="MeshInstance3D" parent="Crew"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.035, 0, 0)
+mesh = SubResource("Mesh_bulb")
+surface_material_override/0 = SubResource("Material_bulb")
+
+[node name="Bulb4" type="MeshInstance3D" parent="Crew"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.105, 0, 0)
+mesh = SubResource("Mesh_bulb")
+surface_material_override/0 = SubResource("Material_bulb")
+
+[node name="Lamp" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.32, -0.14)
+light_color = Color(1, 0.133, 0.133, 1)
+light_energy = 0.35
+omni_range = 1.6
+
+[node name="Press" type="AudioStreamPlayer3D" parent="."]
+unit_size = 3.0
+max_distance = 12.0
+
+[node name="Refused" type="AudioStreamPlayer3D" parent="."]
+unit_size = 3.0
+max_distance = 12.0
+
+[node name="Body" type="StaticBody3D" parent="." groups=["scenery"]]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="Body"]
+shape = SubResource("Shape_body")
