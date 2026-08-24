@@ -2,6 +2,7 @@
 
 [ext_resource type="PackedScene" uid="uid://cnc3cxoy5gjim" path="res://models/box_van.glb" id="1_van"]
 [ext_resource type="PackedScene" uid="uid://bgordf5uoxh7c" path="res://scenes/ps1.tscn" id="2_ps1"]
+[ext_resource type="PackedScene" uid="uid://dq3n7vk8rj5wc" path="res://scenes/ps1_postprocess.tscn" id="16_ps1post"]
 [ext_resource type="PackedScene" uid="uid://bvvcrva6c1ve" path="res://scenes/player.tscn" id="3_player"]
 [ext_resource type="PackedScene" path="res://scenes/ready_station.tscn" id="4_ready"]
 [ext_resource type="PackedScene" path="res://scenes/hud_phase.tscn" id="5_hud_phase"]
@@ -201,6 +202,8 @@ size = Vector2(0.62, 0.86)
 script = ExtResource("11_travel")
 
 [node name="PS1" parent="." instance=ExtResource("2_ps1")]
+
+[node name="PS1PostProcess" parent="." instance=ExtResource("16_ps1post")]
 
 [node name="Environment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment")

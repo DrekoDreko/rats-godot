@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://dq3n7vk8rj5wc"]
+
+[ext_resource type="Material" uid="uid://cq8yv3n5xrlp2" path="res://materials/ps1_postprocess.tres" id="1_material"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_fullscreen"]
+size = Vector2(2, 2)
+
+[node name="PS1PostProcess" type="MeshInstance3D" unique_id=667602802]
+top_level = true
+material_override = ExtResource("1_material")
+cast_shadow = 0
+extra_cull_margin = 16384.0
+gi_mode = 0
+mesh = SubResource("QuadMesh_fullscreen")

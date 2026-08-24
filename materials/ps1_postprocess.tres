@@ -1,0 +1,10 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://cq8yv3n5xrlp2"]
+
+[ext_resource type="Shader" uid="uid://je6sores1t8r" path="res://scripts/ps1_postprocess.gdshader" id="1_shader"]
+
+[resource]
+render_priority = 127
+shader = ExtResource("1_shader")
+shader_parameter/color_depth = 5
+shader_parameter/dithering = true
+shader_parameter/resolution_scale = 2
