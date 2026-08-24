@@ -83,13 +83,34 @@ const REFUSAL_IN_PROGRESS := "That shift is already under way — try them next 
 const REFUSAL_FULL := "That van is full."
 const REFUSAL_UNKNOWN := "Steam did not say who you are — try joining again."
 
+## How long a knock may go unanswered before it is sent again, in seconds. A
+## knock is one reliable packet and the welcome is another, so losing either is
+## rare — but "rare" over a session is "eventually", and the cost of being the
+## one it happened to is standing outside a van nobody can see you are missing
+## from. Three seconds is long enough that a slow host is not knocked at twice
+## for no reason, and short enough that a player does not read it as the game
+## having hung.
+const KNOCK_TIMEOUT := 3.0
+
 ## Whether we have been let in and are standing in the crew. It is what keeps a
 ## second knock from going out when the wire hiccups, and what tells a client
 ## arriving in an already-loaded van that it has nothing to ask for.
 var admitted := false
 
-## A knock is out and has not been answered. Cleared by either answer.
+## A knock is out and has not been answered. Cleared by either answer, and by
+## the timeout below, which is what makes it a wait rather than a dead end.
 var _knocking := false
+
+## Seconds left on the knock that is out, counted down in `_process`. Zero when
+## no knock is waiting on anything.
+var _knock_timeout := 0.0
+
+## We wanted to knock but Steam had not said who we are yet, so the knock is
+## held until `LobbyManager.peer_identified` says the introduction landed. It is
+## a wait and not a refusal: knocking with an ID of zero is the one thing the
+## host is certain to turn away (`REFUSAL_UNKNOWN`), and the answer is a moment
+## away rather than absent.
+var _waiting_for_identity := false
 
 
 func _ready() -> void:
@@ -103,7 +124,30 @@ func _ready() -> void:
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 	LobbyManager.lobby_left.connect(_on_lobby_left)
+	# The other road to the door: a client whose wire came up before Steam had
+	# introduced anybody knocks off this instead (see `knock`).
+	LobbyManager.peer_identified.connect(_on_peer_identified)
 	PhaseManager.phase_changed.connect(_on_phase_changed)
+
+
+## Watches the knock that is out. It is the whole of what this node does per
+## frame, and it does nothing at all once we are in — `_knocking` is false for
+## every machine that has been welcomed, and for the host always.
+func _process(delta: float) -> void:
+	if not _knocking:
+		return
+	_knock_timeout -= delta
+	if _knock_timeout > 0.0:
+		return
+	# The knock, or the answer to it, did not arrive. Only worth sending again
+	# while the wire that would carry it is still up: a client that has lost the
+	# host is `NetworkGuard`'s problem, not this one.
+	_knocking = false
+	if admitted or PhaseManager.is_host() or not multiplayer.has_multiplayer_peer():
+		return
+	push_warning("JoinGate: the knock went unanswered for %.0fs — knocking again."
+		% KNOCK_TIMEOUT)
+	knock()
 
 
 ## Whether the door is open at all: only in the lobby phase, and only while
@@ -133,14 +177,28 @@ func refusal_reason() -> String:
 ## directly and is done, which is the same shape every other request in the
 ## session takes (`ReadyManager.request_set`, `ColorManager.request_color`) and
 ## is what keeps a solo run from being a second set of rules.
+##
+## **A man who cannot say who he is does not knock yet.** `our_steam_id()` is
+## zero until Steam has answered or, on the local wire, until we have a peer id
+## to build a stand-in from. Knocking anyway spends the one packet on a
+## certain refusal, so the knock is held and `peer_identified` sends it — which
+## is a wait of a moment rather than a trip back to the lobby screen.
 func knock() -> void:
 	if admitted or _knocking:
 		return
 	if PhaseManager.is_host():
 		_admit_host()
 		return
+
+	var steam_id := LobbyManager.our_steam_id()
+	if steam_id == 0:
+		_waiting_for_identity = true
+		return
+
+	_waiting_for_identity = false
 	_knocking = true
-	_knock.rpc_id(HOST_PEER, LobbyManager.our_steam_id(), LobbyManager.our_name())
+	_knock_timeout = KNOCK_TIMEOUT
+	_knock.rpc_id(HOST_PEER, steam_id, LobbyManager.our_name())
 
 
 ## Takes a player out of the crew and lets the rest of the game know. **Host
@@ -189,6 +247,13 @@ func _handle_knock(steam_id: int, persona: String, from_peer: int) -> void:
 	if steam_id == 0:
 		_turn_away(from_peer, REFUSAL_UNKNOWN)
 		return
+	# The host's own entry, before anybody is told what the crew looks like. He
+	# ordinarily has one already — `_enter_game` fills it on the way into the
+	# van — but a knock can beat that, and a welcome built from an empty crew is
+	# a newcomer standing in a van with no host in it. It costs one dictionary
+	# lookup on every knock to make that impossible.
+	if not admitted:
+		_admit_host()
 	if not SessionManager.has_player(steam_id):
 		var reason := refusal_reason()
 		if not reason.is_empty():
@@ -223,6 +288,8 @@ func _welcome(state: Dictionary) -> void:
 	if multiplayer.get_remote_sender_id() != HOST_PEER:
 		return
 	_knocking = false
+	_knock_timeout = 0.0
+	_waiting_for_identity = false
 	_apply_welcome(state)
 
 
@@ -233,7 +300,12 @@ func _welcome(state: Dictionary) -> void:
 func _turn_away_rpc(reason: String) -> void:
 	if multiplayer.get_remote_sender_id() != HOST_PEER:
 		return
+	# A refusal is an answer, and an answer ends the knocking for good: knocking
+	# again at a host who has just said no would be the retry turning into a
+	# machine that will not take no for an answer.
 	_knocking = false
+	_knock_timeout = 0.0
+	_waiting_for_identity = false
 	admitted = false
 	refused.emit(reason)
 	LobbyManager.leave_lobby()
@@ -388,6 +460,18 @@ func _on_connected_to_server() -> void:
 	knock()
 
 
+## An introduction landed. The only thing wanted from it here is the one case
+## that held a knock back: our own ID was not known when the wire came up, and
+## now it is. Anybody else's introduction is no business of this node's, and a
+## knock that is already out is left alone rather than doubled.
+func _on_peer_identified(_peer_id: int) -> void:
+	if not _waiting_for_identity:
+		return
+	if LobbyManager.our_steam_id() == 0:
+		return
+	knock()
+
+
 ## A peer dropped. **The host acts, and only the host** — he is the one who says
 ## who is in the crew, and a client removing on its own timing would be a second
 ## opinion about who the ready flags are still owed by.
@@ -410,6 +494,8 @@ func _on_peer_disconnected(peer_id: int) -> void:
 func _on_server_disconnected() -> void:
 	admitted = false
 	_knocking = false
+	_knock_timeout = 0.0
+	_waiting_for_identity = false
 
 
 ## We walked out. Same as above, and it covers the roads that do not go through a
@@ -418,6 +504,8 @@ func _on_server_disconnected() -> void:
 func _on_lobby_left() -> void:
 	admitted = false
 	_knocking = false
+	_knock_timeout = 0.0
+	_waiting_for_identity = false
 
 
 ## The shift moved, so the door moves with it: shut once the van pulls away, open

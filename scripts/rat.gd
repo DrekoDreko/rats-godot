@@ -229,11 +229,29 @@ const BLEND := 0.15
 ## What species a rat is when somebody drops one on the map without saying which.
 const DEFAULT_SPECIES := preload("res://resources/species/common_rat.tres")
 
+## How fast a watched rat closes on where the wire last said it was, per second.
+## A rate and not a duration, so that the easing comes out the same whatever the
+## frame rate at either end.
+##
+## Higher than the players' (`player_avatar.gd`) on purpose: a rat bolts and
+## turns far more sharply than a man walks, and at twenty the body would be
+## visibly wide of every corner it took.
+const SMOOTHING := 28.0
+## Further off than this and nothing is eased at all — that is a rat put back
+## where it was born (`MIN_HEIGHT`), or a gap in the wire, and neither of them
+## ran there.
+const SNAP_DISTANCE := 3.0
+
 @onready var agent: NavigationAgent3D = $Navigation
 @onready var model: Node3D = $Model
 @onready var animator: AnimationPlayer = $Model/Mesh/AnimationPlayer
 ## A deep path, because it follows the hierarchy that came from the FBX.
 @onready var mesh: MeshInstance3D = $"Model/Mesh/Rat/Skeleton3D/Rat Model"
+## What carries this rat to the other machines. Fetched with `get_node_or_null`
+## rather than `$Sync` because a rat put together in code — the benches do — has
+## no such node, and a missing synchroniser should leave a working solo rat
+## rather than a broken one.
+@onready var _sync: MultiplayerSynchronizer = get_node_or_null("Sync") as MultiplayerSynchronizer
 
 var _state := State.WANDERING
 var _health := 1
@@ -296,6 +314,48 @@ var _death_type := Death.Type.UNKNOWN
 var _size := 1.0
 var _paid := false
 
+# --- What crosses the wire --------------------------------------------------
+#
+# A rat is the host's animal. Only the host thinks — picks where to go, decides
+# it is frightened, walks the navigation mesh — and what the other machines get
+# is the result of that thinking, not the thinking itself. Rats deciding for
+# themselves on each machine would be a different rat on every screen: the mesh
+# is the same, but the die rolls behind every destination are not.
+#
+# So the guest's rat is a puppet. Its `_physics_process` returns before the
+# state machine (see the guard there), and these three variables — written by
+# the `Sync` node twenty times a second — are the whole of what it knows. Same
+# split as `player_avatar.gd`, and for the same reason.
+#
+# The position is *eased* rather than assigned, in `_draw_remote`. Between two
+# packets the rat would otherwise stand still and then jump, which at a rat's
+# speed reads as a stutter rather than as an animal running.
+
+## Where the host says the body is.
+var sync_position := Vector3.ZERO
+## Which way it faces. The yaw alone — a rat never leaves the floor.
+var sync_yaw := 0.0
+## How fast it is going along the ground, in metres per second. The animation is
+## picked from this and not from the state, exactly as it is on the host
+## (`_update_animation`): what plays follows the speed.
+var sync_speed := 0.0
+## Its `State`. Only the two ends matter to a watcher — DEAD topples it, CAPTURED
+## takes it out of the guest's hands entirely — but the whole value crosses
+## because it costs nothing and reads plainly in the debugger.
+var sync_state := State.WANDERING
+## Which fur it was born with, as an index into the species' `furs`. It is rolled
+## on the host and crosses on the spawn so that a rat is the same animal on every
+## screen. `-1` is a rat whose species has no furs to roll.
+var sync_fur := -1
+## The hideout crouch, which is a scale on the model and not a position: a rat
+## squeezed under a crate on the host should be squeezed under it everywhere.
+var sync_crouched := false
+
+## A packet has landed: this body knows where it stands. Until then it is not
+## drawn at all — a rat that is up but has never been told where it is would sit
+## at the origin, which is a lie the moment somebody looks at it.
+var _seen := false
+
 func _ready() -> void:
 	add_to_group("rats")
 	# `_process` belongs to the capture alone; loose on the map the rat lives in
@@ -312,22 +372,58 @@ func _ready() -> void:
 	_search_time = randf() * SEARCH_INTERVAL
 	_fear_time = randf() * FEAR_REFRESH
 	_fear_cache = _fear_spots()
-	_pick_fur()
 	_play_idle()
 	# Each rat enters the animation at a different point of the cycle, otherwise
 	# all ten breathe in the same rhythm.
 	animator.seek(randf() * animator.current_animation_length, true)
+
+	# Somebody else's rat: it does not think, it is drawn. Physics goes off — the
+	# state machine, the navigation and the gravity all live there — and `_process`
+	# comes on to ease the body towards whatever the last packet said. Note the
+	# two are swapped compared with the host, which runs physics and leaves
+	# `_process` for the capture alone.
+	#
+	# Solo this is never taken: with no wire at all every node is its own
+	# authority, so a lone player's rats think exactly as they always did.
+	if not is_multiplayer_authority():
+		_become_puppet()
+		return
+
+	# Ours to think for, which is the host's rat and every rat in a solo game.
+	_size = species.roll_size()
+	sync_fur = _roll_fur_index()
+	_apply_fur(sync_fur)
 	# It may be too early: the freshly baked mesh has not answered the server's
 	# first sync yet. In that case it stays without a destination and the wander
 	# tries again on the next frame.
 	_pick_wander_target()
+	_publish()
+
+## Somebody else's rat, on our machine: a body with no opinions. Everything that
+## decides is switched off here, in one place, so that what a guest's rat does
+## and does not do is one block to read rather than a guard in every method.
+func _become_puppet() -> void:
+	set_physics_process(false)
+	set_process(true)
+	# Not drawn until the wire says where it is — see `_seen`.
+	visible = false
+	if _sync != null:
+		_sync.synchronized.connect(_on_synchronized)
 
 func _physics_process(delta: float) -> void:
+	# A guest's rat has physics switched off entirely (`_become_puppet`), so this
+	# never runs there. The guard is kept anyway because authority can change
+	# under a node that is already up, and a rat that started thinking for itself
+	# on two machines at once is a bug that shows as a rat in two places.
+	if not is_multiplayer_authority():
+		return
+
 	_immune_time = maxf(0.0, _immune_time - delta)
 
 	if _state == State.DEAD:
 		_apply_gravity(delta)
 		move_and_slide()
+		_publish()
 		return
 
 	# In the player's hand it leaves physics entirely: what rules its body now is
@@ -345,6 +441,7 @@ func _physics_process(delta: float) -> void:
 		_struggle_in_place(delta)
 		_apply_gravity(delta)
 		move_and_slide()
+		_publish()
 		return
 
 	_state_time += delta
@@ -376,8 +473,22 @@ func _physics_process(delta: float) -> void:
 		global_position = _start_position
 		velocity = Vector3.ZERO
 
-## Only runs while the rat is captured — see `set_process` in `_ready`.
+	_publish()
+
+## Two jobs, told apart by who owns the rat.
+##
+## On the host — and solo, where every rat is ours — it belongs to the capture
+## alone and is off the rest of the time (see `set_process` in `_ready`): held
+## against the camera, the body has to run on the screen's beat rather than the
+## 60 Hz one or the mismatch shows up as jitter.
+##
+## On a guest it is the only thing running at all, and what it does is draw the
+## animal the host is thinking for.
 func _process(delta: float) -> void:
+	if not is_multiplayer_authority():
+		_draw_remote(delta)
+		return
+
 	_capture_time += delta
 	match _capture_phase:
 		Capture.POUNCE:
@@ -397,6 +508,17 @@ func _process(delta: float) -> void:
 ## arm's length lets it jump, and whatever comes down on top of it does not.
 func take_damage(amount: int = 1, origin: Vector3 = INVALID_POINT,
 		type := Death.Type.UNKNOWN, leap := 3.0) -> void:
+	# Only the machine that thinks for this rat may kill it. A guest swinging at
+	# one would otherwise drop it on his own screen alone and pay his own wallet
+	# for it, while on every other machine the same rat goes on running.
+	#
+	# So a guest's hit lands nowhere yet. That is a known gap and it is the
+	# honest state of things: making it land means the hit crossing to the host
+	# and the host deciding, which is a weapons-and-wallet job rather than a
+	# replication one. What matters here is that it does not land *wrongly* —
+	# the money and the tally stay the host's, which is where they already were.
+	if not is_multiplayer_authority():
+		return
 	if _state == State.DEAD or _state == State.CAPTURED:
 		return
 	_health -= amount
@@ -544,6 +666,11 @@ func release_carcass() -> void:
 ## The player grabbed this rat. Returns false when it cannot be done: dead,
 ## already in someone's hand or freshly escaped.
 func capture(point: Node3D) -> bool:
+	# Same rule as `take_damage`, and the same gap: a guest cannot pick a rat up
+	# yet. It refuses cleanly rather than putting a rat in one man's hands that
+	# is still running about on everybody else's screen.
+	if not is_multiplayer_authority():
+		return false
 	if _state == State.DEAD or _state == State.CAPTURED or _immune_time > 0.0:
 		return false
 
@@ -1288,6 +1415,83 @@ func _shake_sideways() -> void:
 			return
 	_dodge_direction = -forward
 
+# --- The wire ---------------------------------------------------------------
+#
+# One direction only. The host writes the `sync_*` variables at the end of every
+# physics frame and the `Sync` node in `rat.tscn` carries them; a guest reads
+# them and draws. Nothing here sends a packet by hand, and no guest ever writes
+# back — a rat has exactly one machine thinking for it, and that is what keeps
+# ten rats from being ten different animals on two screens.
+
+## The host's frame, packed for everybody else. Called at the end of every
+## `_physics_process` — including the ones that return early, so that a rat that
+## is dead, pinned or falling goes on reporting rather than freezing at the last
+## place it was fully alive.
+##
+## Solo it writes six variables nobody reads, which is a few floats a frame and
+## the price of having no second code path to keep in step.
+func _publish() -> void:
+	sync_position = global_position
+	sync_yaw = rotation.y
+	sync_speed = Vector2(velocity.x, velocity.z).length()
+	sync_state = _state
+	sync_crouched = model.scale != Vector3.ONE
+
+## Somebody else's rat, drawn from the last packet. Runs on the screen's beat,
+## which is where easing belongs: what arrives twenty times a second has to be
+## spread across however many frames the watcher's machine draws in between.
+##
+## The animation is picked from the speed that crossed rather than from this
+## body's own `velocity`, which is zero here and always will be — a puppet has
+## its physics switched off and never moves itself.
+func _draw_remote(delta: float) -> void:
+	if not _seen:
+		return
+
+	var weight := 1.0 - exp(-SMOOTHING * delta)
+	# Further off than this is not a rat running: it is one that respawned, or a
+	# hole in the wire. Sliding across the room to it would read as flying.
+	if global_position.distance_to(sync_position) > SNAP_DISTANCE:
+		global_position = sync_position
+	else:
+		global_position = global_position.lerp(sync_position, weight)
+	rotation.y = lerp_angle(rotation.y, sync_yaw, weight)
+
+	# The crouch it does in its hideout: a scale on the model, eased the same way
+	# the body is so that it squeezes down rather than snapping flat.
+	var wanted: Vector3 = CROUCH_SCALE if sync_crouched else Vector3.ONE
+	model.scale = model.scale.lerp(wanted, weight)
+
+	_draw_remote_animation()
+
+## The animation a watched rat plays. It follows the same rule the host's does
+## (`_update_animation`) — the speed decides, not the state — with the one
+## addition that a rat the host has killed topples where it stands.
+func _draw_remote_animation() -> void:
+	if sync_state == State.DEAD:
+		if animator.current_animation != ANIM_DEATH:
+			animator.speed_scale = 1.0
+			animator.play(ANIM_DEATH, BLEND)
+		return
+	if sync_speed < IDLE_SPEED:
+		_play_idle()
+		return
+	if animator.current_animation != ANIM_RUN:
+		animator.play(ANIM_RUN, BLEND)
+	animator.speed_scale = clampf(sync_speed / CYCLE_SPEED, MIN_CADENCE, MAX_CADENCE)
+
+## The first packet: the rat stops being a rumour and becomes a body. Snapped
+## rather than eased, because there is nothing yet to ease from — and this is
+## also where the coat is painted, the fur index having crossed on the spawn.
+func _on_synchronized() -> void:
+	if _seen:
+		return
+	_seen = true
+	global_position = sync_position
+	rotation.y = sync_yaw
+	_apply_fur(sync_fur)
+	visible = true
+
 # --- Looks and animation ---------------------------------------------------
 
 ## Gives this rat one of its species' furs, without touching the material the
@@ -1297,8 +1501,23 @@ func _shake_sideways() -> void:
 ## one if there is a `PS1MaterialApplier` on the `Mesh`. Since the applier runs
 ## in its own `_ready` — a child, therefore before the rat's `_ready` — the fur
 ## swap always happens afterwards, and it is the one that sticks.
-func _pick_fur() -> void:
-	var fur := species.roll_fur()
+## Which of the species' furs this animal was born with, as an index. The roll
+## is the host's and the index is what crosses the wire (`sync_fur`): the texture
+## itself could not cross, and rolling again on each machine would give the same
+## rat a different coat on every screen.
+##
+## `-1` for a species with no furs, which leaves the model's own material alone.
+func _roll_fur_index() -> int:
+	if species == null or species.furs.is_empty():
+		return -1
+	return randi() % species.furs.size()
+
+## Paints the coat picked by `_roll_fur_index`, wherever the index came from —
+## our own roll on the host, or the wire on a guest.
+func _apply_fur(index: int) -> void:
+	if index < 0 or species == null or index >= species.furs.size():
+		return
+	var fur: Texture2D = species.furs[index]
 	if fur == null:
 		return
 

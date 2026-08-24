@@ -55,6 +55,12 @@ const HUNT_LIVING_ENERGY := 0.25
 const BLACKOUT_DURATION := 1.0
 const DEFAULT_INFESTATION := 6
 const RAT_SCENE_PATH := "res://scenes/rat.tscn"
+## The peer that thinks for every rat on the map. It is the same 1 that
+## `PhaseManager` uses, written out again rather than reached through the
+## autoload: an autoload has no global *name* until it is in the tree, so a
+## bench that loads this file early would fail to compile it — and the failure
+## shows up as a house with no script rather than as a missing constant.
+const HOST_PEER := 1
 
 @onready var _traps_root: Node3D = get_node_or_null(traps_root_path) as Node3D
 @onready var _rats_root: Node3D = get_node_or_null(rats_root_path) as Node3D
@@ -115,7 +121,14 @@ func installed_trap_count() -> int:
 func spawned_rat_count() -> int:
 	if _rats_root == null:
 		return 0
-	return _rats_root.get_child_count()
+	# Counted by what a child *is* rather than by how many there are: the
+	# container also holds the `MultiplayerSpawner` that replicates the rats, and
+	# that is not an animal.
+	var count := 0
+	for child in _rats_root.get_children():
+		if child is CharacterBody3D:
+			count += 1
+	return count
 
 
 ## Total number of active (alive, non-captured/unvanished) rats in the house.
@@ -124,7 +137,7 @@ func active_rat_count() -> int:
 		return 0
 	var count := 0
 	for child in _rats_root.get_children():
-		var rat := child as Node3D
+		var rat := child as CharacterBody3D
 		if rat != null and is_instance_valid(rat):
 			if rat.has_method("is_dead") and rat.is_dead():
 				continue
@@ -341,9 +354,23 @@ func _spawn_rats_if_needed() -> void:
 				var rat := rat_packed.instantiate() as CharacterBody3D
 				var base_pos: Vector3 = spawn_positions[i % spawn_positions.size()]
 				var offset := Vector3(rng.randf_range(-0.5, 0.5), 0.0, rng.randf_range(-0.5, 0.5))
-				_rats_root.add_child(rat)
-				rat.global_position = base_pos + offset
+				# Everything that has to be true of a rat *before* it is in the
+				# tree is settled here, and the order is not cosmetic. The
+				# `MultiplayerSpawner` over this container replicates the animal
+				# the moment it is added, and what it sends is what it finds at
+				# that moment:
+				#
+				# - The name, or the guest builds a rat called `@CharacterBody3D@12`
+				#   while the host has `Rat_3`, and two nodes that do not share a
+				#   path never hear each other again.
+				# - The authority, so that the rat wakes up on the guest already
+				#   knowing it is not the one doing the thinking (`rat.gd::_ready`).
+				# - The position, or the rat is replicated at the origin and walks
+				#   to its nest on the guest's screen.
 				rat.name = "Rat_%d" % (i + 1)
+				rat.set_multiplayer_authority(HOST_PEER)
+				rat.position = base_pos + offset
+				_rats_root.add_child(rat)
 				if rat.has_signal("died"):
 					rat.died.connect(_on_rat_died)
 

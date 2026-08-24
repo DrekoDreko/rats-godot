@@ -38,6 +38,13 @@ const FEAR_RADIUS := 4.0
 const LIFT_TIME := 0.2
 const LIFT_SCALE := Vector3(1.0, 0.02, 1.0)
 
+## Whether this machine has already asked for the trap to be cleaned. It guards
+## the request, not the gesture — see `_lifting` for that one.
+var _asked_to_clean := false
+## Whether the trap is already on its way off the floor. The lift runs once
+## however many times the word arrives.
+var _lifting := false
+
 @onready var model: Node3D = $Model
 ## The face it turns to the player once there is something on it worth coming
 ## back for. Clean, the trap is nothing he can put his hands on — he sets it and
@@ -91,7 +98,69 @@ func fear_radius() -> float:
 ##
 ## Scraping it off the boards costs him only the time it took. He pays for the
 ## parts when he asks for the parts, and not before.
+##
+## **It goes off every machine, not just his.** The node is the host's — he put
+## it down and the `MultiplayerSpawner` over `Traps` carries it
+## (`scripts/session/trap_manager.gd`) — so a guest that freed his own copy would
+## be a guest walking through a room where everybody else can still see a trap.
+## What the hand does here is therefore say so, and `_clean` below is where the
+## thing actually comes off the floor.
 func _on_cleaned(_by: Node3D) -> void:
+	if _asked_to_clean:
+		return
+	# Held down the moment the work finishes, on the machine that did it: the
+	# announcement is a round trip away and the handle is still reachable in the
+	# meantime, so without this a second hold asks a second time.
+	_asked_to_clean = true
+	# Ourselves first, and with the true that nobody else gets: the salvaged trap
+	# goes in the box of the man who did the work and in nobody else's. The others
+	# are then told with a false, and the guard inside `_clean` is what makes the
+	# order harmless either way.
+	_clean(true)
+	if _on_the_wire():
+		_clean.rpc(false)
+
+
+## The trap coming off the floor, on every machine at once — called plainly on
+## the machine that asked and sent to the rest, so all four go out through this
+## one door.
+##
+## `salvage_here` is true only on the machine that asked, and false everywhere
+## else:
+## a bent trap comes back into `Stock`, `Stock` is the box of whichever man is
+## sitting at this machine, and a trap salvaged in one man's hands must not
+## appear in all four boxes. That is the same rule `ShopManager._apply` keeps
+## when it credits a purchase.
+##
+## It is not gated on authority. A guest may clean a trap — the work is his to do
+## and the host has nothing to check about it — and what keeps the tree in one
+## piece is that every machine frees the same node in the same breath. That is
+## the one place a trap is not the host's alone, and it is deliberate: a hold on
+## a handle is not a thing worth a round trip, and there is nothing in it a
+## client could gain by lying beyond a trap it had already earned.
+##
+## `_lifting` is what makes a second arrival harmless: the tween and the
+## `queue_free` behind it must run once, and two packets for one trap is a thing
+## that costs nothing to be ready for.
+@rpc("any_peer", "reliable")
+func _clean(salvage_here: bool) -> void:
+	if _lifting:
+		return
+	_lifting = true
+	_take_off_the_floor(salvage_here)
+
+
+## Whether there is anybody to say it to. An `rpc` with no wire under it is an
+## error in the log for a call that has already run here.
+func _on_the_wire() -> bool:
+	if not multiplayer.has_multiplayer_peer():
+		return false
+	return not multiplayer.multiplayer_peer is OfflineMultiplayerPeer
+
+
+## The gesture itself: the smell goes, the body is let go of, the box is credited
+## on the one machine that earned it, and the trap flattens off the floor.
+func _take_off_the_floor(salvage_here: bool) -> void:
 	remove_from_group("fear")
 	handle_shape.disabled = true
 	monitoring = false
@@ -100,7 +169,8 @@ func _on_cleaned(_by: Node3D) -> void:
 	if _prey != null and is_instance_valid(_prey):
 		_prey.release_carcass()
 	_prey = null
-	Stock.salvage(stock_id)
+	if salvage_here:
+		Stock.salvage(stock_id)
 	var tween := create_tween()
 	tween.tween_property(self, "scale", LIFT_SCALE, LIFT_TIME).set_ease(Tween.EASE_IN)
 	tween.tween_callback(queue_free)

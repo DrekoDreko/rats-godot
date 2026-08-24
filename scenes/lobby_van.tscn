@@ -14,6 +14,7 @@
 [ext_resource type="Script" uid="uid://bfq6tw1la5riy" path="res://scripts/session/radio_station.gd" id="11_radio"]
 [ext_resource type="Script" uid="uid://b7h3dlip6ueyi" path="res://scripts/session/contract_board.gd" id="12_board"]
 [ext_resource type="PackedScene" uid="uid://dq3n7vk8rj5wc" path="res://scenes/ps1_postprocess.tscn" id="14_s1s1f"]
+[ext_resource type="PackedScene" path="res://scenes/pause_menu.tscn" id="99_pause"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_stiwm"]
 render_priority = 0
@@ -760,3 +761,5 @@ theme_override_font_sizes/font_size = 8
 text = "+"
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="PauseMenu" parent="." instance=ExtResource("99_pause")]

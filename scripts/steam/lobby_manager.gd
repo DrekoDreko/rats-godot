@@ -469,6 +469,7 @@ func _on_peer_connected(peer_id: int) -> void:
 
 func _on_peer_disconnected(peer_id: int) -> void:
 	_identities.erase(peer_id)
+	_pings.erase(peer_id)
 	if is_local:
 		members_changed.emit(list_players())
 
@@ -491,6 +492,126 @@ func _relax_local_timeout(peer_id: int) -> void:
 		return
 	connection.set_timeout(
 		LOCAL_TIMEOUT_MIN_MS, LOCAL_TIMEOUT_MAX_MS, LOCAL_TIMEOUT_MS)
+
+# --- How far away a peer is -------------------------------------------------
+# Two wires and two answers. ENet measures the round trip itself and has done
+# since before the lobby opened, so over the loopback the number is simply read
+# off the connection — the same `get_peer` the timeout above is set through.
+# Steam's transport keeps no such reading where the game can reach it, so on
+# that road the round trip is measured the only way left: a packet is sent out
+# with the clock on it and the far end sends it straight back, and half of what
+# the clock has moved is the answer.
+#
+# **Both roads are asked through `ping_of_peer` and nothing else.** Whoever is
+# drawing a list of players should not have to know which wire is under him,
+# nor be handed a `MultiplayerPeer` to dig around inside; he asks for a number
+# of milliseconds and is told `UNKNOWN_PING` when there is not one to give.
+
+## What `ping_of_peer` answers when there is no reading: no wire at all, a peer
+## who is not on it, a Steam peer who has not answered his first probe yet. It
+## is negative rather than zero, because zero is a real and excellent ping.
+const UNKNOWN_PING := -1
+
+## How often a Steam-road probe goes out, in seconds. Once a second is often
+## enough that a number on screen is never badly stale and rare enough that it
+## costs nothing — a full van is three packets a second, each of them one
+## integer long.
+const PING_INTERVAL := 1.0
+
+## The last round trip measured for each peer on the Steam road, in ms, by peer
+## id. ENet is not in here at all: its own reading is better than ours and is
+## already up to date whenever it is asked for.
+var _pings: Dictionary[int, int] = {}
+
+## What is left of the wait before the next probe goes out. Counted down in
+## `_process` rather than run off a `Timer` so that there is one clock to reason
+## about and nothing to remember to start and stop as lobbies come and go.
+var _ping_countdown := PING_INTERVAL
+
+
+## The round trip to a peer in milliseconds, or `UNKNOWN_PING` when there is no
+## reading to give. **This is the only way anything above should ask.**
+##
+## Our own id answers zero: a man is not far from himself, and the alternative
+## is every caller having to special-case his own row.
+func ping_of_peer(peer_id: int) -> int:
+	if peer_id == 0 or not multiplayer.has_multiplayer_peer():
+		return UNKNOWN_PING
+	if peer_id == _our_peer_id():
+		return 0
+	if not multiplayer.get_peers().has(peer_id):
+		return UNKNOWN_PING
+	var enet := _peer as ENetMultiplayerPeer
+	if enet != null:
+		var connection := enet.get_peer(peer_id)
+		if connection != null:
+			return int(connection.get_statistic(
+				ENetPacketPeer.PEER_ROUND_TRIP_TIME))
+	return int(_pings.get(peer_id, UNKNOWN_PING))
+
+
+## The same question asked about an account rather than a peer, which is the
+## form the crew keeps people in — so a list drawn off `SessionManager.players`
+## can ask it without first having to work out which peer a man is.
+##
+## `UNKNOWN_PING` for somebody nobody on the wire answers for, and for the solo
+## player, who has no wire and so no round trip to measure.
+func ping_of_steam_id(steam_id: int) -> int:
+	if steam_id == 0 or not multiplayer.has_multiplayer_peer():
+		return UNKNOWN_PING
+	if steam_id == our_steam_id():
+		return 0
+	for peer_id in multiplayer.get_peers():
+		if steam_id_of_peer(peer_id) == steam_id:
+			return ping_of_peer(peer_id)
+	return UNKNOWN_PING
+
+
+## Paces the Steam-road probe. It does nothing at all on the local wire, where
+## ENet has already done the measuring, and nothing with no wire up.
+func _process(delta: float) -> void:
+	if is_local or not multiplayer.has_multiplayer_peer():
+		return
+	_ping_countdown -= delta
+	if _ping_countdown > 0.0:
+		return
+	_ping_countdown = PING_INTERVAL
+	_send_pings()
+
+
+## One probe to each peer, carrying our clock. Sent unreliably on purpose: a
+## probe that had to be retransmitted would come home carrying the wait for the
+## retransmission, which is not the number anybody wanted, and a probe that is
+## simply lost costs nothing but one more second of a slightly older reading.
+func _send_pings() -> void:
+	var now := Time.get_ticks_msec()
+	for peer_id in multiplayer.get_peers():
+		_ping_probe.rpc_id(peer_id, now)
+
+
+## The probe, run on the far end. It reads no clock of its own and does no
+## thinking: it hands the same stamp straight back, so that what is measured is
+## the trip and not the far machine's frame rate.
+@rpc("any_peer", "unreliable")
+func _ping_probe(stamp: int) -> void:
+	var from := multiplayer.get_remote_sender_id()
+	if from == 0:
+		return
+	_ping_echo.rpc_id(from, stamp)
+
+
+## The probe coming home. What our own clock has moved since the stamp was
+## written is the whole round trip, and the ping is half of it — the one-way
+## time, which is what a game showing a number means by the word.
+##
+## The stamp is our own and is never read off the far machine's clock, so two
+## machines that disagree about what time it is still measure the same trip.
+@rpc("any_peer", "unreliable")
+func _ping_echo(stamp: int) -> void:
+	var from := multiplayer.get_remote_sender_id()
+	if from == 0:
+		return
+	_pings[from] = maxi(0, Time.get_ticks_msec() - stamp) / 2
 
 
 ## Our own id on the wire, or zero when there is no wire to have one on — which
@@ -609,8 +730,11 @@ func _close_peer() -> void:
 		_peer = null
 	multiplayer.multiplayer_peer = null
 	# The peer ids go with the wire: the next one hands out its own, and a name
-	# filed against an id from the last lobby would be a name on a stranger.
+	# filed against an id from the last lobby would be a name on a stranger. The
+	# same goes for a round trip measured to him.
 	_identities.clear()
+	_pings.clear()
+	_ping_countdown = PING_INTERVAL
 
 
 ## The end of a lobby that did not end by choice: say why, then get out. The

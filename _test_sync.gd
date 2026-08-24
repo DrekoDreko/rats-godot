@@ -42,6 +42,8 @@ extends SceneTree
 ## The loopback port. Nothing else in the project listens, and the bench closes
 ## it on the way out.
 const PORT := 47120
+## The late-wire step's own port, so it never meets the one above.
+const LATE_PORT := 47121
 ## Frames of slack between one step and the next.
 const WAIT := 8
 ## How long the connection is given before the bench gives up on it.
@@ -102,6 +104,13 @@ var _max_step := 0.0
 var _max_gap := 0.0
 ## What arrived on `acted`.
 var _actions: Array[int] = []
+
+## The late-wire step's own two machines, its port and its APIs. Kept apart from
+## the pair above because that wire is closed by the time this step runs.
+var _late_a: Node3D
+var _late_b: Node3D
+var _late_host: SceneMultiplayer
+var _late_guest: SceneMultiplayer
 
 var _frames := 0
 var _step := 0
@@ -169,6 +178,7 @@ func _physics_process(_delta: float) -> bool:
 		9: return _check_he_leaves()
 		10: return _check_a_solo_hunt()
 		11: return _check_the_character_answers()
+		12: return _check_a_late_wire()
 	return _finish()
 
 # --- Steps -----------------------------------------------------------------
@@ -417,6 +427,63 @@ func _check_the_character_answers() -> bool:
 	_expect(player.animation_state() == PlayerAvatar.State.AIRBORNE,
 		"and a player in the air should read as airborne")
 	return _advance()
+
+## The van that stood before anybody dialled. Two machines open the map with no
+## wire under either of them, and only afterwards is the wire put there.
+##
+## The old shape asked once, in `_ready`, and returned for good when the peer was
+## null — so a map opened ahead of the wire stayed a solo hunt whatever happened
+## next, with no body for anybody however many people joined. Nothing above
+## catches it: every other step here builds the wire first, which is the one
+## order that always worked.
+func _check_a_late_wire() -> bool:
+	if _clock == 1:
+		_late_a = Node3D.new()
+		_late_a.name = "LateA"
+		root.add_child(_late_a)
+		_late_b = Node3D.new()
+		_late_b.name = "LateB"
+		root.add_child(_late_b)
+		_late_a.add_child(_late_van())
+		_late_b.add_child(_late_van())
+		return false
+	# The vans are standing and there is still no wire: nobody should be up.
+	if _clock == WAIT * 2:
+		var early := _late_a.get_node("LobbyVan/Players") as Node3D
+		_expect(early.count() == 0, "a van with no wire has nobody in it, and has %d" % early.count())
+		var host_peer := ENetMultiplayerPeer.new()
+		host_peer.create_server(LATE_PORT, 4)
+		var guest_peer := ENetMultiplayerPeer.new()
+		guest_peer.create_client("127.0.0.1", LATE_PORT)
+		_late_host = SceneMultiplayer.new()
+		_late_host.multiplayer_peer = host_peer
+		set_multiplayer(_late_host, NodePath("/root/LateA"))
+		_late_guest = SceneMultiplayer.new()
+		_late_guest.multiplayer_peer = guest_peer
+		set_multiplayer(_late_guest, NodePath("/root/LateB"))
+		return false
+	if _clock < PATIENCE / 2:
+		var a := _late_a.get_node("LobbyVan/Players") as Node3D
+		var b := _late_b.get_node("LobbyVan/Players") as Node3D
+		if a.count() < 2 or b.count() < 2:
+			return false
+	var crowd_a := _late_a.get_node("LobbyVan/Players") as Node3D
+	var crowd_b := _late_b.get_node("LobbyVan/Players") as Node3D
+	_expect(crowd_a.count() == 2,
+		"a wire that came up after the van should still fill it, and left %d" % crowd_a.count())
+	_expect(crowd_b.count() == 2,
+		"on both sides, and left %d" % crowd_b.count())
+	if _late_host != null and _late_host.multiplayer_peer != null:
+		_late_host.multiplayer_peer.close()
+	return _advance()
+
+
+## A lobby van, for the late-wire step. The real scene and not a stand-in: what
+## is being checked is the crowd node waking up inside the map the game actually
+## loads.
+func _late_van() -> Node3D:
+	return load("res://scenes/lobby_van.tscn").instantiate() as Node3D
+
 
 # --- Plumbing --------------------------------------------------------------
 

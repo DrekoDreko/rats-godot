@@ -91,9 +91,9 @@ func _lay_strip(spot: Vector3) -> void:
 	_anchor = INVALID_POINT
 	# The tray is laid along its own body, from one end to the other: it sits on
 	# the middle of the run, faces down it, and is stretched to its length.
+	# Asked for, not put down: see the note in `mousetrap_weapon.gd`. The tray
+	# comes out of the box when the host says the strip landed.
 	_place((start + end) * 0.5, run.normalized(), run.length())
-	# Last, and on purpose: see the note on the box in `trap_weapon.gd`.
-	Stock.spend_one(stock_id)
 
 ## Where the far end of the strip actually falls: where the player is pointing,
 ## pulled back to the length one tray makes. Aiming past the end of the tape does

@@ -21,6 +21,7 @@
 [ext_resource type="PackedScene" path="res://scenes/hud_phase.tscn" id="20_hud_phase"]
 [ext_resource type="PackedScene" uid="uid://dq3n7vk8rj5wc" path="res://scenes/ps1_postprocess.tscn" id="21_ps1post"]
 [ext_resource type="Script" uid="uid://ddlqj8ges01dg" path="res://scripts/map/map_table.gd" id="21_table"]
+[ext_resource type="PackedScene" path="res://scenes/pause_menu.tscn" id="99_pause"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_7iits"]
 render_priority = 127
@@ -999,7 +1000,15 @@ script = ExtResource("14_players")
 
 [node name="Traps" type="Node3D" parent="." unique_id=84269803]
 
+[node name="TrapSpawner" type="MultiplayerSpawner" parent="Traps" unique_id=84269804]
+_spawnable_scenes = PackedStringArray("res://scenes/traps/mousetrap.tscn", "res://scenes/traps/glue_trap.tscn")
+spawn_path = NodePath("..")
+
 [node name="Rats" type="Node3D" parent="." unique_id=1730976301]
+
+[node name="RatSpawner" type="MultiplayerSpawner" parent="Rats" unique_id=1730976302]
+_spawnable_scenes = PackedStringArray("res://scenes/rat.tscn")
+spawn_path = NodePath("..")
 
 [node name="RatHoles" type="Node3D" parent="." unique_id=1309894906]
 
@@ -1430,3 +1439,5 @@ layout_mode = 2
 text = "CLOSE"
 
 [node name="HUD_Phase" parent="." unique_id=1677183090 instance=ExtResource("20_hud_phase")]
+
+[node name="PauseMenu" parent="." instance=ExtResource("99_pause")]

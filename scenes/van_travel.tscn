@@ -1,4 +1,4 @@
-[gd_scene load_steps=42 format=3]
+[gd_scene load_steps=43 format=3]
 
 [ext_resource type="PackedScene" uid="uid://cnc3cxoy5gjim" path="res://models/box_van.glb" id="1_van"]
 [ext_resource type="PackedScene" uid="uid://bgordf5uoxh7c" path="res://scenes/ps1.tscn" id="2_ps1"]
@@ -16,6 +16,7 @@
 [ext_resource type="Script" path="res://scripts/travel/cabin_shake.gd" id="13_shake"]
 [ext_resource type="Script" path="res://scripts/shop/shop_shelf.gd" id="14_shelf"]
 [ext_resource type="Script" path="res://scripts/map/map_table.gd" id="15_table"]
+[ext_resource type="PackedScene" path="res://scenes/pause_menu.tscn" id="99_pause"]
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_material"]
 sky_top_color = Color(0.09, 0.1, 0.14, 1)
@@ -653,3 +654,5 @@ theme_override_font_sizes/font_size = 8
 text = "+"
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="PauseMenu" parent="." instance=ExtResource("99_pause")]

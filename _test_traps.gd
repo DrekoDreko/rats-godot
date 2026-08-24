@@ -66,6 +66,7 @@ var _rats: Node3D
 ## picked up by node name instead.
 var _wallet: Node
 var _stock: Node
+var _phase: Node
 
 var _trap_node: Node3D
 var _glue_node: Node3D
@@ -97,6 +98,7 @@ func _initialize() -> void:
 	_rats = _world.get_node("Rats")
 	_wallet = root.get_node_or_null("Wallet")
 	_stock = root.get_node_or_null("Stock")
+	_phase = root.get_node_or_null("PhaseManager")
 	# The player is driven from here: no input and no gravity.
 	_player.set_physics_process(false)
 	_player.set_process_unhandled_input(false)
@@ -110,28 +112,56 @@ func _physics_process(delta: float) -> bool:
 	_frames += 1
 	_clock += 1
 	match _step:
-		0: return _check_setup()
-		1: return _check_places_mousetrap()
-		2: return _check_navmesh_untouched()
-		3: return _check_mousetrap_kills()
-		4: return _check_glue_first_click()
-		5: return _check_glue_cancel()
-		6: return _check_glue_places()
-		7: return _check_glue_pins()
-		8: return _check_pinned_dies_fast()
-		9: return _check_glue_pays_more()
-		10: return _check_carcass_stays()
-		11: return _check_trap_scares()
-		12: return _check_cleaning_takes_time()
-		13: return _check_cleaned_trap_is_gone()
-		14: return _check_salvaged_trap_costs_to_place()
-		15: return _check_broke_player_cannot_place()
+		0: return _check_enters_the_house()
+		1: return _check_setup()
+		2: return _check_places_mousetrap()
+		3: return _check_navmesh_untouched()
+		4: return _check_mousetrap_kills()
+		5: return _check_glue_first_click()
+		6: return _check_glue_cancel()
+		7: return _check_glue_places()
+		8: return _check_glue_pins()
+		9: return _check_pinned_dies_fast()
+		10: return _check_glue_pays_more()
+		11: return _check_carcass_stays()
+		12: return _check_trap_scares()
+		13: return _check_cleaning_takes_time()
+		14: return _check_cleaned_trap_is_gone()
+		15: return _check_salvaged_trap_costs_to_place()
+		16: return _check_broke_player_cannot_place()
 	return _finish()
 
 # --- Steps -----------------------------------------------------------------
 
 ## The van hands the player his boxes. Nothing has been bought in this bench, so
 ## the stock is credited straight — the buying itself is `_test_shop.gd`'s job.
+## Into the house, before anything is measured.
+##
+## Traps are not put down locally any more — they are asked for, and the host
+## turns down a request from a phase with no floor under it
+## (`TrapManager.PHASES`). A shift standing in the survey is the state this whole
+## bench was always describing; it simply never had to say so before.
+##
+## It is a step of its own rather than a line in `_check_setup` for two reasons.
+## The phase machine cannot be touched from `_initialize` at all — an autoload is
+## not in the tree yet when the MainLoop script is built, so it has no
+## `multiplayer` to ask whether we are the host. And arriving in the survey
+## rebakes the floor (`house.gd` lays the contract's geometry), which lands a
+## frame or two later: a navmesh baseline taken in the same breath as the phase
+## change is a baseline taken before the bake, and the check three steps down
+## would then read the bake as the trap's doing.
+func _check_enters_the_house() -> bool:
+	if _phase == null:
+		print("FAIL: the phase machine was not found")
+		return _finish()
+	if _clock == 1:
+		_phase.go_to(2)
+		return false
+	if _clock < WAIT:
+		return false
+	_expect(_phase.current() == 2, "the bench should be standing in the survey")
+	return _advance()
+
 func _check_setup() -> bool:
 	if _clock < WAIT:
 		return false
@@ -618,23 +648,33 @@ func _matches(gain: int, multiplier: float) -> bool:
 func _placed_count() -> int:
 	var count := 0
 	for child in _traps.get_children():
-		if (child as Node).process_mode != Node.PROCESS_MODE_DISABLED:
+		if _is_a_trap(child):
 			count += 1
 	return count
+
+## Whether a child of the container is a trap on the floor. The container holds
+## one thing that is not: the `MultiplayerSpawner` that carries the traps to the
+## other machines (`scripts/session/trap_manager.gd`). Counted by what a child
+## *is* rather than by how many there are, which is what `house.gd` already does
+## for the same reason on the `Rats` container.
+##
+## The ghost used to have to be told apart here too. It no longer lives in this
+## container at all — a translucent trap-to-be must never be replicated — so
+## anything a `Trap` script is on is a trap that was really put down.
+func _is_a_trap(child: Node) -> bool:
+	var trap := child as Area3D
+	return trap != null and trap.get_script() != null
 
 ## The trap of a given kind that is on the floor, or null. The last one placed is
 ## the one wanted: the earlier ones are still lying about.
 func _placed_trap(kind: String) -> Node3D:
 	var found: Node3D = null
 	for child in _traps.get_children():
-		var trap := child as Node3D
-		# The ghost is on the same node and is not a trap on the floor: it never
-		# runs, and that is what tells the two apart.
-		if trap == null or trap.process_mode == Node.PROCESS_MODE_DISABLED:
+		if not _is_a_trap(child):
 			continue
-		if trap.get_class() == "Area3D" and trap.get_script() != null:
-			if kind in str(trap.get_script().get_global_name()):
-				found = trap
+		var trap := child as Node3D
+		if kind in str(trap.get_script().get_global_name()):
+			found = trap
 	return found
 
 ## A rat that is still loose on the map: alive, in nobody's hand and on no trap.

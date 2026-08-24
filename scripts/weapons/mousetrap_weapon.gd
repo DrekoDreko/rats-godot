@@ -33,6 +33,8 @@ func _use() -> void:
 	# says so before anything is on the floor.
 	if not _charge():
 		return
+	# Asked for, not put down. What comes back is the host's answer, and the
+	# trap it sends lands on this machine through the same spawner it lands on
+	# everybody else's — including the unit coming out of the box, which is the
+	# host's to take now (`TrapManager._debit`).
 	_place(spot, _facing())
-	# Last, and on purpose: see the note on the box in `trap_weapon.gd`.
-	Stock.spend_one(stock_id)

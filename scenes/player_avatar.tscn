@@ -15,6 +15,7 @@ properties/2/spawn = true
 properties/2/replication_mode = 1
 
 [node name="PlayerAvatar" type="Node3D" groups=["player_avatars"]]
+process_mode = 3
 script = ExtResource("1_avatar")
 
 [node name="Model" parent="." instance=ExtResource("2_model")]
@@ -29,6 +30,7 @@ font_size = 32
 outline_size = 16
 
 [node name="Sync" type="MultiplayerSynchronizer" parent="."]
+process_mode = 3
 root_path = NodePath("..")
 replication_interval = 0.05
 replication_config = SubResource("Replication_avatar")

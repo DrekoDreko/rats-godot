@@ -7,9 +7,9 @@ extends Weapon
 ## What it has that the hands do not is a *count*. The box lives in the `Stock`
 ## autoload under `stock_id`, the same string the catalogue item carries
 ## (`scripts/economy/store_item.gd`), so buying and spending never have to know
-## about each other: the shop credits the id, this spends it, and the belt and
-## the hotbar follow the signal. Empty, the weapon says it is not available and
-## its slot goes back to being an empty loop on the belt.
+## about each other: the shop credits the id and the belt and the hotbar follow
+## the signal. Empty, the weapon says it is not available and its slot goes back
+## to being an empty loop on the belt.
 ##
 ## What it adds is *aiming at the floor*. Every other weapon in the game looks
 ## for an animal — the cone around the sights in `Weapon._rat_in_sights()` — and
@@ -23,10 +23,23 @@ extends Weapon
 ## (`scripts/weapons/mousetrap_weapon.gd`) and the tray of glue
 ## (`scripts/weapons/glue_weapon.gd`). This class never goes on a node by itself.
 ##
-## **The one ordering rule**: `Stock.spend_one()` goes last, always. Taking the
-## final one out of the box makes the belt put the weapon away on the spot
-## (`Inventory._on_stock_changed`), and anything started after that — a tween, a
-## ghost — is work left running on a weapon nobody is holding any more.
+## **What it does not do is put anything on the floor.** It used to: `_place()`
+## instantiated the scene and added it, and the trap existed on the machine of
+## whoever clicked and on no other. Now it *asks*
+## (`scripts/session/trap_manager.gd`), the host checks it and the host puts it
+## down, and it arrives here through the same `MultiplayerSpawner` it arrives
+## through on everybody else's machine. The unit comes out of the box on the
+## host's word too, which is why nothing here spends one.
+##
+## So a click is a request and not an event, and the two things that follow it —
+## the swing, and the `used` signal the HUD beeps off — are this machine saying
+## *the gesture happened*, not *the trap is down*. That is the honest reading of
+## a click whose answer is still on the wire, and it is why they are still fired
+## the moment the button goes down.
+##
+## The **ghost** never crosses. It is this machine's drawing of what the player
+## is about to ask for, it hangs outside the replicated container
+## (`_ghost_root`), and nobody else has any business seeing it.
 
 ## The key of the box this weapon comes out of.
 @export var stock_id := ""
@@ -159,32 +172,44 @@ func _facing() -> Vector3:
 	forward.y = 0.0
 	return Vector3.FORWARD if forward.is_zero_approx() else forward.normalized()
 
-## Where placed traps go. Not under the player — a trap parented to the head
-## would ride the camera around — and not under the weapon either. `world.tscn`
-## keeps a `Traps` node for them; anywhere else (a bench that built a barer
-## scene) falls back to whatever the player himself hangs off, which is always
-## something.
-func _traps_root() -> Node:
-	var root := player.get_parent()
-	var traps := root.get_node_or_null(^"Traps")
-	return traps if traps != null else root
+## Where the ghost hangs. **Not** the `Traps` container: that one is under a
+## `MultiplayerSpawner` (`scripts/session/trap_manager.gd`), and anything added
+## to it is replicated to every machine in the game — which is the last thing a
+## translucent trap-to-be following one man's sights around should be. So the
+## ghost goes beside it, on whatever the player himself hangs off, and never
+## crosses the wire.
+##
+## The real traps do not come through here at all any more. They are the host's
+## to add, and he adds them where the spawner is watching.
+func _ghost_root() -> Node:
+	return player.get_parent()
 
-## Puts one down: the scene, on the spot, turned the way the player is standing.
+## Asks for one: the trap, on the spot, turned the way the player is standing.
 ## `length` stretches it along its own body, which is what a strip of glue is and
 ## what everything else leaves at one.
-func _place(at: Vector3, facing: Vector3, length := 1.0) -> Node3D:
+##
+## **Nothing is put on the floor here.** It used to be — this method instantiated
+## the scene and added it, and the trap existed on the machine of whoever clicked
+## and on no other. Now it asks the host, the host checks it and the host adds
+## it, and the trap arrives on this machine the same way it arrives on everybody
+## else's: through the `MultiplayerSpawner` over `Traps`. So there is nothing to
+## hand back, and a caller wanting to know what landed listens to
+## `TrapManager.trap_placed` rather than reading a return value that would only
+## ever have been this machine's own guess.
+##
+## The `stock_id` is what travels, because it is already the string that names
+## both the box in the van and the trap that comes out of it, and a scene *path*
+## on the wire would be a client choosing what gets built on every machine.
+func _place(at: Vector3, facing: Vector3, length := 1.0) -> void:
 	if trap_scene == null:
-		return null
-	var trap: Node3D = trap_scene.instantiate()
-	_traps_root().add_child(trap)
-	# Named after what it is rather than left to the engine's `@Area3D@22`: a
-	# floor with a dozen things on it is read far more often than it is counted.
-	trap.name = trap.get_script().get_global_name()
-	trap.global_position = at
-	if not facing.is_zero_approx():
-		trap.global_basis = Basis.looking_at(facing, Vector3.UP)
-	trap.scale.z = maxf(length, 0.001)
-	return trap
+		return
+	TrapManager.request_place(_our_steam_id(), stock_id, at, facing, length)
+
+## Who we are, as the crew counts people. The same question the ready boards and
+## the colour panel ask, and asked the same way — see `LobbyManager.our_steam_id`
+## for why it is not `SteamManager.get_steam_id()`.
+func _our_steam_id() -> int:
+	return LobbyManager.our_steam_id()
 
 # --- The trap-to-be ---------------------------------------------------------
 #
@@ -234,7 +259,7 @@ func _build_ghost() -> void:
 	# Nothing in it runs: an `Area3D` that ticked would catch rats for a trap the
 	# player has not put down yet.
 	_ghost.process_mode = Node.PROCESS_MODE_DISABLED
-	_traps_root().add_child(_ghost)
+	_ghost_root().add_child(_ghost)
 	_strip(_ghost)
 	_build_price_tag()
 
