@@ -1,7 +1,7 @@
 class_name PlayerAvatar
 extends Node3D
-## One player as everybody else sees him: a capsule with his Steam name over it,
-## standing where the wire says he is standing.
+## One player as everybody else sees him: the man in the hazmat suit, with his
+## Steam name over him, standing where the wire says he is standing.
 ##
 ## There is one of these per player on the wire, our own included — and that is
 ## the part worth getting straight. Godot replicates a node onto the node with
@@ -10,7 +10,7 @@ extends Node3D
 ## is this one, put up for every peer under the same name (see
 ## `scripts/steam/player_avatars.gd`), and the one standing for us is simply
 ## never drawn: we are already in the map as the character in `player.tscn`, and
-## we are inside this very capsule looking out of it.
+## we are inside this very body looking out of it.
 ##
 ## Which way it works depends on who owns it, and on nothing else:
 ##
@@ -27,15 +27,15 @@ extends Node3D
 ## `SNAP_DISTANCE` is not a walk, it is a respawn or a hole in the wire, and
 ## sliding across the map to it would read as flying.
 ##
-## Nothing is drawn before the first packet lands, either. A capsule that is up
-## but has never been told where its player is would stand at the origin, which
-## is a lie the moment somebody looks at it.
+## Nothing is drawn before the first packet lands, either. A body that is up but
+## has never been told where its player is would stand at the origin, which is a
+## lie the moment somebody looks at it.
 ##
-## The state is the whole of the animation there is to play, the character being
-## a capsule: it bobs as he walks, harder and faster as he runs, sits low while
-## he has a rat in his hands, lower still while he is down on his knees, and
-## rides high while he is off the ground. When the real model arrives, `_animate`
-## is the one thing here to throw away.
+## The state is handed straight to `PlayerModel`, which turns it into an
+## animation. That this file no longer knows *how* is the point of the split:
+## the same scene draws the character on his own machine, so a man's legs move
+## the same way on his screen and on his colleague's, and neither this file nor
+## `player.gd` has to be told what running looks like.
 ##
 ## What it asks of the character it stands for is two things and no more:
 ## `animation_state()` and an `attacked` signal. That is the whole contract, and
@@ -56,10 +56,19 @@ enum State {
 	AIRBORNE,
 	## A rat in his hands, which is why he is walking so slowly.
 	HOLDING,
-	## Down on his knees, moving or not. It is the pose that matters here and not
-	## the pace: a crouching man creeping and a crouching man waiting look the
-	## same from across the room, and both of them are hunting.
+	## Down on his knees and still. Waiting, listening, or lining something up.
 	CROUCHING,
+	## Down on his knees and moving. It was one state with `CROUCHING` for as long
+	## as the body was a capsule, on the reasoning that a crouching man creeping
+	## and a crouching man waiting look the same from across the room. They did,
+	## because there was nothing to tell them apart with. The model has a walk on
+	## its knees and a wait on its knees, and telling a man who is closing on you
+	## from a man who is sitting still is worth the one extra value.
+	##
+	## New values go on the end. The number is what crosses the wire, so moving an
+	## existing one would put every machine on a different reading of the same
+	## packet.
+	CROUCH_WALKING,
 }
 
 ## The one-off things, the ones with no state to be in: they happen, everybody
@@ -82,8 +91,6 @@ const SMOOTHING := 20.0
 ## Further off than this and nothing is smoothed at all. A player who respawned
 ## did not run there.
 const SNAP_DISTANCE := 4.0
-## How fast the model settles into the pose of a new state.
-const POSE_SMOOTHING := 18.0
 
 ## Who this stands for, as the wire counts people. It is the name of the node
 ## too, and that is what makes the paths line up on both machines.
@@ -124,36 +131,30 @@ var sync_state := State.IDLE
 ## The character this avatar reads, on the machine it belongs to. Null on
 ## everybody else's, where the wire is the source instead.
 var _source: Node3D
-## A packet has landed: this capsule knows where it stands.
+## A packet has landed: this body knows where it stands.
 var _seen := false
-## Where the walk cycle is, from 0 to 1.
-var _bob := 0.0
-## Resting depth of the nub on the chest, so that a swing has somewhere to come
-## back to.
-var _front_rest := 0.0
-var _swing: Tween
 
-## The overalls' own material, made private on the way up so that dressing one
-## man does not dress the whole van in his colour — the scene hands the same
-## `StandardMaterial3D` to every capsule otherwise.
-var _body_material: StandardMaterial3D
-
-@onready var _model: Node3D = $Model
-@onready var _body: MeshInstance3D = $Model/Body
-@onready var _front: Node3D = $Model/Front
+@onready var _model: PlayerModel = $Model
 @onready var _tag: Label3D = $Name
 @onready var _sync: MultiplayerSynchronizer = $Sync
 
 
 func _ready() -> void:
 	_tag.text = player_name
-	_front_rest = _front.position.z
-	_body_material = _own_body_material()
 	# The colour is read from `SessionManager` and never kept here, so that a
 	# body is wearing what the crew says he is wearing rather than what he was
 	# wearing when this node went up. What changes it is the host, and this
 	# hears about it the same way every other panel in the game does.
-	ColorManager.color_changed.connect(_on_color_changed)
+	#
+	# Reached through the tree rather than by its global name, and that is not
+	# fussiness: a bench run with `--script` compiles this file before the
+	# autoloads are in the tree, so the global name is not a name yet and the
+	# whole class fails to compile — which shows up not as a missing colour but
+	# as every avatar instantiating as a plain `Node3D` with no script on it.
+	# `_test_color.gd` says the same thing at its top, and takes the same road.
+	var colors := get_node_or_null(^"/root/ColorManager")
+	if colors != null:
+		colors.color_changed.connect(_on_color_changed)
 	_repaint()
 	# Not drawn yet either way: ours is never drawn at all, and anybody else's
 	# waits for the wire to say where he is.
@@ -193,7 +194,12 @@ func _process(delta: float) -> void:
 	else:
 		global_position = global_position.lerp(sync_position, weight)
 	rotation.y = lerp_angle(rotation.y, sync_yaw, weight)
-	_animate(delta)
+	# What he is doing is handed straight over: the model owns the question of
+	# which animation that is. The crouch is worth a word — the animation lowers
+	# the body by a third of a metre on its own, so nothing here lowers it as
+	# well. The capsule had to be dropped by hand to look like it was kneeling; a
+	# man with knees does not.
+	_model.set_state(sync_state)
 
 
 ## The character to read, handed over by the crowd on the machine this player is
@@ -206,16 +212,22 @@ func follow(player: Node3D) -> void:
 
 
 ## Something that happened, rather than something that is. It runs on every
-## machine, this one included (`call_local`), so that the arm goes out at the
-## same moment for the player who swung it and for the player watching him.
+## machine, this one included (`call_local`), so that it lands at the same moment
+## for the player who did it and for the player watching him.
 ##
 ## Only the peer this avatar belongs to may call it, and that is the whole of
 ## the authority model here: everybody owns his own body and nobody else's.
+##
+## **A swing currently shows nothing.** The capsule had a nub on its chest that
+## was thrown forward and pulled back, and that went with the capsule; the model
+## has no swing animation to put in its place. The message still crosses and
+## `acted` still fires, so a sound or a hit marker hung off this works today —
+## what is missing is the arm, and it is missing on purpose rather than by
+## oversight. The whole of the fix, when there is an animation, is one call in
+## `PlayerModel`.
 @rpc("authority", "call_local", "reliable")
 func act(action: Action) -> void:
 	acted.emit(action)
-	if action == Action.SWING:
-		_swing_arm()
 
 # --- Drawing him ------------------------------------------------------------
 
@@ -228,31 +240,6 @@ func _on_synchronized() -> void:
 	global_position = sync_position
 	rotation.y = sync_yaw
 	visible = true
-
-
-## The animation, such as a capsule can have one: a bob for the walk, a bigger
-## and faster one for the run, a dip for the rat in his hands, a deeper one for
-## the crouch and a lift for the ground not being under him.
-func _animate(delta: float) -> void:
-	var cycle := 0.0
-	var height := 0.0
-	var settle := 0.0
-	match sync_state:
-		State.WALKING:
-			cycle = 2.2
-			height = 0.05
-		State.RUNNING:
-			cycle = 3.6
-			height = 0.09
-		State.AIRBORNE:
-			settle = 0.06
-		State.HOLDING:
-			settle = -0.12
-		State.CROUCHING:
-			settle = -0.35
-	_bob = fmod(_bob + delta * cycle, 1.0) if cycle > 0.0 else 0.0
-	var pose := settle + sin(_bob * TAU) * height
-	_model.position.y = lerpf(_model.position.y, pose, 1.0 - exp(-POSE_SMOOTHING * delta))
 
 
 ## Somebody's colour was settled. Only ours is worth a repaint, and asking which
@@ -271,31 +258,11 @@ func _on_color_changed(changed_id: int, _color: Color) -> void:
 ## That is not a fallback so much as the honest answer: there is nothing to read,
 ## and grey would be a claim about him.
 func _repaint() -> void:
-	if _body_material == null or steam_id == 0 or not SessionManager.has_player(steam_id):
+	var session := get_node_or_null(^"/root/SessionManager")
+	if _model == null or steam_id == 0 or session == null \
+			or not session.has_player(steam_id):
 		return
-	_body_material.albedo_color = SessionManager.color(steam_id)
-
-
-## A private copy of the capsule's material, for the reason above.
-func _own_body_material() -> StandardMaterial3D:
-	if _body == null:
-		return null
-	var source := _body.get_active_material(0) as StandardMaterial3D
-	var copy: StandardMaterial3D = source.duplicate() if source != null \
-		else StandardMaterial3D.new()
-	_body.set_surface_override_material(0, copy)
-	return copy
-
-
-## The nub on the chest goes out and comes back. It is the placeholder for an
-## arm on the placeholder for a body, and it is what makes an action on the far
-## side of the map something you can watch happen.
-func _swing_arm() -> void:
-	if _swing != null and _swing.is_running():
-		_swing.kill()
-	_swing = create_tween()
-	_swing.tween_property(_front, "position:z", _front_rest - 0.25, 0.08)
-	_swing.tween_property(_front, "position:z", _front_rest, 0.16)
+	_model.set_tint(session.color(steam_id))
 
 
 func _on_source_attacked(_hit: bool) -> void:

@@ -113,6 +113,11 @@ const MIN_HEIGHT := -20.0
 ## interactable layer, so it never trips over the scenery or over an animal.
 @onready var interact_ray: RayCast3D = $Head/Camera/Interact
 @onready var flashlight: SpotLight3D = get_node_or_null(^"Head/Camera/Flashlight") as SpotLight3D
+## The body he is wearing. He never sees it — he is inside it — but it is what
+## casts his shadow on the floor, and the same scene the other players are drawn
+## with (`scripts/player_model.gd`), so his walk on their screens and his shadow
+## on his own come off one animation.
+@onready var model: PlayerModel = $Model
 
 var _start_position: Vector3
 var _air_time := 0.0
@@ -151,6 +156,9 @@ func _ready() -> void:
 	_stand_collision_y = collision.position.y
 	_stand_head = head.position.y
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	# He is inside his own body, so the mesh would be the inside of his own head.
+	# The shadow it throws is still his and still worth having.
+	model.set_shadows_only(true)
 	# Every weapon on the belt is wired up once, and not the one in hand at each
 	# swap: a weapon that is put away never reaches `_use()`, so it never has
 	# anything to announce.
@@ -248,6 +256,11 @@ func _physics_process(delta: float) -> void:
 	velocity.z = move_toward(velocity.z, target.z, rate * delta)
 
 	move_and_slide()
+
+	# After the move, not before: `animation_state()` reads what the body did
+	# this frame, and asking it beforehand would draw him doing what he was doing
+	# a frame ago — walking into a wall included.
+	model.set_state(animation_state())
 
 	if global_position.y < MIN_HEIGHT:
 		respawn()
@@ -350,6 +363,10 @@ func respawn() -> void:
 	# until he thought to press Ctrl and let go of it.
 	_crouch = 0.0
 	_apply_crouch()
+	# And on his feet in the drawing too, not only in the collision. A man who
+	# died falling would otherwise stand at the van still folded into the pose of
+	# the jump, until the next physics frame thought better of it.
+	model.set_state(PlayerAvatar.State.IDLE)
 	global_position = _start_position
 
 ## What he looks like he is doing, for the benefit of the other players' screens
@@ -360,18 +377,25 @@ func respawn() -> void:
 ##
 ## The order is the order of what wins. A rat in the hands is the whole of what
 ## he is doing, however he is moving; being off the ground beats being on it;
-## being down on his knees beats being on his feet, moving or not, because it is
-## the pose and not the pace that the man watching him needs to see; and the
-## difference between walking and running is drawn halfway between the two
-## speeds, so the moment he crosses it is the moment he looks like it.
+## being down on his knees beats being on his feet; and the difference between
+## walking and running is drawn halfway between the two speeds, so the moment he
+## crosses it is the moment he looks like it.
+##
+## Down on his knees he is told apart moving from still, which he was not while
+## the body was a capsule. The reasoning then was that the two look the same
+## across a dark room, and they did, because a capsule had no legs to show the
+## difference with. The model does, and a man creeping towards you is worth
+## telling from a man sitting still — so the same `IDLE_SPEED` that separates
+## standing from walking separates kneeling from creeping.
 func animation_state() -> PlayerAvatar.State:
 	if inventory.is_busy():
 		return PlayerAvatar.State.HOLDING
 	if not is_on_floor():
 		return PlayerAvatar.State.AIRBORNE
-	if is_crouching():
-		return PlayerAvatar.State.CROUCHING
 	var speed := Vector2(velocity.x, velocity.z).length()
+	if is_crouching():
+		return PlayerAvatar.State.CROUCH_WALKING if speed >= IDLE_SPEED \
+			else PlayerAvatar.State.CROUCHING
 	if speed < IDLE_SPEED:
 		return PlayerAvatar.State.IDLE
 	if speed > (walk_speed + run_speed) * 0.5:

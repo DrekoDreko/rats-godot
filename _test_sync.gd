@@ -100,13 +100,8 @@ var _crowd_guest: Node3D
 var _last_seen := Vector3.ZERO
 var _max_step := 0.0
 var _max_gap := 0.0
-## The lowest and highest the model sat while a state was being played.
-var _low := 0.0
-var _high := 0.0
-## What arrived on `acted`, and how far the nub on the chest travelled.
+## What arrived on `acted`.
 var _actions: Array[int] = []
-var _nub_rest := 0.0
-var _nub_moved := 0.0
 
 var _frames := 0
 var _step := 0
@@ -168,11 +163,12 @@ func _physics_process(_delta: float) -> bool:
 		3: return _check_he_walks()
 		4: return _check_he_runs()
 		5: return _check_he_stands_still()
-		6: return _check_an_action_crosses()
-		7: return _check_a_late_name_lands()
-		8: return _check_he_leaves()
-		9: return _check_a_solo_hunt()
-		10: return _check_the_character_answers()
+		6: return _check_he_kneels()
+		7: return _check_an_action_crosses()
+		8: return _check_a_late_name_lands()
+		9: return _check_he_leaves()
+		10: return _check_a_solo_hunt()
+		11: return _check_the_character_answers()
 	return _finish()
 
 # --- Steps -----------------------------------------------------------------
@@ -281,67 +277,82 @@ func _check_he_walks() -> bool:
 	return _advance()
 
 
-## The state crosses as well as the place, and the capsule plays it — which,
-## with no model to animate yet, means it bobs.
+## The state crosses as well as the place, and the model plays it. What is asked
+## for is the animation by name rather than a body part that moved: the movement
+## lives in the skeleton now, so nothing on the avatar's own transform stirs, and
+## "the right clip is running" is the stronger claim anyway.
 func _check_he_runs() -> bool:
 	var mirror := _avatar(_crowd_guest, 1)
 	if _clock == 1:
 		_stub_host.state = PlayerAvatar.State.RUNNING
-		_low = 999.0
-		_high = -999.0
 		return false
-	if _clock < WAIT:
-		return false
-	var model := mirror.get_node("Model") as Node3D
-	_low = minf(_low, model.position.y)
-	_high = maxf(_high, model.position.y)
 	if _clock < WAIT + 60:
 		return false
 	_expect(mirror.sync_state == PlayerAvatar.State.RUNNING, "the run should have crossed the wire")
-	_expect(_high - _low > 0.04, "and should show as a bob, which moved %.3f m" % (_high - _low))
+	var playing := _animation_of(mirror)
+	_expect(playing == &"Running", "and should be running, which is playing '%s'" % playing)
 	return _advance()
 
 
-## And standing still is standing still: the bob stops with him.
+## And standing still is standing still: he goes back to the idle.
 func _check_he_stands_still() -> bool:
 	var mirror := _avatar(_crowd_guest, 1)
 	if _clock == 1:
 		_stub_host.state = PlayerAvatar.State.IDLE
 		return false
-	if _clock < WAIT * 3:
-		return false
-	if _clock == WAIT * 3:
-		_low = 999.0
-		_high = -999.0
-		return false
-	var model := mirror.get_node("Model") as Node3D
-	_low = minf(_low, model.position.y)
-	_high = maxf(_high, model.position.y)
 	if _clock < WAIT * 3 + 30:
 		return false
 	_expect(mirror.sync_state == PlayerAvatar.State.IDLE, "standing still should have crossed too")
-	_expect(_high - _low < 0.01, "and nothing should be moving, which moved %.3f m" % (_high - _low))
+	var playing := _animation_of(mirror)
+	_expect(playing == &"Idle", "and should be idling, which is playing '%s'" % playing)
 	return _advance()
 
 
-## The half that is not a state: he uses what is in his hands, and the arm goes
-## out on everybody's screen. One click is one action, not one a frame.
+## Down on his knees, moving and still, which used to be one state and is now
+## two. It is the one state the capsule could never have shown: it had no legs to
+## be still or creeping with.
+func _check_he_kneels() -> bool:
+	var mirror := _avatar(_crowd_guest, 1)
+	if _clock == 1:
+		_stub_host.state = PlayerAvatar.State.CROUCHING
+		return false
+	if _clock == WAIT * 2:
+		_expect(mirror.sync_state == PlayerAvatar.State.CROUCHING,
+			"kneeling should have crossed the wire")
+		var kneeling := _animation_of(mirror)
+		_expect(kneeling == &"CrouchIdle",
+			"and should be waiting on his knees, which is playing '%s'" % kneeling)
+		_stub_host.state = PlayerAvatar.State.CROUCH_WALKING
+		return false
+	if _clock < WAIT * 4:
+		return false
+	_expect(mirror.sync_state == PlayerAvatar.State.CROUCH_WALKING,
+		"and creeping should have crossed as its own state")
+	var creeping := _animation_of(mirror)
+	_expect(creeping == &"CrouchedWalking",
+		"and should be creeping, which is playing '%s'" % creeping)
+	return _advance()
+
+
+## The half that is not a state: he uses what is in his hands, and everybody
+## hears about it. One click is one action, not one a frame.
+## What is checked is that the message crosses, once, and arrives as what was
+## sent. What it *looks* like is no longer checked because it no longer looks
+## like anything: the capsule's nub went with the capsule and the model has no
+## swing animation to put in its place (see `act()` in `player_avatar.gd`). The
+## day there is one, the assertion to add is the one above — the clip by name.
 func _check_an_action_crosses() -> bool:
 	var mirror := _avatar(_crowd_guest, 1)
 	if _clock == 1:
 		_actions.clear()
-		_nub_moved = 0.0
-		_nub_rest = (mirror.get_node("Model/Front") as Node3D).position.z
 		mirror.acted.connect(func(action: int) -> void: _actions.append(action))
 		_stub_host.swing()
 		return false
-	_nub_moved = maxf(_nub_moved, absf((mirror.get_node("Model/Front") as Node3D).position.z - _nub_rest))
 	if _clock < WAIT * 4:
 		return false
 	_expect(_actions.size() == 1, "one swing should cross once, and %d arrived" % _actions.size())
 	_expect(not _actions.is_empty() and _actions[0] == PlayerAvatar.Action.SWING,
 		"and should arrive as a swing")
-	_expect(_nub_moved > 0.1, "the arm should have gone out, and it moved %.2f m" % _nub_moved)
 	return _advance()
 
 
@@ -418,6 +429,18 @@ func _expect(condition: bool, what: String) -> void:
 		return
 	print("FAIL: %s" % what)
 	_failures += 1
+
+
+## Which clip a body is playing, by name. It reaches through the avatar to the
+## model rather than being asked of the avatar itself: what animation a state
+## turns into is the model's business and deliberately not the avatar's, and a
+## bench that went through the front door would be asserting on a seam the game
+## does not have.
+func _animation_of(avatar: Node) -> StringName:
+	var model := avatar.get_node_or_null(^"Model")
+	if model == null:
+		return &""
+	return model.current_animation()
 
 
 func _advance() -> bool:
