@@ -22,6 +22,11 @@ const LIMIT := 240
 const STATION := Vector3(0.0, 0.0, 1.6)
 ## Height of the aim point on the rat — the same one the weapon uses.
 const TARGET_HEIGHT := 0.2
+## How far from the capture point a held body may still be. The stowing carries
+## it down to the waist (`rat.gd::WAIST`, about 0.84 m off the point), so this is
+## that gesture with room to spare — and still far short of the floor the rat was
+## grabbed from, which is what a dropped body would read as.
+const REACH := 1.5
 
 var _world: Node3D
 var _player: CharacterBody3D
@@ -35,6 +40,10 @@ var _step := 0
 var _clock := 0
 var _squeezes := 0
 var _rat: Node3D
+## The container the rats are spawned into, and the one they have to stay in for
+## the whole capture — being held is a transform the rat follows, not a place it
+## moves to in the tree.
+var _rats_root: Node
 var _previous_distance := INF
 var _failures := 0
 ## The body left the hand before finishing being stowed. It is only worth
@@ -149,8 +158,11 @@ func _follow_rise() -> bool:
 		if distance > 0.05:
 			print("FAIL: reached the hand %.3f m off the point" % distance)
 			_failures += 1
-		if _rat.get_parent() != _point:
-			print("FAIL: the rat did not become a child of the capture point")
+		# It is held by following the point, not by hanging under it: the rat's
+		# node never leaves the container the spawner replicates it in, or its
+		# `Sync` would start announcing a path no other machine has.
+		if _rat.get_parent() != _rats_root:
+			print("FAIL: the rat left %s to be held" % _rats_root.name)
 			_failures += 1
 		print("reached the hand in %d physics frames" % _clock)
 		return _advance()
@@ -208,9 +220,13 @@ func _confirm_stow() -> bool:
 		])
 		return _advance()
 
-	if _rat.get_parent() != _point and not _dropped_early:
+	# Being stowed is a gesture the body makes *with* the player: whatever the
+	# distance to the point, the body has to stay within arm's reach of it until
+	# it vanishes. A body left behind on the floor is one that was dropped.
+	if not _dropped_early and _rat.global_position.distance_to(_point.global_position) > REACH:
 		_dropped_early = true
-		print("FAIL: the body was dropped in %s instead of being stowed" % _rat.get_parent().name)
+		print("FAIL: the body was dropped %.2f m from the hand instead of being stowed" %
+			_rat.global_position.distance_to(_point.global_position))
 		_failures += 1
 	if _clock > LIMIT:
 		print("FAIL: the rat never finished being stowed")
@@ -245,8 +261,10 @@ func _drop() -> bool:
 	if _rat.is_captured():
 		print("FAIL: escaped but is still captured")
 		_failures += 1
-	if _rat.get_parent() == _point:
-		print("FAIL: escaped but is still a child of the hand")
+	if _rat.get_parent() != _rats_root:
+		print("FAIL: escaped into %s instead of staying in %s" % [
+			_rat.get_parent().name, _rats_root.name
+		])
 		_failures += 1
 	if not _rat.is_in_group("rats"):
 		print("FAIL: escaped but left the group of the living")
@@ -331,6 +349,7 @@ func _seed_rats(count: int) -> void:
 		rats = Node3D.new()
 		rats.name = "Rats"
 		_world.add_child(rats)
+	_rats_root = rats
 	for i in count:
 		var rat := packed.instantiate() as Node3D
 		rats.add_child(rat)
