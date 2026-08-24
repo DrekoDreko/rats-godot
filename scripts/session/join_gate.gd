@@ -140,7 +140,7 @@ func knock() -> void:
 		_admit_host()
 		return
 	_knocking = true
-	_knock.rpc_id(HOST_PEER, SteamManager.get_steam_id(), SteamManager.get_persona_name())
+	_knock.rpc_id(HOST_PEER, LobbyManager.our_steam_id(), LobbyManager.our_name())
 
 
 ## Takes a player out of the crew and lets the rest of the game know. **Host
@@ -283,13 +283,13 @@ func _remove(steam_id: int) -> void:
 ## knock at — so this is where his own entry comes from, and it is the same entry
 ## every client gets, made the same way.
 func _admit_host() -> void:
-	var steam_id := SteamManager.get_steam_id()
+	var steam_id := LobbyManager.our_steam_id()
 	if steam_id == 0:
 		# No Steam at all. `LobbyManager` files the solo player under an ID no
 		# real account can have, and it is the same one here so that the two
 		# roads into a solo crew do not make two different men.
 		steam_id = LobbyManager.SOLO_STEAM_ID
-	SessionManager.register_player(steam_id, SteamManager.get_persona_name(), true)
+	SessionManager.register_player(steam_id, LobbyManager.our_name(), true)
 	admitted = true
 	joined.emit(PhaseManager.current())
 

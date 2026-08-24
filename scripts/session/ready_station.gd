@@ -181,7 +181,7 @@ func _on_refused(reason: String) -> void:
 ## whatever the crew is when Steam is not running, which is what makes the board
 ## work on a bench and in a solo game where `get_steam_id` answers zero.
 func _our_steam_id() -> int:
-	var steam_id := SteamManager.get_steam_id()
+	var steam_id := LobbyManager.our_steam_id()
 	if steam_id != 0 and SessionManager.has_player(steam_id):
 		return steam_id
 	# No Steam and one player: he is the only man in the van, so he is the one

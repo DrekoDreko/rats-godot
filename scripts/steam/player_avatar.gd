@@ -152,7 +152,7 @@ func _ready() -> void:
 	# whole class fails to compile — which shows up not as a missing colour but
 	# as every avatar instantiating as a plain `Node3D` with no script on it.
 	# `_test_color.gd` says the same thing at its top, and takes the same road.
-	var colors := get_node_or_null(^"/root/ColorManager")
+	var colors := _autoload("ColorManager")
 	if colors != null:
 		colors.color_changed.connect(_on_color_changed)
 	_repaint()
@@ -258,11 +258,27 @@ func _on_color_changed(changed_id: int, _color: Color) -> void:
 ## That is not a fallback so much as the honest answer: there is nothing to read,
 ## and grey would be a claim about him.
 func _repaint() -> void:
-	var session := get_node_or_null(^"/root/SessionManager")
+	var session := _autoload("SessionManager")
 	if _model == null or steam_id == 0 or session == null \
 			or not session.has_player(steam_id):
 		return
 	_model.set_tint(session.color(steam_id))
+
+
+## An autoload, reached without going through our own position in the tree.
+##
+## Two reasons it is not simply the global name, and not `get_node` either. The
+## global name does not exist in a bench run with `--script`, where this file is
+## compiled before the autoloads are in the tree — and a name that is not a name
+## yet fails the whole class to compile, which shows up as every avatar coming up
+## as a plain `Node3D` with no script on it. And `get_node` walks from *here*,
+## while `steam_id` is filled in by the crowd one line before `add_child`
+## (`player_avatars.gd`), so at that moment there is no here to walk from.
+func _autoload(autoload_name: String) -> Node:
+	var loop := Engine.get_main_loop() as SceneTree
+	if loop == null:
+		return null
+	return loop.root.get_node_or_null(NodePath(autoload_name))
 
 
 func _on_source_attacked(_hit: bool) -> void:

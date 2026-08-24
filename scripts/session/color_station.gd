@@ -364,7 +364,7 @@ func _reach_ray() -> RayCast3D:
 ## The same answer `ReadyStation._our_steam_id` works out, and worked out the
 ## same way.
 func _our_steam_id() -> int:
-	var steam_id := SteamManager.get_steam_id()
+	var steam_id := LobbyManager.our_steam_id()
 	if steam_id != 0 and SessionManager.has_player(steam_id):
 		return steam_id
 	var crew := SessionManager.players.keys()

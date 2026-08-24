@@ -167,4 +167,4 @@ func _belt() -> Inventory:
 ## right answer for a solo run, where the first spot is the only one that
 ## matters.
 func _our_steam_id() -> int:
-	return SteamManager.get_steam_id()
+	return LobbyManager.our_steam_id()

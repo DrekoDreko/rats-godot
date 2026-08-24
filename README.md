@@ -501,6 +501,36 @@ himself.
 godot --headless --script _test_sync.gd
 ```
 
+### Two windows on one machine
+
+Steam serves one account per computer, so two copies of the game opened side by
+side are the same person as far as Valve is concerned and cannot be two players
+in one lobby. Testing the wire that way needs two machines and two accounts,
+which is a slow loop to be held to for a change to how a body walks.
+
+So there is a second road in, for development only. `--host` and `--join` skip
+Steam entirely and open the same `SceneMultiplayer` over plain ENet on the
+loopback:
+
+```
+godot --host          # first window: opens the wire and waits
+godot --join          # second window: dials 127.0.0.1
+godot --join 192.168.1.7   # or a machine on the same network
+```
+
+Everything downstream of the wire behaves exactly as it does over Steam —
+`player_avatars.gd` reads `multiplayer.get_peers()`, the synchronisers replicate
+the same properties, and the phase, colour, ready and shop managers all identify
+people through `LobbyManager.our_steam_id()`, which answers on either road.
+Players are called `Player 1`, `Player 2` and so on, and are filed under
+stand-in account numbers (101, 102, …) that no real SteamID can collide with.
+
+What is genuinely missing is what only Valve can provide: real personas and
+avatars, the invite overlay, and the lobby browser. Those still need the
+acceptance run on two machines. Everything else — movement, animation, colours,
+the ready boards, contracts, the shop, the whole phase flow — can be watched on
+one desk.
+
 ## The shift
 
 A shift is not one scene, it is five phases walked in order:

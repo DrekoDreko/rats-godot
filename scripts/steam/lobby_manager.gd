@@ -27,6 +27,22 @@ extends Node
 ## With no Steam (`SteamManager.is_online` false) every call here fails politely
 ## with a `lobby_failed` message. The game still runs — solo, which is what
 ## `start_game()` does when there is no lobby.
+##
+## **There is a second road in, for developing on one machine.** Steam serves one
+## account per computer, so two windows opened side by side are the same person
+## as far as Valve is concerned and cannot be two players in one lobby. Testing
+## the wire that way needs two machines and two accounts, which is a slow loop to
+## be held to for a change to how a body walks. So `--host` and `--join` on the
+## command line open the very same `SceneMultiplayer` over plain ENet on the
+## loopback instead, with no Steam involved at all (`host_local`, `join_local`).
+##
+## Nothing downstream knows the difference. `player_avatars.gd` reads
+## `multiplayer.get_peers()`, the synchronisers replicate the same properties,
+## and the phase, colour and ready managers all identify people through
+## `steam_id_of_peer()` — which answers over ENet too, off the numbers the peers
+## introduce themselves with. What is genuinely missing is what only Valve can
+## provide: real personas, invites, and the lobby browser. Those are for the
+## acceptance run on two machines; everything else can be seen here.
 
 ## The lobby is up, the wire is up, and `is_host` is settled. Comes for the host
 ## and for the client alike.
@@ -77,6 +93,22 @@ const GAME_SCENE := "res://scenes/lobby_van.tscn"
 ## is on its way, not a name that is missing.
 const UNKNOWN_NAME := "..."
 
+## Where the local wire listens. Only ever bound on the loopback, and only when
+## the game was started with `--host`.
+const LOCAL_PORT := 47130
+## The lobby id a local session reports. It is not a Steam lobby and there is no
+## number Valve would recognise, but the rest of the game asks `lobby_id != 0` to
+## mean "there are other people on the wire" — so it needs to be something, and
+## something no real lobby can collide with.
+const LOCAL_LOBBY_ID := 2
+## Where the stand-in account numbers start. A real SteamID64 is seventeen digits
+## beginning 765, and `SOLO_STEAM_ID` is already 1 on the same reasoning: a small
+## number is one no account can have, which is what makes it safe to file a local
+## player under it and let every manager downstream treat him as an ordinary
+## member of the crew. The peer id is added to it, so the two windows get two
+## different numbers without having to agree on anything first.
+const LOCAL_STEAM_BASE := 100
+
 ## The lobby everyone in it can be reached through, or zero when there is none.
 var lobby_id := 0
 ## Whether we are peer 1 — the one who holds the lobby open and says when the
@@ -93,7 +125,13 @@ var owner_id := 0
 ## list, and nothing else in this file has to change.
 var lobby_type := Steam.LOBBY_TYPE_PUBLIC
 
-var _peer: SteamMultiplayerPeer = null
+## The wire itself. `SteamMultiplayerPeer` on the Steam road and
+## `ENetMultiplayerPeer` on the local one, which is the whole of the difference
+## between them as far as everything above here is concerned.
+var _peer: MultiplayerPeer = null
+## This lobby is ENet on the loopback rather than anything of Valve's. It is what
+## every call that would otherwise talk to Steam checks before it does.
+var is_local := false
 ## A `createLobby`/`joinLobby` is out and has not been answered yet. Keeps a
 ## player hammering the button from opening four lobbies.
 var _pending := false
@@ -114,6 +152,12 @@ func _ready() -> void:
 	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
+
+	# Before Steam is asked anything: `--host` and `--join` mean this window is
+	# not going down that road at all, and a Steam client that happens to be
+	# running should not put it there.
+	if _open_from_command_line():
+		return
 
 	if not SteamManager.is_online:
 		return
@@ -156,6 +200,110 @@ func create_lobby(max_players: int = MAX_PLAYERS) -> bool:
 	return true
 
 
+# --- The local wire, for one machine ---------------------------------------
+# Steam is not involved in anything below this line. Both of these answer on the
+# spot rather than through a callback, because there is nobody to ask: ENet
+# either binds the port or it does not.
+
+## Opens the local wire and holds it. Started by `--host`, and the answer is
+## immediate — `lobby_entered` goes out before this returns.
+func host_local(port := LOCAL_PORT) -> bool:
+	if lobby_id != 0:
+		lobby_failed.emit("You are already in a lobby.")
+		return false
+	var peer := ENetMultiplayerPeer.new()
+	var error := peer.create_server(port, MAX_PLAYERS)
+	if error != OK:
+		lobby_failed.emit("Could not listen on port %d (error %d)." % [port, error])
+		return false
+	_enter_local(peer, true)
+	return true
+
+
+## How long the local wire will sit quiet before a client decides the host is
+## gone, in milliseconds. ENet's own default is about half a minute of silence,
+## and a lobby is exactly that: four men standing in a van with nothing being
+## sent because nobody has moved. The stock setting drops them one by one while
+## the host, who hears their pings, still sees a full van — which looks like the
+## game randomly kicking people. Twelve minutes is longer than any pause worth
+## waiting through, and a host who has really gone is still noticed the moment
+## the socket closes, which is immediate and does not wait for this at all.
+const LOCAL_TIMEOUT_MS := 720000
+## The two numbers `set_timeout` wants alongside the limit: how long ENet waits
+## before deciding a packet went missing, and how long it keeps doubling that
+## before giving up. The minimum is left short — a second — because it is also
+## what paces the keepalive, and a quiet lobby needs something on the wire often
+## enough that neither end starts wondering. The maximum is the one carrying the
+## patience.
+const LOCAL_TIMEOUT_MIN_MS := 1000
+const LOCAL_TIMEOUT_MAX_MS := 600000
+
+
+## Dials a local host. `connect_to_host` returning OK only means the socket is
+## open; a host that is not there shows up later as `connection_failed`, which is
+## the same road a Steam host who quit takes.
+func join_local(address := "127.0.0.1", port := LOCAL_PORT) -> bool:
+	if lobby_id != 0:
+		lobby_failed.emit("You are already in a lobby.")
+		return false
+	var peer := ENetMultiplayerPeer.new()
+	var error := peer.create_client(address, port)
+	if error != OK:
+		lobby_failed.emit("Could not reach %s:%d (error %d)." % [address, port, error])
+		return false
+	_enter_local(peer, false)
+	return true
+
+
+## The local half of `_enter_lobby`, and deliberately the same shape: the wire
+## goes up, the flags are settled, and the same two signals go out — so a screen
+## listening for a lobby cannot tell which road it came down.
+func _enter_local(peer: ENetMultiplayerPeer, hosting: bool) -> void:
+	_close_peer()
+	_peer = peer
+	multiplayer.multiplayer_peer = peer
+	is_local = true
+	is_host = hosting
+	lobby_id = LOCAL_LOBBY_ID
+	owner_id = LOCAL_STEAM_BASE + 1 if hosting else 0
+	print("Local lobby — %s on port %d" % ["hosting" if hosting else "joined", LOCAL_PORT])
+	lobby_entered.emit(lobby_id, is_host)
+	members_changed.emit(list_players())
+
+
+## The stand-in for a Steam account on the local wire, and the number every
+## manager downstream files this player under.
+##
+## The host is 1, and everybody else is numbered by where his peer id falls once
+## they are sorted. It would be simpler to add the peer id straight on, but ENet
+## hands a client a random id in the millions, which would make one man account
+## 1955902596 and the next one something else entirely — numbers nobody can read
+## in a log, and different every run. Sorting gives 2, 3, 4 instead, which is
+## what the men in the van would call each other anyway.
+func _local_steam_id(peer_id: int) -> int:
+	return LOCAL_STEAM_BASE + _local_seat(peer_id)
+
+
+## Where a peer falls once everybody on the wire is sorted, counting from one.
+## The host is always 1: he is peer 1, and no ENet client is ever given that.
+func _local_seat(peer_id: int) -> int:
+	if peer_id == 1:
+		return 1
+	var peers := multiplayer.get_peers()
+	if not peers.has(_our_peer_id()):
+		peers.append(_our_peer_id())
+	peers.sort()
+	# Peer 1 is the host and holds seat one whether or not he is on our list.
+	var seat := 1
+	for id in peers:
+		if id == 1:
+			continue
+		seat += 1
+		if id == peer_id:
+			return seat
+	return seat + 1
+
+
 ## Walks into somebody else's lobby. The answer — including "it is full" and "it
 ## does not exist" — comes back on `lobby_joined` and ends up as a sentence on
 ## `lobby_failed`.
@@ -183,11 +331,13 @@ func join_lobby(id: int) -> bool:
 func leave_lobby() -> void:
 	if lobby_id == 0:
 		return
-	Steam.leaveLobby(lobby_id)
+	if not is_local:
+		Steam.leaveLobby(lobby_id)
 	_close_peer()
 	lobby_id = 0
 	owner_id = 0
 	is_host = false
+	is_local = false
 	_pending = false
 	lobby_left.emit()
 	members_changed.emit(list_players())
@@ -202,12 +352,33 @@ func list_players() -> Array[Dictionary]:
 	var players: Array[Dictionary] = []
 	if lobby_id == 0:
 		return players
+	if is_local:
+		return _local_players()
 	for index in Steam.getNumLobbyMembers(lobby_id):
 		var member_id := Steam.getLobbyMemberByIndex(lobby_id, index)
 		players.append({
 			"steam_id": member_id,
 			"name": _persona_name(member_id),
 			"is_host": member_id == owner_id,
+		})
+	return players
+
+
+## The same list off the wire instead of off Valve. Everybody who can be heard
+## from, ourselves included, in a settled order — peer ids sort, and the screens
+## that draw this want a list that does not shuffle under them between frames.
+func _local_players() -> Array[Dictionary]:
+	var players: Array[Dictionary] = []
+	var peers := multiplayer.get_peers()
+	peers.append(_our_peer_id())
+	peers.sort()
+	for peer_id in peers:
+		if peer_id == 0:
+			continue
+		players.append({
+			"steam_id": _local_steam_id(peer_id),
+			"name": name_of_peer(peer_id),
+			"is_host": peer_id == 1,
 		})
 	return players
 
@@ -221,20 +392,46 @@ func list_players() -> Array[Dictionary]:
 # of — and a name from the horse's mouth is one name that can never come back
 # as "[unknown]".
 
+## Who we are, as the crew counts people. **This, and not
+## `SteamManager.get_steam_id()`, is what the rest of the game should ask**: the
+## answer depends on which wire is up, and this is the one place that knows.
+## Over Steam it is the real account; on the local wire it is the stand-in built
+## off our peer id; with neither it is zero, and a zero is what `SessionManager`
+## already refuses as "not a player".
+func our_steam_id() -> int:
+	if is_local:
+		return _local_steam_id(_our_peer_id())
+	return SteamManager.get_steam_id()
+
+
+## What we are called, by the same reasoning as `our_steam_id`.
+func our_name() -> String:
+	if is_local:
+		return _local_name(_our_peer_id())
+	return SteamManager.get_persona_name()
+
+
 ## What a peer is called. Our own name for our own id, whatever the peer said
 ## for anybody else's, and `UNKNOWN_NAME` for a peer who has not spoken yet.
 func name_of_peer(peer_id: int) -> String:
 	if peer_id == _our_peer_id():
-		return SteamManager.get_persona_name()
+		return our_name()
 	var known: Dictionary = _identities.get(peer_id, {})
 	return String(known.get("name", UNKNOWN_NAME))
+
+
+## What to call somebody with no Steam persona to read. "Player 1" is the host
+## and the rest are numbered off the wire — enough to tell two windows apart on
+## one desk, which is the whole job.
+func _local_name(peer_id: int) -> String:
+	return "Player %d" % _local_seat(peer_id)
 
 
 ## The Steam account behind a peer, or zero when it has not said yet. It is what
 ## ties a body in the map back to a row on the guest list.
 func steam_id_of_peer(peer_id: int) -> int:
 	if peer_id == _our_peer_id():
-		return SteamManager.get_steam_id()
+		return our_steam_id()
 	var known: Dictionary = _identities.get(peer_id, {})
 	return int(known.get("steam_id", 0))
 
@@ -262,11 +459,38 @@ func _introduce(steam_id: int, persona: String) -> void:
 
 
 func _on_peer_connected(peer_id: int) -> void:
-	_introduce.rpc_id(peer_id, SteamManager.get_steam_id(), SteamManager.get_persona_name())
+	_relax_local_timeout(peer_id)
+	_introduce.rpc_id(peer_id, our_steam_id(), our_name())
+	# The guest list on the local wire *is* the wire, so somebody arriving is a
+	# change to it. On the Steam road this comes from `lobby_chat_update` instead.
+	if is_local:
+		members_changed.emit(list_players())
 
 
 func _on_peer_disconnected(peer_id: int) -> void:
 	_identities.erase(peer_id)
+	if is_local:
+		members_changed.emit(list_players())
+
+
+## Loosens ENet's idea of how long a quiet peer may stay quiet. It can only be
+## done once the peer exists — before the handshake there is nothing to set it
+## on — which is why it hangs off `peer_connected` rather than off the call that
+## opened the socket.
+##
+## Only the local wire needs it. Steam's transport keeps its own connection
+## alive underneath and never asked this question.
+func _relax_local_timeout(peer_id: int) -> void:
+	if not is_local:
+		return
+	var enet := _peer as ENetMultiplayerPeer
+	if enet == null:
+		return
+	var connection := enet.get_peer(peer_id)
+	if connection == null:
+		return
+	connection.set_timeout(
+		LOCAL_TIMEOUT_MIN_MS, LOCAL_TIMEOUT_MAX_MS, LOCAL_TIMEOUT_MS)
 
 
 ## Our own id on the wire, or zero when there is no wire to have one on — which
@@ -331,7 +555,7 @@ func start_game() -> void:
 ## he is told at Steam's own door, before his game has loaded anything, rather
 ## than after connecting to a host who then turns him around.
 func close_to_newcomers() -> void:
-	if lobby_id == 0 or not is_host:
+	if lobby_id == 0 or not is_host or is_local:
 		return
 	Steam.setLobbyJoinable(lobby_id, false)
 
@@ -339,7 +563,7 @@ func close_to_newcomers() -> void:
 ## Lets Steam send people in again. The other half of `close_to_newcomers`, for a
 ## crew that comes back to the van at the end of a shift.
 func open_to_newcomers() -> void:
-	if lobby_id == 0 or not is_host:
+	if lobby_id == 0 or not is_host or is_local:
 		return
 	Steam.setLobbyJoinable(lobby_id, true)
 
@@ -457,10 +681,9 @@ func _enter_game() -> void:
 func _fill_the_crew() -> void:
 	var crew := list_players()
 	if crew.is_empty():
-		var steam_id := SteamManager.get_steam_id()
+		var steam_id := our_steam_id()
 		SessionManager.register_player(
-			steam_id if steam_id != 0 else SOLO_STEAM_ID,
-			SteamManager.get_persona_name(), true)
+			steam_id if steam_id != 0 else SOLO_STEAM_ID, our_name(), true)
 		return
 	for player in crew:
 		SessionManager.register_player(
@@ -582,6 +805,45 @@ func _join_from_command_line() -> void:
 		return
 	await get_tree().process_frame
 	join_lobby(id)
+
+
+## `--host` and `--join` off the command line, which is how two windows on one
+## desk find each other. `--join` takes an optional address, so that a second
+## machine on the same desk — or a phone tethered to it — can be dialled without
+## a rebuild: `--join 192.168.1.7`.
+##
+## One frame of patience before the wire opens, for the same reason the Steam
+## road waits: whatever is on screen should already be listening when the answer
+## comes back.
+func _open_from_command_line() -> bool:
+	var arguments := OS.get_cmdline_args()
+	var hosting := arguments.has("--host")
+	var joining := arguments.has("--join")
+	if not hosting and not joining:
+		return false
+	if hosting and joining:
+		push_warning("Both --host and --join were given; hosting.")
+		joining = false
+	_open_local_deferred(hosting, _address_from_arguments(arguments))
+	return true
+
+
+func _open_local_deferred(hosting: bool, address: String) -> void:
+	await get_tree().process_frame
+	if hosting:
+		host_local()
+	else:
+		join_local(address)
+
+
+## The address after `--join`, or the loopback when there is none. Anything
+## starting with a dash is the next flag rather than an address.
+func _address_from_arguments(arguments: PackedStringArray) -> String:
+	var at := arguments.find("--join")
+	if at == -1 or at + 1 >= arguments.size():
+		return "127.0.0.1"
+	var candidate := arguments[at + 1]
+	return "127.0.0.1" if candidate.begins_with("-") else candidate
 
 
 func _lobby_from_arguments(arguments: PackedStringArray) -> int:

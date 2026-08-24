@@ -338,7 +338,7 @@ func _files_in(path: String) -> PackedStringArray:
 func is_ours(steam_id: int) -> bool:
 	if steam_id == 0:
 		return false
-	var ours := SteamManager.get_steam_id()
+	var ours := LobbyManager.our_steam_id()
 	if ours != 0 and SessionManager.has_player(ours):
 		return steam_id == ours
 	# No man of our own that the crew has heard of. A crew of one is a solo game

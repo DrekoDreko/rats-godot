@@ -319,7 +319,7 @@ func _play_sound(stream: AudioStream) -> void:
 
 
 func _our_steam_id() -> int:
-	var steam_id := SteamManager.get_steam_id()
+	var steam_id := LobbyManager.our_steam_id()
 	if steam_id != 0 and SessionManager.has_player(steam_id):
 		return steam_id
 	var crew := SessionManager.players.keys()
