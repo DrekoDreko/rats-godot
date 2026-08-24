@@ -19,9 +19,16 @@ render_mode vertex_lighting, skip_vertex_transform, diffuse_lambert_wrap, cull_d
 // `source_color` (the colour space conversion) plus the texture default.
 // Albedo falls back to white when nobody fills the uniform, otherwise every
 // object without a texture would come out black.
-uniform sampler2D albedo: source_color, hint_default_white;
-uniform sampler2D specular: hint_default_black;
-uniform sampler2D emission: source_color, hint_default_black;
+//
+// `filter_nearest` is what makes the textures read as pixels rather than as a
+// blur, and it has to be said here. A sampler with no filter hint gets Godot's
+// default of `filter_linear_mipmap`, and the applier builds this material from
+// nothing but the imported one's texture and colour — so a "Nearest" chosen on
+// the import or a "Closest" chosen in Blender never reaches the surface. This
+// line is the only place in the chain that decides it.
+uniform sampler2D albedo: source_color, hint_default_white, filter_nearest;
+uniform sampler2D specular: hint_default_black, filter_nearest;
+uniform sampler2D emission: source_color, hint_default_black, filter_nearest;
 
 // Colour on top of the texture, as in `StandardMaterial3D`. It is what saves the
 // low-poly models painted with a solid colour alone — the ones from kits like
