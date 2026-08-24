@@ -278,8 +278,18 @@ var _cover_query := PhysicsShapeQueryParameters3D.new()
 var _capture_phase := Capture.POUNCE
 var _capture_time := 0.0
 var _capture_point: Node3D
-var _original_parent: Node
 var _original_layer := 0
+## Where the rat sits in the hand, in capture-point coordinates. The whole
+## gesture — trembling, going limp, being stowed — is written against this
+## transform and only then carried to the world by `_follow_capture_point`.
+##
+## It is kept here rather than in the node's own `transform` because the rat
+## never becomes a child of the hand: it stays where the `MultiplayerSpawner`
+## put it, under the house's `Rats` container. A `reparent` would move the
+## `Sync` node with it and make it announce a path — `.../CapturePoint/Rat_N/Sync`
+## — that exists on no other machine, and every guest would answer that with
+## `get_node: Node not found`.
+var _held_transform := Transform3D.IDENTITY
 var _rise_origin := Vector3.ZERO
 var _origin_basis := Basis.IDENTITY
 ## Where the stowing starts from, already in capture-point coordinates: the limp
@@ -502,6 +512,15 @@ func _process(delta: float) -> void:
 		Capture.STOWING:
 			_process_stow(delta)
 
+	# The capture is the one gesture physics never touches, so it is also the one
+	# frame `_physics_process` never reports (it returns early on `CAPTURED`).
+	# Publishing here is what puts the rat in the host's hands on everybody
+	# else's screen instead of leaving it standing on the floor where it was
+	# grabbed. `queue_free` at the end of the stowing can land inside the match
+	# above, hence the guard.
+	if is_inside_tree():
+		_publish()
+
 ## Takes a hit. With `max_health` 1 (the default) any hit kills. `type` is what
 ## death the weapon kills with, and it is what decides how much the body pays.
 ## `leap` is the little hop the body makes as it goes: whatever kills a rat at
@@ -684,7 +703,6 @@ func capture(point: Node3D) -> bool:
 	_capture_phase = Capture.POUNCE
 	_capture_time = 0.0
 	_capture_point = point
-	_original_parent = get_parent()
 	_original_layer = collision_layer
 	_struggle = 1.0
 	_jolt = Vector3.ZERO
@@ -757,8 +775,8 @@ func escape() -> void:
 ## came from.
 func _return_to_world() -> void:
 	set_process(false)
-	if _original_parent != null and is_instance_valid(_original_parent) and get_parent() != _original_parent:
-		reparent(_original_parent, true)
+	# Nothing to put back: the rat never left its own branch of the tree, only
+	# the hand's coordinates. It is already standing where it was last drawn.
 	# Straightens the body: it goes back to the ground on its feet, not upside
 	# down.
 	rotation = Vector3(0.0, rotation.y, 0.0)
@@ -806,14 +824,23 @@ func _process_rise(_delta: float) -> void:
 	if t >= 1.0:
 		_snap_to_hand()
 
-## It arrived: from now on it *is* a child of the point in the middle of the
-## screen.
+## It arrived: from now on it is drawn in the coordinates of the point in the
+## middle of the screen, though it stays where it is in the tree.
 func _snap_to_hand() -> void:
-	reparent(_capture_point, true)
 	var pose := Basis.from_euler(_radians(HELD_POSE))
-	transform = Transform3D(pose, _anchor(pose))
+	_held_transform = Transform3D(pose, _anchor(pose))
+	_follow_capture_point()
 	_capture_phase = Capture.IN_HAND
 	_capture_time = 0.0
+
+## Carries `_held_transform` — written in capture-point coordinates — out to the
+## world. This is what a `reparent` used to do for free, and doing it by hand is
+## what keeps the rat's node, and the `Sync` under it, on the path every machine
+## agreed on when the rat was spawned.
+func _follow_capture_point() -> void:
+	if _capture_point == null or not is_instance_valid(_capture_point):
+		return
+	global_transform = _capture_point.global_transform * _held_transform
 
 ## Where the rat's origin has to sit, in the `base` pose, for the middle of its
 ## body to land right on top of the capture point. It is why it struggles
@@ -851,8 +878,9 @@ func _process_in_hand(delta: float) -> void:
 		sin(t * 29.0 + 2.2) * 0.7
 	) * deg_to_rad(TREMOR_ANGLE) * _struggle
 
-	basis = Basis.from_euler(_radians(HELD_POSE) + spin + _jolt_spin)
-	position = _anchor(basis) + tremor + _jolt
+	var pose := Basis.from_euler(_radians(HELD_POSE) + spin + _jolt_spin)
+	_held_transform = Transform3D(pose, _anchor(pose) + tremor + _jolt)
+	_follow_capture_point()
 	model.scale = model.scale.lerp(Vector3.ONE, minf(delta * 9.0, 1.0))
 
 ## Died: the body goes limp in the hand before being stowed.
@@ -860,10 +888,14 @@ func _process_limp(delta: float) -> void:
 	_damp_jolt(delta)
 	var t := minf(_capture_time / LIMP_TIME, 1.0)
 	var hanging := Basis.from_euler(_radians(LIMP_POSE))
-	basis = Basis(basis.get_rotation_quaternion().slerp(hanging.get_rotation_quaternion(), minf(delta * 9.0, 1.0)))
+	var pose := Basis(_held_transform.basis.get_rotation_quaternion().slerp(
+		hanging.get_rotation_quaternion(), minf(delta * 9.0, 1.0)))
 	# It slips out of the hand while going limp — always around the middle of its
 	# body, otherwise the limp body would leave the frame mid-slump.
-	position = position.lerp(_anchor(basis) + Vector3(0.0, -0.12, 0.05), minf(delta * 6.0, 1.0))
+	var origin := _held_transform.origin.lerp(
+		_anchor(pose) + Vector3(0.0, -0.12, 0.05), minf(delta * 6.0, 1.0))
+	_held_transform = Transform3D(pose, origin)
+	_follow_capture_point()
 	model.scale = model.scale.lerp(Vector3.ONE, minf(delta * 9.0, 1.0))
 	if t < 1.0:
 		return
@@ -871,8 +903,8 @@ func _process_limp(delta: float) -> void:
 	# With no strength left in the animal at all, the arm goes down with it.
 	_capture_phase = Capture.STOWING
 	_capture_time = 0.0
-	_stow_origin = position - _anchor(basis)
-	_stow_basis = basis
+	_stow_origin = _held_transform.origin - _anchor(_held_transform.basis)
+	_stow_basis = _held_transform.basis
 
 ## The stowing: the player lowers the dead rat from the middle of the screen to
 ## his waist, where it leaves the frame. This is where the hunt ends — the body
@@ -887,13 +919,15 @@ func _process_stow(_delta: float) -> void:
 	# body sweeps the whole path with its snout and grazes the camera, swelling
 	# on screen at exactly the frame it should be leaving it.
 	var stowed := Basis.from_euler(_radians(STOWED_POSE))
-	basis = Basis(_stow_basis.get_rotation_quaternion().slerp(
+	var pose := Basis(_stow_basis.get_rotation_quaternion().slerp(
 		stowed.get_rotation_quaternion(), smoothstep(0.0, 0.55, t)))
 
 	# What travels the path is the middle of the body, as in the hand: that way
 	# it goes down whole instead of pivoting around its feet.
 	var middle := (_stow_origin + WAIST) * 0.5 + STOW_OFFSET
-	position = _bezier(_stow_origin, middle, WAIST, progress) + _anchor(basis)
+	_held_transform = Transform3D(pose,
+		_bezier(_stow_origin, middle, WAIST, progress) + _anchor(pose))
+	_follow_capture_point()
 
 	# It vanishes by shrinking at the end of the path, the way the carcass
 	# vanishes on the ground: anyone looking down sees the rat being stowed
