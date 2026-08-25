@@ -91,6 +91,18 @@ const SMOOTHING := 20.0
 ## Further off than this and nothing is smoothed at all. A player who respawned
 ## did not run there.
 const SNAP_DISTANCE := 4.0
+## How far away a name is still written at full strength, and how far away it
+## has faded out altogether, in metres.
+##
+## A name is there to tell one hazmat suit from another in the room you are in,
+## and both numbers come from that. Inside `TAG_FULL_DISTANCE` is about the size
+## of a room in these houses, so a teammate you are working alongside is always
+## named. Past `TAG_FADE_DISTANCE` he is somebody you cannot make out anyway, and
+## a name still hanging over him would be the label reaching further than the
+## eye — four billboards legible across a whole floor, telling you where everyone
+## is standing through the walls between you.
+const TAG_FULL_DISTANCE := 12.0
+const TAG_FADE_DISTANCE := 18.0
 
 ## Who this stands for, as the wire counts people. It is the name of the node
 ## too, and that is what makes the paths line up on both machines.
@@ -134,9 +146,49 @@ var _source: Node3D
 ## A packet has landed: this body knows where it stands.
 var _seen := false
 
+## How fast this body is travelling along the ground, in metres per second.
+##
+## It does not cross the wire, and it does not need to: everything that wants it
+## can work it out from the positions that already do. On our own machine it is
+## read straight off the character; on everybody else's it is the distance
+## between two packets over the time between them, which is the same number the
+## sender would have written and one variable fewer on the wire.
+##
+## What wants it is the rats. A man walking past is worth less notice than a man
+## running past (`rat.gd: _alert_radius_for`), and until this existed the rats
+## could only ask that of the character standing on their own machine — so a
+## guest could sprint through a room and be, to every rat in it, a man strolling.
+var speed := 0.0
+
+## Where the last packet put this body, and how long ago. The two of them are
+## what `speed` is worked out from on a watched avatar.
+var _last_sync_position := Vector3.ZERO
+var _sync_age := 0.0
+
 @onready var _model: PlayerModel = $Model
 @onready var _tag: Label3D = $Name
+## How solid the name and its outline are with nothing faded — whatever the
+## scene was built with.
+##
+## Kept because the fade *scales* these rather than setting the alpha outright.
+## The outline is deliberately half transparent (it is there to lift the letters
+## off a white wall, not to draw a box round them), and a fade that wrote
+## `outline_modulate.a = faded` would throw that away the moment anybody walked
+## close enough to be at full strength — the thick black letters this was fixing
+## in the first place, back again at ten metres.
+@onready var _tag_alpha: float = _tag.modulate.a
+@onready var _tag_outline_alpha: float = _tag.outline_modulate.a
 @onready var _sync: MultiplayerSynchronizer = $Sync
+## Where a rat this player has grabbed is held, on the machines that are only
+## watching him. It stands in for the `Head/CapturePoint` of `player.tscn`, which
+## exists on his machine alone: the host has no character for a guest, only this
+## body, so a guest's catch has to hang off something that is here.
+##
+## It sits at chest height in front of the body rather than in the middle of a
+## screen, and that difference is the point. On the holder's own machine the
+## animal is held against his camera, filling the frame; to everybody else he is
+## a man carrying a rat in front of him, which is what they should see.
+@onready var capture_point: Node3D = $CapturePoint
 
 
 func _ready() -> void:
@@ -177,6 +229,12 @@ func _physics_process(_delta: float) -> void:
 	sync_position = _source.global_position
 	sync_yaw = _source.rotation.y
 	sync_state = _source.animation_state()
+	# Read off the character rather than worked out from his last position: he is
+	# a `CharacterBody3D` and already knows, and the number he knows is the true
+	# one rather than one frame's approximation of it.
+	var body := _source as CharacterBody3D
+	if body != null:
+		speed = Vector2(body.velocity.x, body.velocity.z).length()
 	# Kept on top of the character rather than left at the origin: nobody here
 	# sees it, but the remote debugger's tree — and anything that ever goes
 	# looking for a player's body — should find it where the player is.
@@ -188,6 +246,30 @@ func _physics_process(_delta: float) -> void:
 func _process(delta: float) -> void:
 	if not _seen:
 		return
+	# How fast he is going, from the ground his last two packets covered. It is
+	# measured against `sync_position` — where the wire says he is — and not
+	# against the drawn body, which is deliberately behind it: easing the drawn
+	# position and then measuring it would report a man slowing down every time
+	# the smoothing caught up with him.
+	_sync_age += delta
+	if not sync_position.is_equal_approx(_last_sync_position):
+		var travelled := Vector2(
+			sync_position.x - _last_sync_position.x,
+			sync_position.z - _last_sync_position.z
+		).length()
+		# A packet that arrives on the same frame as the last one would divide by
+		# nothing; one that arrives after a long silence says more about the wire
+		# than about the man, so the window is floored at the interval the
+		# synchroniser is set to.
+		speed = travelled / maxf(_sync_age, 0.05)
+		_last_sync_position = sync_position
+		_sync_age = 0.0
+	elif _sync_age > 0.25:
+		# Nothing new for a quarter of a second: he is standing still, or the
+		# wire has gone quiet. Either way he is not running, and leaving the last
+		# reading up would keep a man who stopped dead looking like a sprinter.
+		speed = 0.0
+
 	var weight := 1.0 - exp(-SMOOTHING * delta)
 	if global_position.distance_to(sync_position) > SNAP_DISTANCE:
 		global_position = sync_position
@@ -200,6 +282,13 @@ func _process(delta: float) -> void:
 	# well. The capsule had to be dropped by hand to look like it was kneeling; a
 	# man with knees does not.
 	_model.set_state(sync_state)
+	# Where the name is being read from. The camera and not our own character:
+	# the two part company the moment a player looks around, and it is the camera
+	# that is doing the reading. Null in a bench, and in the frames before a map
+	# has settled on one — the name simply keeps whatever strength it had.
+	var camera := get_viewport().get_camera_3d()
+	if camera != null:
+		fade_tag(camera.global_position)
 
 
 ## The character to read, handed over by the crowd on the machine this player is
@@ -239,7 +328,43 @@ func _on_synchronized() -> void:
 	_seen = true
 	global_position = sync_position
 	rotation.y = sync_yaw
+	# The first packet is a place, not a movement: measuring from the origin
+	# would call him a man crossing the map at a thousand metres a second.
+	_last_sync_position = sync_position
+	_sync_age = 0.0
 	visible = true
+
+
+## The name, dimmed by how far off its owner is, as seen from `viewer`.
+##
+## Done here rather than in the scene because a `Label3D` has no distance fade of
+## its own — the `distance_fade_*` properties belong to `BaseMaterial3D`, and
+## writing them into the `.tscn` is the worst kind of wrong: the scene loads, no
+## error is printed, and the name simply never fades. That is not a guess; it was
+## written that way first and `_test_nametag.gd` is what caught it.
+##
+## Only ever run on somebody else's avatar. Ours is never drawn at all, and
+## `_process` is switched off on it.
+##
+## The viewpoint is handed in rather than read off the camera in here, and that
+## is worth a word. A `Camera3D` is only ever current in a viewport that is
+## really drawing, so headless `get_camera_3d()` is null and a fade that asked
+## for it itself could not be tested at all — it would quietly do nothing on the
+## bench and there would be no way to tell that from doing nothing in the game.
+func fade_tag(viewer: Vector3) -> void:
+	var distance := viewer.distance_to(global_position)
+	# `inverse_lerp` is not clamped, so a man standing on top of us would come
+	# back brighter than opaque and one across the map darker than gone.
+	var faded := clampf(
+		inverse_lerp(TAG_FADE_DISTANCE, TAG_FULL_DISTANCE, distance), 0.0, 1.0
+	)
+	_tag.modulate.a = _tag_alpha * faded
+	# The outline is what makes a name readable against a wall, so it fades with
+	# the name rather than staying behind as a ghost of it.
+	_tag.outline_modulate.a = _tag_outline_alpha * faded
+	# Nothing to draw at all once it is gone: a fully transparent label is still
+	# a quad the renderer sorts and rasterises every frame, once per player.
+	_tag.visible = faded > 0.0
 
 
 ## Somebody's colour was settled. Only ours is worth a repaint, and asking which

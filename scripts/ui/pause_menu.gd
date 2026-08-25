@@ -194,37 +194,55 @@ func close() -> void:
 ## (wiping the crew, the wallet, the stock and the pins, and changing the
 ## scene). Doing any of that again here would be a second opinion about state
 ## that already has an owner.
+##
+## **Nothing may be read off this node after that call.** `NetworkGuard` answers
+## `lobby_left` in the same breath, and its answer is `change_scene_to_file`,
+## which tears down the scene this menu is a child of — the map, the van and the
+## travel scene each carry their own copy. So the moment `leave_lobby` returns
+## we are a node with no tree under us, and the `get_tree().current_scene` that
+## used to stand here found `get_tree()` null and took the game down with it.
+## That is why the question "was there a lobby at all?" is asked *first*, off
+## `LobbyManager`, and the answer kept in a local: a local survives its node
+## being freed, and a road decided beforehand needs nothing looked up after.
 func _leave_match() -> void:
 	_open = false
 	hide()
 	set_process(false)
-	get_tree().paused = false
+	var tree := get_tree()
+	tree.paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+	# A solo run never had a lobby, so `leave_lobby` will return without a word
+	# and nobody will move us — the scene change is ours to make in that case, and
+	# only in that case. Asked before the call, because after it there is no
+	# `LobbyManager.lobby_id` worth reading and no `self` left to read it from.
+	var was_solo := LobbyManager.lobby_id == 0
 
 	LobbyManager.leave_lobby()
 
-	# A solo run never had a lobby, so `leave_lobby` returned without a word and
-	# nothing above has moved us. The scene change is ours to make in that case,
-	# and only in that case — checking where we ended up is surer than trying to
-	# work out beforehand which road we were on.
-	var current := get_tree().current_scene
-	if current == null or current.scene_file_path != LOBBY_SCENE:
+	if was_solo:
 		SessionManager.reset()
 		Wallet.reset()
 		Stock.reset()
 		MapManager.clear_all_pins()
 		ReadyManager.blocked = false
 		JoinGate.admitted = false
-		get_tree().change_scene_to_file(LOBBY_SCENE)
+		tree.change_scene_to_file(LOBBY_SCENE)
 
 
 ## Out of the game altogether. The lobby is left on the way out rather than being
 ## dropped on the floor: the other players get a clean departure instead of a
 ## peer that stops answering, and Steam is told before the process goes.
+##
+## The tree is taken hold of before the lobby is left, for the reason
+## `_leave_match` gives at length: leaving the lobby sends `NetworkGuard` off to
+## change the scene, which frees this node, and a `get_tree()` asked afterwards
+## comes back null. Here that would have been a quit button that does not quit.
 func _quit_game() -> void:
-	get_tree().paused = false
+	var tree := get_tree()
+	tree.paused = false
 	LobbyManager.leave_lobby()
-	get_tree().quit()
+	tree.quit()
 
 
 ## The host went down while the menu was up. The scene is being changed out from

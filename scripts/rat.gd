@@ -47,9 +47,15 @@ enum Capture { POUNCE, RISING, IN_HAND, GOING_LIMP, STOWING }
 @export var knockback_force := 5.0
 
 ## Height of the rat's eyes, used in the line-of-sight checks.
-const EYE_HEIGHT := 0.25
+const EYE_HEIGHT := 0.10
 ## Height of the player's chest, the point the rat tries to see.
 const PLAYER_HEIGHT := 1.2
+## Above this ground speed a man counts as running, and a running man is noticed
+## from further off (`_alert_radius_for`). It was a bare 7.0 in the middle of the
+## sight check for as long as there was one player to ask; it is a constant now
+## because it is asked of everybody in the house, character and avatar alike, and
+## the two work their speed out by different roads.
+const RUNNING_SPEED := 7.0
 ## Only the scenery takes part in the sight and clearance checks (layer 1).
 const SCENERY_LAYER := 1
 ## Range of the "whiskers" that sniff out walls ahead. They only come into play
@@ -146,7 +152,7 @@ const STOWED_POSE := Vector3(-72.0, 200.0, 24.0)
 ## above it — this point, not the origin, is what the hand puts in the middle of
 ## the screen. Without it the animal is hung by its feet and its body leaves the
 ## frame; standing, its snout came within a hand's width of the camera.
-const BODY_CENTER := Vector3(0.0, 0.2, -0.125)
+const BODY_CENTER := Vector3(0.0, 0.08, -0.05)
 ## Hunched on the ground, in the pounce.
 const POUNCE_SCALE := Vector3(1.2, 0.7, 1.2)
 ## Stretched in the pull — its belly lengthens as it leaves the ground.
@@ -278,6 +284,15 @@ var _cover_query := PhysicsShapeQueryParameters3D.new()
 var _capture_phase := Capture.POUNCE
 var _capture_time := 0.0
 var _capture_point: Node3D
+## Whose catch this is, as the wire counts people, on the machine that is
+## thinking for the rat. Zero when nobody is holding it.
+##
+## The host keeps this and puts it on the wire as `sync_holder`; solo it is the
+## local peer id, which with no wire at all is 1. It is deliberately separate
+## from `_capture_point`: the point is a node and says *where* the animal is
+## held, this says *whose* it is, and only the second one means anything on a
+## machine other than the holder's.
+var _holder_peer := 0
 var _original_layer := 0
 ## Where the rat sits in the hand, in capture-point coordinates. The whole
 ## gesture — trembling, going limp, being stowed — is written against this
@@ -323,6 +338,14 @@ var _holder: Node3D
 var _death_type := Death.Type.UNKNOWN
 var _size := 1.0
 var _paid := false
+## Whose kill this was, as the wire counts people. Zero until something kills it,
+## and zero for good for anything that dies with nobody to blame.
+##
+## Every rat is killed on the host, because that is the machine that thinks for
+## it — but the man who killed it is very often sitting at another one, and the
+## money has to find him. This is the thread that carries him from the blow, or
+## from the hand, all the way to `_pay_reward` at the far end of the gesture.
+var _killer_peer := 0
 
 # --- What crosses the wire --------------------------------------------------
 #
@@ -360,11 +383,36 @@ var sync_fur := -1
 ## The hideout crouch, which is a scale on the model and not a position: a rat
 ## squeezed under a crate on the host should be squeezed under it everywhere.
 var sync_crouched := false
+## Whose hand this rat is in, as the wire counts people. Zero is a rat nobody is
+## holding, which is nearly all of them nearly all the time.
+##
+## It is what makes a catch mean the same thing on every machine. The host thinks
+## for every rat, so a guest's catch is *carried out* on the host — but the man
+## it belongs to is sitting somewhere else, and without this the other machines
+## would see a rat hanging in mid-air beside him. With it, everybody knows whose
+## catch it is: the holder's own machine draws it against his camera, filling his
+## frame, and everybody else draws it in front of that man's body
+## (`_draw_remote_capture`).
+##
+## It is also who gets paid. `_pay_reward` reads it, which is the whole reason
+## the money lands in the right wallet rather than always in the host's.
+var sync_holder := 0
 
 ## A packet has landed: this body knows where it stands. Until then it is not
 ## drawn at all — a rat that is up but has never been told where it is would sit
 ## at the origin, which is a lie the moment somebody looks at it.
 var _seen := false
+
+## A watched rat is in somebody's hand, as far as this machine is concerned. It
+## is what tells the first frame of a catch from every frame after it, for a rat
+## held by somebody else — where there is no change of parent to notice.
+var _held_remotely := false
+
+## A watched rat has died in the hand and should stop fighting. It is a latch and
+## not a reading of `sync_state`, because the rat is freed on the host at the end
+## of the stowing and the last packets before that are the ones that matter: once
+## it has gone limp on this screen it does not start thrashing again.
+var _remote_limp := false
 
 func _ready() -> void:
 	add_to_group("rats")
@@ -500,6 +548,7 @@ func _process(delta: float) -> void:
 		return
 
 	_capture_time += delta
+	_follow_holder()
 	match _capture_phase:
 		Capture.POUNCE:
 			_process_pounce(delta)
@@ -527,22 +576,51 @@ func _process(delta: float) -> void:
 ## arm's length lets it jump, and whatever comes down on top of it does not.
 func take_damage(amount: int = 1, origin: Vector3 = INVALID_POINT,
 		type := Death.Type.UNKNOWN, leap := 3.0) -> void:
-	# Only the machine that thinks for this rat may kill it. A guest swinging at
-	# one would otherwise drop it on his own screen alone and pay his own wallet
-	# for it, while on every other machine the same rat goes on running.
+	if _state == State.DEAD or _state == State.CAPTURED:
+		return
+	# Only the machine that thinks for this rat may kill it — otherwise a guest
+	# would drop it on his own screen alone while on every other machine the same
+	# animal went on running, and would pay his own wallet for a rat nobody else
+	# saw die.
 	#
-	# So a guest's hit lands nowhere yet. That is a known gap and it is the
-	# honest state of things: making it land means the hit crossing to the host
-	# and the host deciding, which is a weapons-and-wallet job rather than a
-	# replication one. What matters here is that it does not land *wrongly* —
-	# the money and the tally stay the host's, which is where they already were.
+	# So the hit crosses instead of landing here, and the host lands it. The
+	# knockback, the flight, the death and the money all follow from that one
+	# decision made in one place, and the guest sees the result come back like
+	# any other thing the rat does.
 	if not is_multiplayer_authority():
+		_request_damage.rpc_id(get_multiplayer_authority(), amount, origin, type, leap)
+		return
+	_health -= amount
+	if _health <= 0:
+		_die(origin, leap, type, _local_peer())
+		return
+	_change_state(State.FLEEING)
+	if origin != INVALID_POINT:
+		velocity += _away_from(origin) * knockback_force
+
+## A guest hit this rat. Runs on the host, which is the machine that decides
+## whether it dies of it and who is paid if it does.
+##
+## Everything the blow was crosses, because none of it can be worked out here:
+## `origin` is where the weapon swung from and it is what the body is knocked
+## away from, `type` is what the weapon kills with and it is what the carcass is
+## worth, and `leap` is the hop it makes on the way down. They come from the
+## guest's weapon and there is no copy of that weapon on this machine to ask.
+##
+## The sender is not checked against anything, and that is right: anybody in the
+## house may hit any rat, which is the game. What is checked is the state of the
+## animal, and that is checked in `_apply_damage` — the same road the host's own
+## swing takes.
+@rpc("any_peer", "reliable")
+func _request_damage(amount: int, origin: Vector3, type: Death.Type, leap: float) -> void:
+	var peer_id := multiplayer.get_remote_sender_id()
+	if peer_id == 0:
 		return
 	if _state == State.DEAD or _state == State.CAPTURED:
 		return
 	_health -= amount
 	if _health <= 0:
-		_die(origin, leap, type)
+		_die(origin, leap, type, peer_id)
 		return
 	_change_state(State.FLEEING)
 	if origin != INVALID_POINT:
@@ -551,16 +629,48 @@ func take_damage(amount: int = 1, origin: Vector3 = INVALID_POINT,
 ## True as soon as its health runs out, even in the moments when the body is
 ## still in the player's hand — going limp or dropping to the waist.
 func is_dead() -> bool:
+	if not is_multiplayer_authority():
+		return sync_state == State.DEAD
 	if _state == State.CAPTURED:
 		return _capture_phase == Capture.GOING_LIMP or _capture_phase == Capture.STOWING
 	return _state == State.DEAD
 
+## In somebody's hand — anybody's. It is what keeps a rat already caught out of
+## everybody else's sights (`weapon.gd: _rat_in_sights`), and on a machine that
+## is only watching, the wire is the only thing that knows.
 func is_captured() -> bool:
+	if not is_multiplayer_authority():
+		return sync_state == State.CAPTURED
 	return _state == State.CAPTURED
 
 ## True only once it has finished rising and is settled in the hand.
+##
+## The phases of the rise do not cross the wire — they are a gesture, and the
+## whole of it takes a fraction of a second — so a watcher answers for the state
+## it can see. What asks is the escape clock (`hands.gd`), and the difference it
+## makes there is a hair of extra grace on a grab whose rise the holder never
+## sees anyway.
 func is_in_hand() -> bool:
+	if not is_multiplayer_authority():
+		return sync_state == State.CAPTURED
 	return _state == State.CAPTURED and _capture_phase == Capture.IN_HAND
+
+## Whether *this* machine's player is the one holding it.
+##
+## It is the question a guest's hands ask to find out whether the grab they sent
+## off actually landed (`hands.gd: _forget_lost_rat`), and the one this rat
+## answers from `sync_holder` — the holder as the machine that thinks for the
+## animal sees it, which is the only reading that counts.
+##
+## On the host and in a solo hunt it is answered from `_holder_peer` directly,
+## which is the same number a frame earlier.
+func is_held_by_me() -> bool:
+	var holder := _holder_peer if is_multiplayer_authority() else sync_holder
+	return holder != 0 and holder == _local_peer()
+
+## Who is holding it, as the wire counts people, or zero for a rat nobody has.
+func holder_peer() -> int:
+	return _holder_peer if is_multiplayer_authority() else sync_holder
 
 ## Where the middle of its body is in the world: the point the hand holds and
 ## the one the capture carries to the middle of the screen.
@@ -684,13 +794,84 @@ func release_carcass() -> void:
 
 ## The player grabbed this rat. Returns false when it cannot be done: dead,
 ## already in someone's hand or freshly escaped.
+##
+## `point` is where *this* machine wants to hold it — the node in the middle of
+## its own screen. It matters only on the machine of whoever is holding it; the
+## host anchors a guest's catch to that guest's avatar instead, and everybody
+## else draws it from the wire.
+##
+## Called by the weapon on the machine of the man doing the grabbing, whoever he
+## is. On the host that is the whole of it. On a guest it asks the host, which is
+## the machine that thinks for the animal, and answers **provisionally**: the
+## grab is a request, and the guest finds out it succeeded when the rat comes
+## back over the wire as his (`sync_holder`). See `_hold` for why answering
+## optimistically is the right way round here.
 func capture(point: Node3D) -> bool:
-	# Same rule as `take_damage`, and the same gap: a guest cannot pick a rat up
-	# yet. It refuses cleanly rather than putting a rat in one man's hands that
-	# is still running about on everybody else's screen.
-	if not is_multiplayer_authority():
+	if not _grabbable():
 		return false
-	if _state == State.DEAD or _state == State.CAPTURED or _immune_time > 0.0:
+
+	# Not ours to decide. The request goes to the host, who runs the very same
+	# `capture` there, anchors the animal to this player's avatar and puts the
+	# answer on the wire.
+	#
+	# It answers true without waiting, and that is deliberate: the wait is a
+	# round trip, and a hand that goes limp for a fifth of a second on every grab
+	# feels broken in a way that a hand which occasionally grabs nothing does
+	# not. The rat itself is not moved here — nothing is a fact until the host
+	# says so — so the worst an optimistic answer costs is a weapon that thinks
+	# it is holding something for one round trip and then finds it is not
+	# (`hands.gd: _forget_lost_rat`).
+	if not is_multiplayer_authority():
+		_request_capture.rpc_id(get_multiplayer_authority())
+		return true
+
+	return _hold(_local_peer(), point)
+
+## Whether this rat can be picked up at all, asked before anybody has committed
+## to anything. It is the one rule that is the same on every machine, which is
+## why it is checked on the guest before the request goes out as well as on the
+## host when it lands: a guest need not trouble the wire to be told that the rat
+## he is looking at is already dead.
+func _grabbable() -> bool:
+	# A puppet has to be asked through the wire and not through itself. Its own
+	# `_state` is whatever it was when its physics was switched off — usually
+	# `WANDERING`, and stuck there for good — so a rat the host killed a minute
+	# ago would still call itself grabbable and every guest in the house would be
+	# able to reach for a corpse.
+	if not is_multiplayer_authority():
+		return sync_state != State.DEAD and sync_state != State.CAPTURED
+	return _state != State.DEAD and _state != State.CAPTURED and _immune_time <= 0.0
+
+## A guest wants this rat. Runs on the host, which is the only machine that may
+## say yes.
+##
+## `any_peer` because anybody in the house may try to grab a rat — that is the
+## game — and there is nothing to trust in the message: it carries no state, only
+## the wish. Whether it is allowed is decided here, by the same `_hold` the host
+## puts his own hand through, and the sender does not get a vote.
+@rpc("any_peer", "reliable")
+func _request_capture() -> void:
+	var peer_id := multiplayer.get_remote_sender_id()
+	if peer_id == 0:
+		return
+	# Where the animal is held, on this machine, for a man sitting at another
+	# one: in front of his avatar's chest. His own machine will draw it against
+	# his camera instead — the two are different views of one catch, and
+	# `sync_holder` is what tells each machine which of them it is looking at.
+	#
+	# A grab is never dropped for want of a body to hang it on. A guest whose
+	# avatar has not gone up here yet — the first seconds of a hunt, a peer this
+	# machine has heard from before it has drawn him — has still *caught the
+	# rat*, and refusing it would be a grab that vanished for a reason nobody
+	# could see. `_hold` falls back to holding the animal where it stands, and
+	# `_follow_holder` moves it onto the man the moment he is drawn.
+	_hold(peer_id, _capture_point_of(peer_id))
+
+## The catch itself, on the machine that thinks for the rat. Everything that
+## makes a grab real happens here and nowhere else, whoever asked for it: the
+## host through `capture`, a guest through `_request_capture`.
+func _hold(peer_id: int, point: Node3D) -> bool:
+	if not _grabbable():
 		return false
 
 	# Torn off whatever was holding it down. It happens before anything else so
@@ -703,6 +884,7 @@ func capture(point: Node3D) -> bool:
 	_capture_phase = Capture.POUNCE
 	_capture_time = 0.0
 	_capture_point = point
+	_holder_peer = peer_id
 	_original_layer = collision_layer
 	_struggle = 1.0
 	_jolt = Vector3.ZERO
@@ -718,22 +900,105 @@ func capture(point: Node3D) -> bool:
 	# It stays in the `rats` group: for the HUD scoreboard it is still alive, and
 	# rightly so — the player can still lose it.
 	set_process(true)
+	# The holder crosses on the next packet like everything else, but the state
+	# is written now so that a rat grabbed and killed inside one frame is never
+	# on the wire as a rat nobody is holding.
+	_publish()
 	return true
+
+## Where a given peer holds a rat, on *this* machine.
+##
+## Our own hand is the point in the middle of our own screen, which is a child of
+## our character's head (`player.tscn`). Everybody else's is the chest of the
+## body standing for him (`player_avatar.tscn`), because his character does not
+## exist here — the host has no `Player` node for a guest, only an avatar, and a
+## catch has to hang off something that is actually in this tree.
+func _capture_point_of(peer_id: int) -> Node3D:
+	if peer_id == _local_peer():
+		var local := get_tree().get_first_node_in_group("player") as Node3D
+		if local == null:
+			return null
+		return local.get_node_or_null("Head/CapturePoint") as Node3D
+	for node in get_tree().get_nodes_in_group("player_avatars"):
+		var avatar := node as PlayerAvatar
+		if avatar != null and avatar.peer_id == peer_id:
+			return avatar.capture_point
+	return null
+
+## Who we are, as the wire counts people. One with no wire at all: a solo hunt
+## has a single pair of hands and they may as well be numbered like the host's,
+## so that nothing below has to ask whether there is a wire before reading a
+## holder.
+func _local_peer() -> int:
+	# A wire that is not up — never dialled, or closed under us at the end of a
+	# hunt — has no id to give and complains if it is asked. Everything that
+	# reads a holder wants a number either way, and one is the right one: with no
+	# peers there is a single pair of hands in the game and they may as well be
+	# numbered like the host's.
+	var api := multiplayer
+	if api == null or api.multiplayer_peer == null \
+			or api.multiplayer_peer is OfflineMultiplayerPeer \
+			or api.multiplayer_peer.get_connection_status() \
+				!= MultiplayerPeer.CONNECTION_CONNECTED:
+		return 1
+	var id := api.get_unique_id()
+	return 1 if id == 0 else id
 
 ## One squeeze of the neck. Counting the squeezes and deciding when it dies is
 ## the weapon's job; here the rat only reacts.
+##
+## It is the holder's hand doing the squeezing, so on his machine it is applied
+## at once — the flinch belongs on the frame he clicked, not a round trip later —
+## and passed to the host, which is where the body it flinches with actually
+## lives. Everybody else sees it as the animal jolting in that man's hands.
 func squeeze() -> void:
-	if _state != State.CAPTURED:
+	if not is_captured():
 		return
+	_flinch()
+	if not is_multiplayer_authority():
+		_request_squeeze.rpc_id(get_multiplayer_authority())
+
+## The flinch itself: what a squeeze looks like, with nothing said about who
+## asked for it. Kept apart from `squeeze` so that the holder can play it on his
+## own screen and the host can play it on the real body without either of them
+## going round the loop twice.
+func _flinch() -> void:
 	_struggle = 1.0
 	model.scale = SQUEEZED_SCALE
 	_kick(0.6)
+
+## A guest squeezed the rat he is holding. Runs on the host.
+##
+## Only the man actually holding it is listened to. Anybody may *ask* — it is
+## `any_peer`, like every message a guest sends — and the check is here rather
+## than in the sender, which is where a check has to be when the sender is
+## somebody else's machine.
+@rpc("any_peer", "reliable")
+func _request_squeeze() -> void:
+	if multiplayer.get_remote_sender_id() != _holder_peer:
+		return
+	if _state != State.CAPTURED:
+		return
+	_flinch()
 
 ## Died in the hand: it goes limp for a moment and is then stowed at the waist.
 ## `type` comes from the weapon that killed it — today only the hands get here,
 ## strangling.
 func die_in_hands(type := Death.Type.STRANGULATION) -> void:
-	if _state != State.CAPTURED or is_dead():
+	# `is_captured` and not `_state`, and that is the whole of what a puppet
+	# needs: its own `_state` was frozen at whatever it held when its physics was
+	# switched off, so a guest asking his own copy whether it is in his hand is
+	# asking a variable that has not been written since the rat was born. What
+	# knows is the wire.
+	if not is_captured() or is_dead():
+		return
+	# The killing blow is the host's to land, whoever threw it. A guest that
+	# strangled its rat says so and stops there: the body goes limp, is stowed
+	# and is paid for on the host, and comes back over the wire as a rat that is
+	# dead. Doing it here as well would kill the animal twice — once really, once
+	# on a puppet — and pay for it twice with it.
+	if not is_multiplayer_authority():
+		_request_kill.rpc_id(get_multiplayer_authority(), type)
 		return
 	# Whoever hammered too fast can kill it before it has finished rising. In
 	# that case it reaches the hand in one go and goes limp from there — without
@@ -754,7 +1019,15 @@ func die_in_hands(type := Death.Type.STRANGULATION) -> void:
 
 ## Got loose from the player's hand and bolts.
 func escape() -> void:
-	if _state != State.CAPTURED:
+	# Read through `is_captured` for the same reason as `die_in_hands`: on a
+	# guest the only honest answer comes from the wire.
+	if not is_captured():
+		return
+	# Same rule as the kill: the animal gets loose on the machine that thinks for
+	# it, and everybody watches it happen. A guest whose grip failed says so and
+	# lets go of it locally through the wire, not by hand.
+	if not is_multiplayer_authority():
+		_request_escape.rpc_id(get_multiplayer_authority())
 		return
 	# It leaps out in front of the player. The direction comes from his body, not
 	# from the rat's position: hanging in his hand the rat is *on top of* him,
@@ -771,6 +1044,25 @@ func escape() -> void:
 	_change_state(State.FLEEING)
 	velocity = flight * flee_speed + Vector3.UP * ESCAPE_LEAP
 
+## A guest strangled the rat in his hands. Runs on the host.
+##
+## The death type crosses because the weapon decides it, and the weapon is on his
+## machine — the hands strangle, and the day something else kills in the hand it
+## will say so here. It is still checked against the holder: a peer who is not
+## holding this rat has no say in how it dies.
+@rpc("any_peer", "reliable")
+func _request_kill(type: Death.Type) -> void:
+	if multiplayer.get_remote_sender_id() != _holder_peer:
+		return
+	die_in_hands(type)
+
+## A guest lost his grip. Runs on the host.
+@rpc("any_peer", "reliable")
+func _request_escape() -> void:
+	if multiplayer.get_remote_sender_id() != _holder_peer:
+		return
+	escape()
+
 ## Takes the rat out of the hand and gives it back to the tree and the physics it
 ## came from.
 func _return_to_world() -> void:
@@ -782,6 +1074,43 @@ func _return_to_world() -> void:
 	rotation = Vector3(0.0, rotation.y, 0.0)
 	set_deferred("collision_layer", _original_layer)
 	_capture_point = null
+	# Nobody's any more. It matters on the wire as much as here: a rat back on
+	# the floor still carrying a holder would be drawn hanging in front of the
+	# man who lost it (`_draw_remote_capture`).
+	_holder_peer = 0
+
+## Keeps the catch on the man it belongs to, on the machine thinking for the rat.
+##
+## There are two ways the hand under a rat can change while it is being held, and
+## neither of them is the ordinary case:
+##
+## - It was never there. A guest grabbed a rat before this machine had drawn his
+##   body, so the catch was allowed with nowhere to hang it (`_request_capture`).
+##   The moment the avatar goes up, the animal moves onto it.
+## - It went away. The man dropped off the wire with a rat in his hands, and his
+##   body went with him. The rat is let go rather than carried by a ghost — it is
+##   the same thing that happens when somebody loses his grip, and from the
+##   animal's point of view it is exactly that.
+##
+## It costs one dictionary-free group walk per held rat per frame, and there is
+## at most one rat per player in the game.
+func _follow_holder() -> void:
+	if _holder_peer == 0:
+		return
+	var point := _capture_point_of(_holder_peer)
+	if point == _capture_point:
+		return
+	if point == null:
+		# His body has gone. Whatever he was holding is loose again.
+		escape()
+		return
+	_capture_point = point
+	# Already in a hand: it moves across to the new one rather than starting the
+	# rise over, which from a watcher's side is the rat simply being where the
+	# man is.
+	if _capture_phase == Capture.IN_HAND or _capture_phase == Capture.GOING_LIMP \
+			or _capture_phase == Capture.STOWING:
+		_snap_to_hand()
 
 ## The pounce: it hunches on the ground and the hand comes down on it.
 func _process_pounce(delta: float) -> void:
@@ -797,6 +1126,12 @@ func _process_pounce(delta: float) -> void:
 
 ## The pull: from the ground to the hand, in an arc and somersaulting.
 func _process_rise(_delta: float) -> void:
+	# Nowhere to rise to yet: the hand this catch belongs to is not in this tree.
+	# It hunches where it is until `_follow_holder` finds the body, which is a
+	# frame or two at worst and reads as an animal held down rather than one
+	# frozen mid-air.
+	if _capture_point == null:
+		return
 	var t := clampf(_capture_time / RISE_TIME, 0.0, 1.0)
 	# It leaves the ground fast and slows down as it reaches the hand — that is
 	# what gives the pull.
@@ -826,6 +1161,14 @@ func _process_rise(_delta: float) -> void:
 
 ## It arrived: from now on it is drawn in the coordinates of the point in the
 ## middle of the screen, though it stays where it is in the tree.
+##
+## It is never reparented into the hand, not even a hand on this machine. A
+## node's path is its address on the wire: a `MultiplayerSynchronizer` writes to
+## the node at the same path on the far machine, so moving this rat under a
+## capture point renames it from `Rats/Rat_2` to something no other machine has,
+## and every guest answers with `get_node: Node not found`. So the gesture is
+## written in the hand's coordinates and carried out to the world every frame
+## instead — see `_follow_capture_point`.
 func _snap_to_hand() -> void:
 	var pose := Basis.from_euler(_radians(HELD_POSE))
 	_held_transform = Transform3D(pose, _anchor(pose))
@@ -1035,8 +1378,10 @@ func _process_flee(delta: float) -> void:
 	var direction := _path_direction()
 	if direction.is_zero_approx():
 		# No reachable hideout (or it fell off the mesh): it runs far away on
-		# instinct, sniffing out walls ahead.
-		direction = _dodge(_away_from(_player_position()))
+		# instinct, sniffing out walls ahead. Away from everybody at once and not
+		# merely from the nearest — with two hunters closing in, fleeing the
+		# nearer one alone is what runs the animal straight into the other.
+		direction = _dodge(_away_from_hunters())
 	var speed := burst_speed if _state_time < BURST_TIME else flee_speed
 	_move(direction, speed, delta)
 
@@ -1105,27 +1450,31 @@ func _search_hideout() -> void:
 		_clear_target()
 		return
 
+	# Everybody in the house, gathered once and handed down through the whole
+	# search. Once, and not per candidate, because the scoring below asks about
+	# them some hundreds of times per search and the list does not change while
+	# it runs.
+	var eyes := _hunter_eyes()
 	var player_position := player.global_position
-	var player_eyes := player_position + Vector3.UP * PLAYER_HEIGHT
 	# Found a good hideout? Then it does not keep changing its mind halfway.
-	if _hideout_still_works(player_eyes):
+	if _hideout_still_works(eyes):
 		return
 	_clear_target()
 
 	var best := INVALID_POINT
 	var best_score := -INF
 
-	for point in _candidates(player_eyes, player_position):
+	for point in _candidates(eyes, player_position):
 		# The point's score comes first because it is cheap; the path only
 		# subtracts, so anything already losing to the leader need not be asked
 		# about at all.
-		var score := _score_point(point, player_eyes, player_position)
+		var score := _score_point(point, eyes)
 		if score <= best_score:
 			continue
 		var path := _path_to(point)
 		if path.is_empty():
 			continue
-		score -= _path_cost(path, player_position)
+		score -= _path_cost(path, eyes)
 		if score > best_score:
 			best_score = score
 			best = point
@@ -1133,8 +1482,27 @@ func _search_hideout() -> void:
 	if best != INVALID_POINT:
 		_set_target(best)
 
+## Where everybody in the house is looking from: one point per hunter, at chest
+## height, which is what the sight checks are drawn to.
+##
+## It is the hunters flattened into bare positions on purpose. What the scoring
+## does with them is geometry and nothing else, and a list of points can be
+## carried down through a search that runs hundreds of checks without going back
+## to the tree for a node that has not moved in the meantime.
+func _hunter_eyes() -> Array[Vector3]:
+	var eyes: Array[Vector3] = []
+	for hunter in _hunters():
+		eyes.append(hunter.global_position + Vector3.UP * PLAYER_HEIGHT)
+	return eyes
+
 ## The destinations it considers in this search, all already snapped to the mesh.
-func _candidates(player_eyes: Vector3, player_position: Vector3) -> Array[Vector3]:
+##
+## `eyes` is everybody, and `player_position` is the nearest man alone. The two
+## are used for different things and that is why both are passed: the blind spots
+## have to be behind cover from *every* pair of eyes, while the fan of points is
+## simply thrown in the direction the rat is already running, which is away from
+## whoever is closest.
+func _candidates(eyes: Array[Vector3], player_position: Vector3) -> Array[Vector3]:
 	var points: Array[Vector3] = []
 
 	_cover_query.transform = Transform3D(Basis(), global_position)
@@ -1148,11 +1516,11 @@ func _candidates(player_eyes: Vector3, player_position: Vector3) -> Array[Vector
 			continue
 		if _flat_distance(body.global_position, global_position) > COVER_RADIUS:
 			continue
-		var point := _blind_spot_behind(body.global_position, player_eyes)
+		var point := _blind_spot_behind(body.global_position, eyes)
 		if point != INVALID_POINT:
 			points.append(point)
 
-	var flight := _away_from(player_position)
+	var flight := _away_from_hunters()
 	for i in CANDIDATES:
 		var direction := flight.rotated(Vector3.UP, randf_range(-FAN_SPREAD, FAN_SPREAD))
 		var raw := global_position + direction * randf_range(MIN_SEARCH_DISTANCE, MAX_SEARCH_DISTANCE)
@@ -1162,10 +1530,26 @@ func _candidates(player_eyes: Vector3, player_position: Vector3) -> Array[Vector
 
 	return points
 
-## Walks behind the obstacle, moving away from the player, until it leaves his
+## Walks behind the obstacle, moving away from the hunters, until it leaves their
 ## sight.
-func _blind_spot_behind(center: Vector3, player_eyes: Vector3) -> Vector3:
-	var direction := center - player_eyes
+##
+## Which way "behind" is comes from the nearest man — an obstacle has a different
+## far side for each person looking at it, and the one worth putting a crate
+## between yourself and is the one closing in. But the *arrival* is checked
+## against everybody: a spot hidden from him and open to his colleague is not a
+## hideout, and the animal that trusted it is caught standing still.
+func _blind_spot_behind(center: Vector3, eyes: Array[Vector3]) -> Vector3:
+	if eyes.is_empty():
+		return INVALID_POINT
+	var nearest := eyes[0]
+	var best := INF
+	for eye in eyes:
+		var distance := _flat_distance(eye, global_position)
+		if distance < best:
+			best = distance
+			nearest = eye
+
+	var direction := center - nearest
 	direction.y = 0.0
 	if direction.is_zero_approx():
 		return INVALID_POINT
@@ -1180,18 +1564,34 @@ func _blind_spot_behind(center: Vector3, player_eyes: Vector3) -> Vector3:
 			continue
 		if _flat_distance(point, global_position) > MAX_SEARCH_DISTANCE:
 			continue
-		if _blocked(player_eyes, point + Vector3.UP * EYE_HEIGHT):
+		if _hidden_from_all(point, eyes):
 			return point
 	return INVALID_POINT
 
-## The candidate's score before looking at the path: far from the player is good,
-## out of his sight is better still, and a dead end loses points.
-func _score_point(point: Vector3, player_eyes: Vector3, player_position: Vector3) -> float:
-	var distance := _flat_distance(point, player_position)
+## Whether a spot is out of sight of every last person in the house. One pair of
+## eyes with a clear line to it is enough to make it no hiding place at all.
+func _hidden_from_all(point: Vector3, eyes: Array[Vector3]) -> bool:
+	var head := point + Vector3.UP * EYE_HEIGHT
+	for eye in eyes:
+		if not _blocked(eye, head):
+			return false
+	return true
+
+## The candidate's score before looking at the path: far from the hunters is
+## good, out of their sight is better still, and a dead end loses points.
+##
+## The distance that counts is to the *nearest* man, and the sight check is
+## against *all* of them. Both are the cautious reading: a spot ten metres from
+## one hunter and two from another is a spot two metres from a hunter, and one
+## hidden from three men and open to the fourth is not hidden.
+func _score_point(point: Vector3, eyes: Array[Vector3]) -> float:
+	var distance := INF
+	for eye in eyes:
+		distance = minf(distance, _flat_distance(point, eye))
 	if distance < panic_radius:
 		return -INF
 	var score := distance
-	if _blocked(player_eyes, point + Vector3.UP * EYE_HEIGHT):
+	if _hidden_from_all(point, eyes):
 		score += HIDDEN_BONUS
 	# A blind spot with a dead rat in it is no blind spot at all. The penalty is
 	# steep but finite: cornered, with the player on one side and the smell on
@@ -1212,10 +1612,18 @@ func _exits_from_point(point: Vector3) -> int:
 	return clear
 
 ## How much the path subtracts from the score: its length, plus a heavy penalty
-## if it grazes the player — a great hideout is no use if the rat has to walk
-## past whoever is hunting it.
-func _path_cost(path: PackedVector3Array, player_position: Vector3) -> float:
-	var flat_player := Vector3(player_position.x, 0.0, player_position.z)
+## if it grazes anybody — a great hideout is no use if the rat has to walk past
+## one of the men hunting it to reach it.
+##
+## Anybody, and not merely the nearest: the whole trouble with a route measured
+## against one hunter is that it happily threads the rat straight past a second
+## one standing in the corridor. The penalty lands once however many it brushes,
+## which is the same rule the foul ground below is scored by — a path is either
+## a bad idea or it is not.
+func _path_cost(path: PackedVector3Array, eyes: Array[Vector3]) -> float:
+	var flat_hunters: Array[Vector3] = []
+	for eye in eyes:
+		flat_hunters.append(Vector3(eye.x, 0.0, eye.z))
 	var length := 0.0
 	var closest := INF
 
@@ -1228,8 +1636,9 @@ func _path_cost(path: PackedVector3Array, player_position: Vector3) -> float:
 		var from := Vector3(path[i - 1].x, 0.0, path[i - 1].z)
 		var to := Vector3(path[i].x, 0.0, path[i].z)
 		length += from.distance_to(to)
-		var graze := Geometry3D.get_closest_point_to_segment(flat_player, from, to)
-		closest = minf(closest, graze.distance_to(flat_player))
+		for flat_hunter in flat_hunters:
+			var graze := Geometry3D.get_closest_point_to_segment(flat_hunter, from, to)
+			closest = minf(closest, graze.distance_to(flat_hunter))
 		for spot in _fear_cache:
 			var reach := spot.w
 			if reach <= 0.0:
@@ -1245,14 +1654,16 @@ func _path_cost(path: PackedVector3Array, player_position: Vector3) -> float:
 		cost += NEAR_MISS_PENALTY
 	return cost + foul * FEAR_CROSSING_PENALTY
 
-## The current hideout keeps working as long as the player neither reaches it
-## with his eyes nor comes too close to it.
-func _hideout_still_works(player_eyes: Vector3) -> bool:
+## The current hideout keeps working as long as nobody reaches it with his eyes
+## and nobody has come too close to it. One man walking round the crate is enough
+## to send the rat looking again, even with the others still shut out.
+func _hideout_still_works(eyes: Array[Vector3]) -> bool:
 	if not _has_target:
 		return false
-	if _flat_distance(_target, _player_position()) < panic_radius:
-		return false
-	return _blocked(player_eyes, _target + Vector3.UP * EYE_HEIGHT)
+	for eye in eyes:
+		if _flat_distance(_target, eye) < panic_radius:
+			return false
+	return _hidden_from_all(_target, eyes)
 
 func _pick_wander_target() -> void:
 	for attempt in WANDER_TRIES:
@@ -1328,10 +1739,93 @@ func _path_to(point: Vector3) -> PackedVector3Array:
 	return path
 
 # --- Perception ------------------------------------------------------------
+#
+# **A rat is afraid of everybody in the house, and not only of whoever happens to
+# be standing on the machine that thinks for it.**
+#
+# That distinction is the whole of this section, and it used to be missed. The
+# hunt is played on several machines and a rat thinks on one of them — the
+# host's — but a hunter is a hunter on every screen, and the man the host cannot
+# see is still a man walking up behind the animal. Before this, a guest could
+# stand on a rat and it would go on grooming itself: the rat asked for "the
+# player", got the one character standing on the host's machine, and measured
+# its whole fear against him.
+#
+# There are two kinds of body to ask about, and they are not the same kind of
+# node:
+#
+# - The character on *this* machine, `player.tscn`, in the group `player`. There
+#   is exactly one, always, solo hunt included.
+# - Everybody else, as `PlayerAvatar` in the group `player_avatars` — including,
+#   awkwardly, a body standing for the very character above. Every peer gets an
+#   avatar, our own among them (`player_avatars.gd`), so the two groups overlap
+#   by exactly one and the overlap has to be dropped or the local hunter is
+#   counted twice.
+#
+# Everything below is built on `_hunters()`, the two lists put together with that
+# overlap removed. On top of it sit the two questions the fear machine actually
+# asks: who is *nearest* (`_get_player`, kept under its old name because a dozen
+# callers ask it for "the threat"), and whether *anybody at all* can see the rat.
+# The second is not the first one's line of sight: a rat with a crate between it
+# and the nearest man, and a second man standing in the open beside it, has been
+# seen.
+#
+# Solo none of this costs anything worth measuring: the avatar group is empty,
+# the list is one node long, and every answer is what it always was.
 
+## Everybody hunting in this house, however many machines they are sitting at.
+##
+## Rebuilt on each call rather than cached: bodies come and go with the wire — a
+## peer drops, a man joins mid-shift — and a cached list is a rat afraid of
+## somebody who has left the game. It is a handful of nodes asked for a few times
+## a frame, which is a cost the profile does not notice.
+func _hunters() -> Array[Node3D]:
+	var found: Array[Node3D] = []
+	var tree := get_tree()
+	if tree == null:
+		return found
+
+	# Ours first, so that when two men are the same distance away the one this
+	# machine can say most about is the one that wins.
+	var local := tree.get_first_node_in_group("player") as Node3D
+	if local != null:
+		found.append(local)
+
+	var us := multiplayer.get_unique_id() if multiplayer != null else 0
+	for node in tree.get_nodes_in_group("player_avatars"):
+		var avatar := node as PlayerAvatar
+		if avatar == null:
+			continue
+		# Our own body is in this group too, and stands exactly where the
+		# character above stands. Counting it again would not change which man is
+		# nearest, but it would double the sight rays and read as a bug to the
+		# next person through here.
+		if avatar.peer_id == us:
+			continue
+		# A body that has never had a packet is not standing anywhere yet: it
+		# waits at the origin to be told where it is (`player_avatar.gd: _seen`),
+		# and a rat fleeing the origin is a rat fleeing nobody.
+		if not avatar.visible:
+			continue
+		found.append(avatar)
+
+	return found
+
+## The nearest hunter, and so the one the flight is measured against: where to
+## run from, whose eyes to get out of, whose path not to cross.
+##
+## Nearest and not "the most dangerous", because at a rat's scale those are the
+## same thing — everybody in this game kills it in one go, so the only question
+## a rat has about a man is how far away he is.
 func _get_player() -> Node3D:
-	if not is_instance_valid(_player):
-		_player = get_tree().get_first_node_in_group("player") as Node3D
+	var best: Node3D = null
+	var best_distance := INF
+	for hunter in _hunters():
+		var distance := _flat_distance(global_position, hunter.global_position)
+		if distance < best_distance:
+			best_distance = distance
+			best = hunter
+	_player = best
 	return _player
 
 func _player_position() -> Vector3:
@@ -1344,20 +1838,61 @@ func _player_distance() -> float:
 		return INF
 	return _flat_distance(global_position, player.global_position)
 
-## The rat notices someone running past more than someone walking slowly.
+## The rat notices someone running past from further off than someone strolling.
+##
+## Asked of the nearest man, who is the one the flight is about. A sprinter
+## further away is caught by `_sees_player`, which asks everybody at his own
+## radius.
 func _current_alert_radius() -> float:
-	var player := _get_player()
-	if player is CharacterBody3D and (player as CharacterBody3D).velocity.length() > 7.0:
+	return _alert_radius_for(_get_player())
+
+## How far away this particular man is noticed from. Split out of
+## `_current_alert_radius` because the sight check now asks it of everybody in
+## turn, and each of them is moving at his own speed.
+##
+## The two kinds of body answer differently and neither can answer for the other:
+## the character knows its own `velocity`, while an avatar has none — it is a
+## `Node3D` eased towards wherever the wire last put it, so its speed is worked
+## out from the packets instead (`player_avatar.gd: speed`).
+func _alert_radius_for(hunter: Node3D) -> float:
+	if hunter == null:
+		return alert_radius
+	var speed := 0.0
+	var body := hunter as CharacterBody3D
+	if body != null:
+		speed = Vector2(body.velocity.x, body.velocity.z).length()
+	else:
+		var avatar := hunter as PlayerAvatar
+		if avatar != null:
+			speed = avatar.speed
+	if speed > RUNNING_SPEED:
 		return alert_radius * 1.4
 	return alert_radius
 
+## Whether *anybody* has this rat in view, each of them from his own distance.
+##
+## Everybody rather than just the nearest, and that is the point of it: a man
+## crouched behind a crate three metres away does not see the rat, and his
+## colleague standing in the open across the room does. Asking only the nearest
+## would leave the animal sitting still in plain sight of somebody walking
+## straight at it.
 func _sees_player() -> bool:
-	var player := _get_player()
-	if player == null:
+	for hunter in _hunters():
+		if _sees(hunter):
+			return true
+	return false
+
+## One man's line of sight, at his own alert radius. The distance is checked
+## first because it is arithmetic and the sight check is a ray: a man on the far
+## side of the house is dismissed without troubling the physics server about him.
+func _sees(hunter: Node3D) -> bool:
+	if hunter == null:
+		return false
+	if _flat_distance(global_position, hunter.global_position) > _alert_radius_for(hunter):
 		return false
 	return not _blocked(
 		global_position + Vector3.UP * EYE_HEIGHT,
-		player.global_position + Vector3.UP * PLAYER_HEIGHT
+		hunter.global_position + Vector3.UP * PLAYER_HEIGHT
 	)
 
 ## True if there is scenery between the two points.
@@ -1470,6 +2005,7 @@ func _publish() -> void:
 	sync_speed = Vector2(velocity.x, velocity.z).length()
 	sync_state = _state
 	sync_crouched = model.scale != Vector3.ONE
+	sync_holder = _holder_peer
 
 ## Somebody else's rat, drawn from the last packet. Runs on the screen's beat,
 ## which is where easing belongs: what arrives twenty times a second has to be
@@ -1481,6 +2017,15 @@ func _publish() -> void:
 func _draw_remote(delta: float) -> void:
 	if not _seen:
 		return
+
+	# In somebody's hand it is not walking about the map, and easing it towards a
+	# position on the floor is not what should happen to it. Where it belongs is
+	# against the man holding it — his camera if that man is us, his chest if he
+	# is somebody across the wire — and that is a different sum entirely.
+	if sync_state == State.CAPTURED and sync_holder != 0:
+		_draw_remote_capture(delta)
+		return
+	_release_remote_capture()
 
 	var weight := 1.0 - exp(-SMOOTHING * delta)
 	# Further off than this is not a rat running: it is one that respawned, or a
@@ -1513,6 +2058,137 @@ func _draw_remote_animation() -> void:
 	if animator.current_animation != ANIM_RUN:
 		animator.play(ANIM_RUN, BLEND)
 	animator.speed_scale = clampf(sync_speed / CYCLE_SPEED, MIN_CADENCE, MAX_CADENCE)
+
+## A rat in somebody's hand, drawn on a machine that is not thinking for it.
+##
+## The whole of the difference between this and the host's own capture is *where*
+## the animal hangs, and the answer depends on who is holding it:
+##
+## - **Us.** It goes in the middle of our screen, exactly where our own catch
+##   would go: a child of `Head/CapturePoint`, filling the frame. This is the
+##   case that makes a guest's catch feel like a catch at all — without it he
+##   would watch his rat being held by a body he is standing inside.
+## - **Somebody else.** It hangs at his avatar's chest, and we watch a man
+##   carrying a rat.
+##
+## Either way it is *parented* rather than chased, which is the same trick the
+## host's capture turns and for the same reason: a rat glued to a moving camera
+## by its transform lags a frame behind every swing, and a rat that is a child of
+## it cannot lag at all.
+##
+## The struggle is not replicated and is not meant to be. What crosses is that
+## the animal is held and whether it is dead; the trembling and the kicking are
+## rolled locally from the same functions the host rolls them from, so the two
+## machines show the same animal doing the same *kind* of thing without a packet
+## per twitch. Nobody can tell one thrash from another, and it is not worth the
+## wire.
+func _draw_remote_capture(delta: float) -> void:
+	var point := _capture_point_of(sync_holder)
+	if point == null:
+		# The body it should hang off is not up yet — an avatar still waiting for
+		# its first packet, or a player who has just dropped. It is left where it
+		# was rather than snapped to the floor: the holder is a moment away, and
+		# a rat that flickers onto the ground and back into a hand reads worse
+		# than one that hangs still for a frame.
+		return
+
+	# **Nothing is ever reparented here, our own catch included.** A node's path
+	# is its address on the wire, and this rat's is the host's to write to: moved
+	# under our camera it becomes `Player/Head/CapturePoint/Rat_1`, a path that
+	# exists on no other machine. The host's packets stop landing — and, worse,
+	# so do ours going the other way, because a guest's `_request_escape`,
+	# `_request_kill` and `_request_squeeze` are all addressed by that same path.
+	# Reparenting our own catch is what used to leave a guest unable to let go of
+	# a rat at all: he stopped clicking, the hand opened on his side, the request
+	# never arrived, and the animal stayed in his fist for the rest of the hunt.
+	#
+	# So a watched rat is *always* carried by its transform (`_place_in_hand`),
+	# whoever is holding it. It costs a frame of chasing on our own camera and it
+	# keeps the rat reachable, which is not a trade worth thinking about twice.
+	if not _held_remotely:
+		# The first frame we have heard of this catch. The rat arrives in the
+		# hand rather than flying to it: the rise is the holder's own gesture,
+		# played out on the machine that thinks for the rat, and by the time a
+		# watcher hears about the catch at all the animal is usually already up.
+		# Animating a second, later rise would only put the rat in two places.
+		_capture_time = 0.0
+		_struggle = 1.0
+		_kick_time = randf_range(KICK_INTERVAL.x, KICK_INTERVAL.y)
+		var pose := Basis.from_euler(_radians(HELD_POSE))
+		_place_in_hand(point, Transform3D(pose, _anchor(pose)))
+	_held_remotely = true
+	visible = true
+
+	_capture_time += delta
+	if sync_state == State.DEAD or _remote_limp:
+		# Dead in the hand: it stops fighting and hangs. The stowing itself is the
+		# holder's own gesture and is not drawn here — what a watcher sees is the
+		# animal go limp and then vanish with the man, which is what happens.
+		_remote_limp = true
+		_damp_jolt(delta)
+		var hanging := Basis.from_euler(_radians(LIMP_POSE))
+		var here := _remote_held_transform(point)
+		var limp := Basis(here.basis.get_rotation_quaternion().slerp(
+			hanging.get_rotation_quaternion(), minf(delta * 9.0, 1.0)))
+		var offset := here.origin.lerp(_anchor(limp) + Vector3(0.0, -0.12, 0.05),
+			minf(delta * 6.0, 1.0))
+		_place_in_hand(point, Transform3D(limp, offset))
+		if animator.current_animation != ANIM_DEATH:
+			animator.speed_scale = 1.0
+			animator.play(ANIM_DEATH, BLEND)
+		return
+
+	# Alive and fighting: the same thrash the host draws, rolled here.
+	if animator.current_animation != ANIM_RUN and animator.current_animation != ANIM_ATTACK:
+		animator.play(ANIM_RUN, BLEND)
+		animator.speed_scale = STRUGGLE_CADENCE
+	_struggle = lerpf(BASE_STRUGGLE, _struggle, pow(STRUGGLE_DAMPING, delta))
+	_damp_jolt(delta)
+	_kick_time -= delta
+	if _kick_time <= 0.0:
+		_kick_time = randf_range(KICK_INTERVAL.x, KICK_INTERVAL.y)
+		_kick(1.0)
+	var t := _capture_time
+	var tremor := Vector3(
+		sin(t * 27.0) * 0.6 + sin(t * 41.0) * 0.4,
+		sin(t * 33.0 + 1.3) * 0.5 + sin(t * 19.0) * 0.5,
+		sin(t * 23.0 + 2.1)
+	) * TREMOR * _struggle
+	var spin := Vector3(
+		sin(t * 21.0) * 0.5,
+		sin(t * 17.0 + 0.7),
+		sin(t * 29.0 + 2.2) * 0.7
+	) * deg_to_rad(TREMOR_ANGLE) * _struggle
+	var held := Basis.from_euler(_radians(HELD_POSE) + spin + _jolt_spin)
+	_place_in_hand(point, Transform3D(held, _anchor(held) + tremor + _jolt))
+	model.scale = model.scale.lerp(Vector3.ONE, minf(delta * 9.0, 1.0))
+
+## Puts a watched rat in a hand, in that hand's coordinates. It is left where it
+## is in the tree and placed in the world instead — for every hand, our own
+## included; see `_draw_remote_capture` for why nothing here may be reparented.
+func _place_in_hand(point: Node3D, local_transform: Transform3D) -> void:
+	global_transform = point.global_transform * local_transform
+
+## Where a watched rat sits in the coordinates of the hand holding it, whichever
+## way it is being held. The watcher's counterpart to `_held_transform`.
+func _remote_held_transform(point: Node3D) -> Transform3D:
+	return point.global_transform.affine_inverse() * global_transform
+
+## Back out of a hand, on a machine that was only watching. It undoes exactly
+## what `_draw_remote_capture` did — the pose and the limp latch — so that a rat
+## which got loose goes back to being eased across the floor like any other.
+##
+## There is no parent to put back: a watched rat is never reparented into a hand,
+## whoever is holding it (`_draw_remote_capture`), so it has been hanging where
+## it always hung and only its transform was being written.
+func _release_remote_capture() -> void:
+	if not _held_remotely:
+		return
+	_held_remotely = false
+	_remote_limp = false
+	# Back on its feet: it was hanging nose-down in somebody's fist a frame ago.
+	rotation = Vector3(0.0, rotation.y, 0.0)
+	global_position = sync_position
 
 ## The first packet: the rat stops being a rumour and becomes a body. Snapped
 ## rather than eased, because there is nothing yet to ease from — and this is
@@ -1599,6 +2275,12 @@ func _play_idle() -> void:
 ## paying belongs to `_pay_reward`.
 func _record_death(type: Death.Type) -> void:
 	_death_type = type
+	# A rat that dies in somebody's hand was killed by whoever is holding it, and
+	# there is no blow to carry a name. It is latched here rather than read at
+	# paying time because the two are a whole gesture apart — the body still has
+	# to go limp and be stowed — and by then the hand has let go of it.
+	if _holder_peer != 0:
+		_killer_peer = _holder_peer
 	remove_from_group("rats")
 	# It leaves the rats' layer so it cannot be hit again. The mask stays: the
 	# carcass still needs to find the ground.
@@ -1609,19 +2291,30 @@ func _record_death(type: Death.Type) -> void:
 ## ended, and each death ends somewhere: strangled, at the player's waist; killed
 ## from a distance, where the body fell. Escaping the hand closes no account at
 ## all.
+##
+## **The money goes to whoever earned it, and that need not be this machine.**
+## Every rat is thought for by the host, so every death is decided there — but a
+## rat strangled by a guest was that guest's work, and paying the host for it
+## would be the plainest kind of wrong. `_killer_peer` is who it was, carried
+## from the blow that landed (`_die`) or from the hand that held it
+## (`_holder_peer`), and `Wallet.credit` is what puts it in the right pocket.
 func _pay_reward() -> void:
 	if _paid:
 		return
 	_paid = true
-	Wallet.collect(species, _death_type, _size)
+	Wallet.credit(_killer_peer, species, _death_type, _size)
 
 ## Drops dead where it stood, upright in the world. `leap` is the little hop the
 ## body makes as it takes the hit. Whatever dies strangled does not come through
 ## here: it vanishes at the player's waist, leaving no carcass.
-func _die(origin: Vector3, leap := 3.0, type := Death.Type.UNKNOWN) -> void:
-	# Whatever was holding it down has finished its job and hears about it here,
-	# before the body starts falling: a glue tray with a dead rat on it is a tray
-	# that has been used up.
+func _die(origin: Vector3, leap := 3.0, type := Death.Type.UNKNOWN,
+		killer := 0) -> void:
+	# Whose kill it was, as the wire counts people. Zero is nobody in particular
+	# — a rat that fell down a hole, or one killed by something that does not
+	# belong to a player — and `_pay_reward` reads it as "the machine that is
+	# deciding", which for anything without an owner is the right answer.
+	if killer != 0:
+		_killer_peer = killer
 	unpin()
 	_state = State.DEAD
 	_record_death(type)
@@ -1673,6 +2366,35 @@ func _away_from(point: Vector3) -> Vector3:
 	if direction.is_zero_approx():
 		return -global_basis.z
 	return direction.normalized()
+
+## The way out with everybody in the house taken into account: each hunter pushes
+## the rat away from himself, and the nearer he is the harder he pushes.
+##
+## The weight is the inverse of the distance, which is what makes a man at arm's
+## length count for more than one across the room without either of them being
+## ignored. Cornered between two, the sum points at the gap between them — which
+## is the only way out there is, and the one a rat takes.
+##
+## With one hunter it comes out as `_away_from` did and always will: one term in
+## the sum, normalised, is the direction away from him. So a solo hunt is not a
+## different code path, it is this one with a list of length one.
+func _away_from_hunters() -> Vector3:
+	var push := Vector3.ZERO
+	for hunter in _hunters():
+		var away := global_position - hunter.global_position
+		away.y = 0.0
+		var distance := away.length()
+		if distance < 0.01:
+			# Standing on top of the rat: there is no direction to be had from
+			# him, and normalising this would be a division by nothing. Whoever
+			# else is about decides, and if nobody is, the fallback below does.
+			continue
+		push += away / (distance * distance)
+	if push.is_zero_approx():
+		# Nobody to run from, or everybody standing on it. Straight ahead, which
+		# is what `_away_from` answers in the same corner.
+		return -global_basis.z
+	return push.normalized()
 
 func _flat_distance(a: Vector3, b: Vector3) -> float:
 	return Vector2(a.x - b.x, a.z - b.z).length()

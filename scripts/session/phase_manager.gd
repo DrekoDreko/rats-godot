@@ -193,7 +193,9 @@ func set_house(path: String) -> void:
 ##
 ## The crew's ready flags are cleared on the way through: being ready to leave
 ## the van is not being ready to walk into the house, and a flag left standing
-## would skip the next phase the instant it began.
+## would skip the next phase the instant it began. It happens in `_apply`, on
+## every machine at once, rather than here on the host's alone — see the note
+## there.
 func advance() -> void:
 	go_to(next_phase())
 
@@ -207,7 +209,6 @@ func go_to(phase: Phase.Type) -> void:
 		return
 	if phase == current():
 		return
-	SessionManager.reset_ready()
 	var peer := multiplayer.multiplayer_peer
 	if peer != null and not peer is OfflineMultiplayerPeer:
 		_apply.rpc(phase)
@@ -247,6 +248,16 @@ func _apply(phase: Phase.Type) -> void:
 	var previous: Phase.Type = SessionManager.phase
 	if previous == phase:
 		return
+
+	# Cleared here and not in `go_to`, because `SessionManager` never touches the
+	# wire: a reset done on the host alone leaves every client still holding the
+	# flags it raised in the phase that just ended. The board in the next scene
+	# would then be drawn green on a machine the host reads as red, and the man
+	# standing at it would have to press it twice — once to un-ready a flag only
+	# he can see, once to actually say it. Doing it in here puts the clearing in
+	# the same packet as the phase, so all four machines forget together.
+	SessionManager.reset_ready()
+
 	SessionManager.phase = phase
 	_start_clock(phase)
 

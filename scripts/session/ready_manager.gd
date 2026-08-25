@@ -29,8 +29,11 @@ extends Node
 ## what `player_left` is connected for — otherwise the two who are already ready
 ## would stand there waiting on a name that is gone.
 ##
-## **No flag is carried into the next phase.** `PhaseManager.go_to` clears them
-## on the way through, so nobody arrives at the next station already ready.
+## **No flag is carried into the next phase.** `PhaseManager._apply` clears them
+## on the way through, so nobody arrives at the next station already ready. It is
+## done there rather than in `go_to` on purpose: `_apply` is the part that runs
+## on every machine, and a reset the host kept to himself is what left a guest
+## on the road looking at a board that was still green.
 
 ## Somebody's ready flag moved. `SessionManager.player_changed` says the same
 ## thing among everything else that can change about a player; this one carries
@@ -154,7 +157,12 @@ func _handle_request(steam_id: int, value: bool, from_peer: int) -> void:
 	if not _may_speak_for(from_peer, steam_id):
 		push_warning("ReadyManager: peer %d tried to move %d's flag." % [from_peer, steam_id])
 		return
+	# Asking for the value it already holds. Nothing to write — but the only way
+	# a client gets here is that its copy of the flag disagreed with this one, so
+	# it is drawing a board the host would not recognise. Putting the answer back
+	# to that peer alone costs one packet and is what stops him pressing twice.
 	if SessionManager.is_ready(steam_id) == value:
+		_answer_to(from_peer, steam_id, value)
 		return
 	if multiplayer.has_multiplayer_peer() \
 			and not multiplayer.multiplayer_peer is OfflineMultiplayerPeer:
@@ -211,6 +219,19 @@ func _refuse_to(peer_id: int, reason: String) -> void:
 		request_refused.emit(reason)
 		return
 	_refuse.rpc_id(peer_id, reason)
+
+
+## The host repeating a flag to one peer whose copy had drifted. The same shape
+## as `_refuse_to`: nothing goes on the wire for the host's own machine, which
+## already holds the answer it just read. `_apply` is what lands, so the board
+## is put right by the same road every other change takes.
+func _answer_to(peer_id: int, steam_id: int, value: bool) -> void:
+	if peer_id == 0 or peer_id == _our_peer_id():
+		return
+	if not multiplayer.has_multiplayer_peer() \
+			or multiplayer.multiplayer_peer is OfflineMultiplayerPeer:
+		return
+	_apply.rpc_id(peer_id, steam_id, value)
 
 # --- What ends a phase ------------------------------------------------------
 

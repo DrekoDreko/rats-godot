@@ -52,8 +52,19 @@ void vertex() {
 
 void fragment() {
 	ivec2 uv = ivec2(FRAGCOORD.xy / float(resolution_scale));
-	vec3 color = texelFetch(screen_texture, uv * resolution_scale, 0).rgb;
-	
+
+	// Snapping the sample up to the block grid can land past the last texel on
+	// the right and bottom edges, where texelFetch is undefined and reads white
+	// on some drivers. Clamp it back inside the buffer.
+	ivec2 last_texel = textureSize(screen_texture, 0) - ivec2(1);
+	ivec2 texel = clamp(uv * resolution_scale, ivec2(0), last_texel);
+	vec3 color = texelFetch(screen_texture, texel, 0).rgb;
+
+	// The screen buffer is HDR, so a bright pixel can arrive above 1.0 and NaN
+	// can arrive too. Both survive the cast to int as garbage that the shift
+	// below turns into white, so pin the range down first.
+	color = clamp(color, vec3(0.0), vec3(1.0));
+
 	// Convert from [0.0, 1.0] range to [0, 255] range
 	ivec3 c = ivec3(round(color * 255.0));
 	

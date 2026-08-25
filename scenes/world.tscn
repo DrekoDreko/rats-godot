@@ -43,16 +43,15 @@ ground_horizon_color = Color(0.62, 0.63, 0.65, 1)
 sky_material = SubResource("Sky_material")
 
 [sub_resource type="Environment" id="Environment"]
-background_mode = 1
-background_color = Color(1, 1, 1, 1)
+background_mode = 2
 sky = SubResource("Sky")
 ambient_light_source = 3
 ambient_light_color = Color(1, 1, 1, 1)
 ambient_light_energy = 0.45
 fog_enabled = true
 fog_mode = 1
-fog_light_color = Color(0.7666196, 0.76661956, 0.76661956, 1)
-fog_density = 1.0
+fog_light_color = Color(0.22, 0.23, 0.26, 1)
+fog_density = 0.85
 fog_depth_begin = 18.0
 fog_depth_end = 52.0
 

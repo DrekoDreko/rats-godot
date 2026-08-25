@@ -42,6 +42,10 @@ const CAUGHT_UP := 0.25
 const NOT_A_TELEPORT := 0.6
 
 const RAT_SCENE := "res://scenes/rat.tscn"
+## The body that stands for a player on everybody else's machine. The bench
+## needs one because a guest's catch is held against it (`rat.gd:
+## _capture_point_of`), which is the whole of what the grab checks below test.
+const AVATAR_SCENE := "res://scenes/player_avatar.tscn"
 ## Where the solo rat is stood. Off the origin on purpose — see the step.
 const SOLO_SPOT := Vector3(11.0, 0.0, -7.0)
 
@@ -62,6 +66,12 @@ var _rat_guest: Node3D
 var _last_seen := Vector3.ZERO
 var _max_step := 0.0
 var _max_gap := 0.0
+
+## The second rat, the live one the guest reaches across the wire and grabs.
+var _catch_host: Node3D
+var _catch_guest: Node3D
+## What the purse held before the guest strangled his catch.
+var _wallet_before := 0
 
 ## The solo rat, put up at the end with no wire under it at all.
 var _solo: Node3D
@@ -139,8 +149,10 @@ func _physics_process(_delta: float) -> bool:
 		4: return _check_it_catches_up()
 		5: return _check_the_coat_crossed()
 		6: return _check_a_death_crosses()
-		7: return _check_it_leaves()
-		8: return _check_a_solo_rat_thinks()
+		7: return _check_a_guest_can_grab()
+		8: return _check_the_guest_is_paid()
+		9: return _check_it_leaves()
+		10: return _check_a_solo_rat_thinks()
 	return _finish()
 
 # --- Steps -----------------------------------------------------------------
@@ -297,26 +309,153 @@ func _check_a_death_crosses() -> bool:
 	else:
 		print("PASS: the death crossed — both sides read state %d" % _rat_host.sync_state)
 
+	# A guest may now swing at a rat and grab one — the blow and the grab cross
+	# to the host and the host decides. What no machine may do, from either end,
+	# is touch an animal that is already dead: this one is a carcass, so both
+	# must refuse it outright rather than sending anything over the wire.
 	var before: int = _rat_guest.sync_state
 	_rat_guest.take_damage(99)
 	if _rat_guest.sync_state != before:
-		print("FAIL: the guest killed a rat it does not own")
+		print("FAIL: the guest changed the state of a rat that was already dead")
 		_failures += 1
 	else:
-		print("PASS: the guest cannot kill a rat it does not own")
+		print("PASS: a dead rat takes no further hits from the guest")
 	if _rat_guest.capture(_rats_guest):
-		print("FAIL: the guest picked up a rat it does not own")
+		print("FAIL: the guest picked up a corpse")
 		_failures += 1
 	else:
-		print("PASS: the guest cannot pick up a rat it does not own")
+		print("PASS: the guest cannot pick up a rat that is already dead")
 	return _next()
+
+
+## The whole point of the change: a *live* rat that a guest grabs becomes his.
+##
+## The grab is a request — it crosses to the host, the host is the machine that
+## thinks for the animal, and it is the host that actually puts the rat in a
+## hand. What is checked here is that all three machines end up agreeing about
+## it: the guest asked, the host carried it out, and both of them name the same
+## man as the one holding it.
+func _check_a_guest_can_grab() -> bool:
+	if _catch_host == null:
+		var packed: PackedScene = load(RAT_SCENE)
+		var rat := packed.instantiate() as Node3D
+		rat.name = "Rat_2"
+		rat.set_multiplayer_authority(1)
+		rat.position = Vector3(-4.0, 0.0, 5.0)
+		_rats_host.add_child(rat)
+		_catch_host = rat
+		_clock = 0
+		return false
+
+	if _catch_guest == null:
+		_catch_guest = _rats_guest.get_node_or_null("Rat_2") as Node3D
+		if _catch_guest == null:
+			if _clock < PATIENCE:
+				return false
+			print("FAIL: the second rat never reached the guest")
+			_failures += 1
+			return _next()
+		_clock = 0
+		return false
+
+	# The guest's body, standing on the host's map. In the game the crowd node
+	# puts one of these up for every peer that says his van is standing
+	# (`player_avatars.gd`); here it is placed by hand, because what is being
+	# tested is the catch and not the crowd. It matters: it is what a guest's rat
+	# is held against on every machine but his own, and without it the host has
+	# nothing to hang the catch on.
+	if _clock == 1:
+		var packed_avatar: PackedScene = load(AVATAR_SCENE)
+		var avatar := packed_avatar.instantiate() as PlayerAvatar
+		# Named and owned the way the crowd names and owns one, because the name
+		# is the address on the wire and the authority is what stops this machine
+		# writing to somebody else's body.
+		avatar.name = "Player%d" % _guest_id
+		avatar.peer_id = _guest_id
+		avatar.set_multiplayer_authority(_guest_id)
+		root.get_node("A").add_child(avatar)
+		avatar.global_position = Vector3(-4.0, 0.0, 6.5)
+		return false
+
+	# A moment on its feet before anybody grabs at it, so the grab lands on a rat
+	# that is properly up rather than one still finding the floor.
+	if _clock == WAIT:
+		# The hand the guest holds it in. In the game this is the capture point
+		# under his own camera; here any node in his own tree will do, because
+		# what is being tested is who the host says owns the catch, and the host
+		# never sees this node at all.
+		_catch_guest.capture(_rats_guest)
+		return false
+	if _clock < WAIT * 6:
+		return false
+
+	if _catch_host.holder_peer() != _guest_id:
+		print("FAIL: the host says the rat is held by peer %d, not by the guest (%d)"
+				% [_catch_host.holder_peer(), _guest_id])
+		_failures += 1
+		return _next()
+	print("PASS: the guest asked, and the host put the rat in his hand")
+
+	if not _catch_guest.is_held_by_me():
+		print("FAIL: the guest does not know the rat it grabbed is his")
+		_failures += 1
+	else:
+		print("PASS: the guest knows the catch is his")
+
+	if not _catch_host.is_captured():
+		print("FAIL: the host does not have the rat as captured at all")
+		_failures += 1
+	else:
+		print("PASS: the rat is captured on the host, which is where it is thought for")
+	return _next()
+
+
+## And the money. A rat strangled by a guest is the guest's catch, and the
+## payment has to cross back to him — for a long while every rat in the game paid
+## the host, whoever had actually done the work.
+func _check_the_guest_is_paid() -> bool:
+	if _clock == 1:
+		_wallet_before = _wallet_total()
+		_catch_guest.die_in_hands(Death.Type.STRANGULATION)
+		return false
+	# The gesture is a whole one: the body goes limp and is then stowed, and the
+	# money only lands at the far end of it.
+	if _clock < 180:
+		return false
+
+	# The rat frees itself at the end of the stowing — that is where a strangled
+	# animal goes, into the player's belt and off the map — so by now `_catch_host`
+	# is very often already gone. That it is gone is half the proof the gesture ran
+	# all the way through.
+	var gained := _wallet_total() - _wallet_before
+	if gained <= 0:
+		print("FAIL: the guest strangled a rat and was paid %d" % gained)
+		_failures += 1
+	else:
+		print("PASS: the guest was paid $%d for the rat he strangled" % gained)
+	return _next()
+
+
+## This process has one `Wallet` autoload standing in for both machines, so the
+## total cannot say *which* pocket the money reached — only that it was paid at
+## all, and paid once. What proves it went to the right man is the peer the rat
+## names as its killer, and that is checked above by `holder_peer`.
+func _wallet_total() -> int:
+	var wallet := root.get_node_or_null("Wallet")
+	return wallet.money if wallet != null else 0
 
 
 ## The host takes the rat off the map. The spawner should take the guest's copy
 ## with it — which is how a hunt ends without a rat left standing on one screen.
 func _check_it_leaves() -> bool:
 	if _clock == 1:
-		_rat_host.queue_free()
+		# It may have gone already: the first rat was killed several steps back
+		# and a carcass takes itself off the map on its own clock (`rat.gd:
+		# _vanish`). Either way what is being checked is the same — that the
+		# guest's copy went with it — so a rat that has already left is not a
+		# reason to stop, only a reason not to free it twice.
+		if is_instance_valid(_rat_host):
+			_rat_host.queue_free()
 		return false
 	if _clock < PATIENCE and _rats_guest.get_node_or_null("Rat_1") != null:
 		return false

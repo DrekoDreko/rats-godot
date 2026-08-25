@@ -45,9 +45,24 @@ const DEATH_TYPE := Death.Type.STRANGULATION
 
 @onready var capture_point: Node3D = get_parent().get_node("CapturePoint")
 
+## How long the hands wait to be told a grab worked before giving up on it.
+##
+## A guest's grab is a request, and it is answered optimistically so the hand
+## does not go dead for a round trip (`rat.gd: capture`). This is the other half
+## of that bargain: if the rat has not come back as ours within this, the host
+## said no — somebody else got to it first, or it was already dead when we swung
+## — and the hands quietly let go of a rat they never had. It is generous on
+## purpose. A grab lost to a hiccup in the wire is worse than one that hangs a
+## moment longer than it should.
+const CLAIM_TIMEOUT := 0.6
+
 var _rat: Node3D
 var _pressure := 0.0
 var _empty_time := 0.0
+## How long we have been holding a rat the host has not yet confirmed is ours.
+## Negative once it is confirmed, which is the ordinary case within a frame or
+## two and for the whole of a solo hunt.
+var _claim_time := 0.0
 ## How much of the usual strangling this rat is worth, read at the moment of the
 ## grab. It is latched and not asked for again on purpose: taking the animal off
 ## the glue is what un-sticks it, so by the time it is in the hand it no longer
@@ -61,6 +76,8 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	super(delta)
 	if not _is_holding():
+		return
+	if _forget_lost_rat(delta):
 		return
 
 	_set_pressure(_pressure - decay * delta)
@@ -96,6 +113,7 @@ func _use() -> void:
 	_effort = effort
 	_pressure = 0.0
 	_empty_time = 0.0
+	_claim_time = 0.0
 	_add_recoil(GRAB_RECOIL)
 	caught.emit(_rat)
 	pressure_changed.emit(0.0)
@@ -116,6 +134,38 @@ func press_secondary() -> void:
 	_set_pressure(_pressure + 1.0 / goes)
 	if _pressure >= 1.0:
 		_release(true)
+
+## Whether the rat in these hands is really in them.
+##
+## Solo, and on the host, it always is: `capture` there does the whole job before
+## it answers, so the animal is ours from the frame we clicked. On a guest the
+## grab crossed the wire as a request, and the answer comes back as the rat
+## saying whose it is — so for the first fraction of a second the hands are
+## holding something that may turn out to belong to somebody else, or to nobody.
+##
+## Returns true when it has given up, having already put the player back to
+## normal. Everything the hands do afterwards is skipped on that frame: squeezing
+## a rat we do not have would be pressure spent on nothing.
+func _forget_lost_rat(delta: float) -> bool:
+	if _rat.has_method("is_held_by_me") and _rat.is_held_by_me():
+		# Confirmed ours. The clock is wound right back rather than merely
+		# stopped: a rat can be lost and re-grabbed inside one hunt and each grab
+		# gets its own grace.
+		_claim_time = 0.0
+		return false
+	_claim_time += delta
+	if _claim_time < CLAIM_TIMEOUT:
+		return false
+	# Never ours. Nothing is asked of the rat on the way out — it is not ours to
+	# release, and whoever does have it is holding it perfectly happily.
+	_rat = null
+	_pressure = 0.0
+	_empty_time = 0.0
+	_effort = 1.0
+	_claim_time = 0.0
+	pressure_changed.emit(0.0)
+	finished.emit(false)
+	return true
 
 func _is_holding() -> bool:
 	if _rat != null and not is_instance_valid(_rat):
@@ -138,6 +188,7 @@ func _release(killed: bool) -> void:
 	_pressure = 0.0
 	_empty_time = 0.0
 	_effort = 1.0
+	_claim_time = 0.0
 	if killed:
 		rat.die_in_hands(DEATH_TYPE)
 		# The rat died mid-hammering and more clicks are still coming in behind:

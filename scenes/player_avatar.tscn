@@ -22,12 +22,18 @@ script = ExtResource("1_avatar")
 
 [node name="Name" type="Label3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.2, 0)
-pixel_size = 0.01
+pixel_size = 0.004
 billboard = 1
 texture_filter = 0
+modulate = Color(1, 1, 1, 1)
+outline_modulate = Color(0, 0, 0, 0.5)
 text = "Player"
 font_size = 32
-outline_size = 16
+outline_size = 4
+alpha_cut = 2
+
+[node name="CapturePoint" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.55, -0.6)
 
 [node name="Sync" type="MultiplayerSynchronizer" parent="."]
 process_mode = 3
