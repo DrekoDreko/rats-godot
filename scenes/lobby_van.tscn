@@ -16,16 +16,6 @@
 [ext_resource type="PackedScene" uid="uid://dq3n7vk8rj5wc" path="res://scenes/ps1_postprocess.tscn" id="14_s1s1f"]
 [ext_resource type="PackedScene" path="res://scenes/pause_menu.tscn" id="99_pause"]
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_s1s1f"]
-render_priority = 0
-shader = ExtResource("2_d3kjp")
-shader_parameter/albedo_color = Color(1, 1, 1, 1)
-shader_parameter/jitter = 0.750000035625
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
 [sub_resource type="ProceduralSkyMaterial" id="Sky_material"]
 sky_top_color = Color(0.11, 0.12, 0.16, 1)
 sky_horizon_color = Color(0.24, 0.24, 0.27, 1)
@@ -43,8 +33,8 @@ ambient_light_color = Color(0.62, 0.64, 0.72, 1)
 ambient_light_energy = 0.22
 fog_enabled = true
 fog_mode = 1
-fog_light_color = Color(0.16, 0.17, 0.2, 1)
-fog_density = 1.0
+fog_light_color = Color(0.055, 0.06, 0.075, 1)
+fog_density = 0.6
 fog_depth_begin = 9.0
 fog_depth_end = 30.0
 
@@ -326,7 +316,6 @@ size = Vector3(26, 4, 0.4)
 
 [node name="PS1PostProcess" parent="." unique_id=667602802 instance=ExtResource("14_s1s1f")]
 transform = Transform3D(1, 0, 0, 0, 0.98772365, 0.15621147, 0, -0.15621147, 0.98772365, 0, 0, 0)
-surface_material_override/0 = SubResource("ShaderMaterial_s1s1f")
 
 [node name="Environment" type="WorldEnvironment" parent="." unique_id=1096833124]
 environment = SubResource("Environment")

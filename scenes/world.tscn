@@ -23,16 +23,6 @@
 [ext_resource type="Script" uid="uid://ddlqj8ges01dg" path="res://scripts/map/map_table.gd" id="21_table"]
 [ext_resource type="PackedScene" path="res://scenes/pause_menu.tscn" id="99_pause"]
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_oo54l"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(1, 1, 1, 1)
-shader_parameter/jitter = 0.70000003325
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
 [sub_resource type="ProceduralSkyMaterial" id="Sky_material"]
 sky_top_color = Color(0.36, 0.38, 0.41, 1)
 sky_horizon_color = Color(0.62, 0.63, 0.65, 1)
@@ -51,8 +41,8 @@ ambient_light_color = Color(1, 1, 1, 1)
 ambient_light_energy = 0.45
 fog_enabled = true
 fog_mode = 1
-fog_light_color = Color(0.22, 0.23, 0.26, 1)
-fog_density = 0.85
+fog_light_color = Color(0.075, 0.08, 0.095, 1)
+fog_density = 0.55
 fog_depth_begin = 18.0
 fog_depth_end = 52.0
 
@@ -527,8 +517,6 @@ script = ExtResource("16_house")
 [node name="PS1" parent="." unique_id=1777166208 instance=ExtResource("3_75jji")]
 
 [node name="PS1PostProcess" parent="." unique_id=124545275 instance=ExtResource("21_ps1post")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0739616, 0)
-surface_material_override/0 = SubResource("ShaderMaterial_oo54l")
 
 [node name="Environment" type="WorldEnvironment" parent="." unique_id=353208073]
 environment = SubResource("Environment")
