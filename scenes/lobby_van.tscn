@@ -16,11 +16,11 @@
 [ext_resource type="PackedScene" uid="uid://dq3n7vk8rj5wc" path="res://scenes/ps1_postprocess.tscn" id="14_s1s1f"]
 [ext_resource type="PackedScene" path="res://scenes/pause_menu.tscn" id="99_pause"]
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_stiwm"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_s1s1f"]
 render_priority = 0
 shader = ExtResource("2_d3kjp")
 shader_parameter/albedo_color = Color(1, 1, 1, 1)
-shader_parameter/jitter = 0.70000003325
+shader_parameter/jitter = 0.750000035625
 shader_parameter/jitter_z_coordinate = false
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
@@ -56,11 +56,11 @@ roughness = 0.95
 material = SubResource("Mat_road")
 size = Vector2(48, 48)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_d3kjp"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_e4t5j"]
 render_priority = 0
 shader = ExtResource("2_d3kjp")
 shader_parameter/albedo_color = Color(0.1, 0.1, 0.11, 1)
-shader_parameter/jitter = 0.70000003325
+shader_parameter/jitter = 0.750000035625
 shader_parameter/jitter_z_coordinate = false
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
@@ -93,11 +93,11 @@ size = Vector3(1.2, 0.9, 0.5)
 [sub_resource type="BoxMesh" id="Mesh_panel"]
 size = Vector3(1.1, 0.8, 0.07)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_s1s1f"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_bgjlr"]
 render_priority = 0
 shader = ExtResource("2_d3kjp")
 shader_parameter/albedo_color = Color(0.2, 0.19, 0.18, 1)
-shader_parameter/jitter = 0.70000003325
+shader_parameter/jitter = 0.750000035625
 shader_parameter/jitter_z_coordinate = false
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
@@ -106,31 +106,11 @@ shader_parameter/alpha_scissor = 0.5
 [sub_resource type="BoxMesh" id="Mesh_swatch"]
 size = Vector3(0.2, 0.2, 0.03)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_e4t5j"]
-render_priority = 0
-shader = ExtResource("2_d3kjp")
-shader_parameter/albedo_color = Color(0.28, 0.28, 0.3, 1)
-shader_parameter/jitter = 0.70000003325
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_bgjlr"]
-render_priority = 0
-shader = ExtResource("2_d3kjp")
-shader_parameter/albedo_color = Color(0.28, 0.28, 0.3, 1)
-shader_parameter/jitter = 0.70000003325
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
-
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_e3t88"]
 render_priority = 0
 shader = ExtResource("2_d3kjp")
 shader_parameter/albedo_color = Color(0.28, 0.28, 0.3, 1)
-shader_parameter/jitter = 0.70000003325
+shader_parameter/jitter = 0.750000035625
 shader_parameter/jitter_z_coordinate = false
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
@@ -140,7 +120,7 @@ shader_parameter/alpha_scissor = 0.5
 render_priority = 0
 shader = ExtResource("2_d3kjp")
 shader_parameter/albedo_color = Color(0.28, 0.28, 0.3, 1)
-shader_parameter/jitter = 0.70000003325
+shader_parameter/jitter = 0.750000035625
 shader_parameter/jitter_z_coordinate = false
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
@@ -150,7 +130,7 @@ shader_parameter/alpha_scissor = 0.5
 render_priority = 0
 shader = ExtResource("2_d3kjp")
 shader_parameter/albedo_color = Color(0.28, 0.28, 0.3, 1)
-shader_parameter/jitter = 0.70000003325
+shader_parameter/jitter = 0.750000035625
 shader_parameter/jitter_z_coordinate = false
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
@@ -160,7 +140,7 @@ shader_parameter/alpha_scissor = 0.5
 render_priority = 0
 shader = ExtResource("2_d3kjp")
 shader_parameter/albedo_color = Color(0.28, 0.28, 0.3, 1)
-shader_parameter/jitter = 0.70000003325
+shader_parameter/jitter = 0.750000035625
 shader_parameter/jitter_z_coordinate = false
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
@@ -170,7 +150,7 @@ shader_parameter/alpha_scissor = 0.5
 render_priority = 0
 shader = ExtResource("2_d3kjp")
 shader_parameter/albedo_color = Color(0.28, 0.28, 0.3, 1)
-shader_parameter/jitter = 0.70000003325
+shader_parameter/jitter = 0.750000035625
 shader_parameter/jitter_z_coordinate = false
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
@@ -180,7 +160,27 @@ shader_parameter/alpha_scissor = 0.5
 render_priority = 0
 shader = ExtResource("2_d3kjp")
 shader_parameter/albedo_color = Color(0.28, 0.28, 0.3, 1)
-shader_parameter/jitter = 0.70000003325
+shader_parameter/jitter = 0.750000035625
+shader_parameter/jitter_z_coordinate = false
+shader_parameter/jitter_depth_independent = true
+shader_parameter/affine_texture_mapping = true
+shader_parameter/alpha_scissor = 0.5
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_qivtu"]
+render_priority = 0
+shader = ExtResource("2_d3kjp")
+shader_parameter/albedo_color = Color(0.28, 0.28, 0.3, 1)
+shader_parameter/jitter = 0.750000035625
+shader_parameter/jitter_z_coordinate = false
+shader_parameter/jitter_depth_independent = true
+shader_parameter/affine_texture_mapping = true
+shader_parameter/alpha_scissor = 0.5
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_cd85t"]
+render_priority = 0
+shader = ExtResource("2_d3kjp")
+shader_parameter/albedo_color = Color(0.28, 0.28, 0.3, 1)
+shader_parameter/jitter = 0.750000035625
 shader_parameter/jitter_z_coordinate = false
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
@@ -195,11 +195,11 @@ size = Vector3(0.7, 0.95, 0.5)
 [sub_resource type="BoxMesh" id="Mesh_clipboard"]
 size = Vector3(0.6, 0.85, 0.06)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_qivtu"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_3wi1a"]
 render_priority = 0
 shader = ExtResource("2_d3kjp")
 shader_parameter/albedo_color = Color(0.55, 0.44, 0.28, 1)
-shader_parameter/jitter = 0.70000003325
+shader_parameter/jitter = 0.750000035625
 shader_parameter/jitter_z_coordinate = false
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
@@ -208,11 +208,11 @@ shader_parameter/alpha_scissor = 0.5
 [sub_resource type="BoxMesh" id="Mesh_paper"]
 size = Vector3(0.48, 0.66, 0.02)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_cd85t"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_5fodp"]
 render_priority = 0
 shader = ExtResource("2_d3kjp")
 shader_parameter/albedo_color = Color(0.86, 0.85, 0.79, 1)
-shader_parameter/jitter = 0.70000003325
+shader_parameter/jitter = 0.750000035625
 shader_parameter/jitter_z_coordinate = false
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
@@ -221,11 +221,11 @@ shader_parameter/alpha_scissor = 0.5
 [sub_resource type="BoxMesh" id="Mesh_pen"]
 size = Vector3(0.03, 0.16, 0.03)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_3wi1a"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_tna2a"]
 render_priority = 0
 shader = ExtResource("2_d3kjp")
 shader_parameter/albedo_color = Color(1, 0.698, 0.161, 1)
-shader_parameter/jitter = 0.70000003325
+shader_parameter/jitter = 0.750000035625
 shader_parameter/jitter_z_coordinate = false
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
@@ -244,12 +244,12 @@ texture_filter = 0
 material = SubResource("Mat_sheet")
 size = Vector2(0.46, 0.64)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_5fodp"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_tiw8x"]
 render_priority = 0
 shader = ExtResource("2_d3kjp")
 shader_parameter/albedo = SubResource("Tex_sheet")
 shader_parameter/albedo_color = Color(1, 1, 1, 1)
-shader_parameter/jitter = 0.70000003325
+shader_parameter/jitter = 0.750000035625
 shader_parameter/jitter_z_coordinate = false
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
@@ -264,11 +264,11 @@ size = Vector3(0.62, 0.62, 0.5)
 [sub_resource type="BoxMesh" id="Mesh_radio"]
 size = Vector3(0.52, 0.4, 0.2)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_tna2a"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_7d5fh"]
 render_priority = 0
 shader = ExtResource("2_d3kjp")
 shader_parameter/albedo_color = Color(0.17, 0.16, 0.15, 1)
-shader_parameter/jitter = 0.70000003325
+shader_parameter/jitter = 0.750000035625
 shader_parameter/jitter_z_coordinate = false
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
@@ -277,11 +277,11 @@ shader_parameter/alpha_scissor = 0.5
 [sub_resource type="BoxMesh" id="Mesh_dial"]
 size = Vector3(0.3, 0.12, 0.03)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_tiw8x"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_stiwm"]
 render_priority = 0
 shader = ExtResource("2_d3kjp")
 shader_parameter/albedo_color = Color(1, 0.698, 0.161, 1)
-shader_parameter/jitter = 0.70000003325
+shader_parameter/jitter = 0.750000035625
 shader_parameter/jitter_z_coordinate = false
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
@@ -303,12 +303,12 @@ texture_filter = 0
 material = SubResource("Mat_wall_sheet")
 size = Vector2(0.62, 0.86)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_7d5fh"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_sbncx"]
 render_priority = 0
 shader = ExtResource("2_d3kjp")
 shader_parameter/albedo = SubResource("Tex_wall")
 shader_parameter/albedo_color = Color(1, 1, 1, 1)
-shader_parameter/jitter = 0.70000003325
+shader_parameter/jitter = 0.750000035625
 shader_parameter/jitter_z_coordinate = false
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
@@ -325,7 +325,8 @@ size = Vector3(26, 4, 0.4)
 [node name="PS1" parent="." unique_id=695134079 instance=ExtResource("2_ps1")]
 
 [node name="PS1PostProcess" parent="." unique_id=667602802 instance=ExtResource("14_s1s1f")]
-surface_material_override/0 = SubResource("ShaderMaterial_stiwm")
+transform = Transform3D(1, 0, 0, 0, 0.98772365, 0.15621147, 0, -0.15621147, 0.98772365, 0, 0, 0)
+surface_material_override/0 = SubResource("ShaderMaterial_s1s1f")
 
 [node name="Environment" type="WorldEnvironment" parent="." unique_id=1096833124]
 environment = SubResource("Environment")
@@ -341,7 +342,7 @@ collision_mask = 0
 
 [node name="Mesh" type="MeshInstance3D" parent="Road" unique_id=386351297]
 mesh = SubResource("Mesh_road")
-surface_material_override/0 = SubResource("ShaderMaterial_d3kjp")
+surface_material_override/0 = SubResource("ShaderMaterial_e4t5j")
 
 [node name="Collision" type="CollisionShape3D" parent="Road" unique_id=724897490]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
@@ -423,7 +424,7 @@ shape = SubResource("Shape_reach_panel")
 
 [node name="Housing" type="MeshInstance3D" parent="Stations/ColorPanel" unique_id=1838712255]
 mesh = SubResource("Mesh_panel")
-surface_material_override/0 = SubResource("ShaderMaterial_s1s1f")
+surface_material_override/0 = SubResource("ShaderMaterial_bgjlr")
 
 [node name="Swatches" type="Node3D" parent="Stations/ColorPanel" unique_id=1133181050]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.05)
@@ -431,42 +432,42 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.05)
 [node name="Swatch1" type="MeshInstance3D" parent="Stations/ColorPanel/Swatches" unique_id=647728071]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.36, 0.18, 0)
 mesh = SubResource("Mesh_swatch")
-surface_material_override/0 = SubResource("ShaderMaterial_e4t5j")
+surface_material_override/0 = SubResource("ShaderMaterial_e3t88")
 
 [node name="Swatch2" type="MeshInstance3D" parent="Stations/ColorPanel/Swatches" unique_id=1804900944]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.12, 0.18, 0)
 mesh = SubResource("Mesh_swatch")
-surface_material_override/0 = SubResource("ShaderMaterial_bgjlr")
+surface_material_override/0 = SubResource("ShaderMaterial_6wjnk")
 
 [node name="Swatch3" type="MeshInstance3D" parent="Stations/ColorPanel/Swatches" unique_id=1551154760]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.12, 0.18, 0)
 mesh = SubResource("Mesh_swatch")
-surface_material_override/0 = SubResource("ShaderMaterial_e3t88")
+surface_material_override/0 = SubResource("ShaderMaterial_v517o")
 
 [node name="Swatch4" type="MeshInstance3D" parent="Stations/ColorPanel/Swatches" unique_id=481075619]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.36, 0.18, 0)
 mesh = SubResource("Mesh_swatch")
-surface_material_override/0 = SubResource("ShaderMaterial_6wjnk")
+surface_material_override/0 = SubResource("ShaderMaterial_g6w07")
 
 [node name="Swatch5" type="MeshInstance3D" parent="Stations/ColorPanel/Swatches" unique_id=901141021]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.36, -0.1, 0)
 mesh = SubResource("Mesh_swatch")
-surface_material_override/0 = SubResource("ShaderMaterial_v517o")
+surface_material_override/0 = SubResource("ShaderMaterial_3xbfi")
 
 [node name="Swatch6" type="MeshInstance3D" parent="Stations/ColorPanel/Swatches" unique_id=968171342]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.12, -0.1, 0)
 mesh = SubResource("Mesh_swatch")
-surface_material_override/0 = SubResource("ShaderMaterial_g6w07")
+surface_material_override/0 = SubResource("ShaderMaterial_0g7rb")
 
 [node name="Swatch7" type="MeshInstance3D" parent="Stations/ColorPanel/Swatches" unique_id=1366790063]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.12, -0.1, 0)
 mesh = SubResource("Mesh_swatch")
-surface_material_override/0 = SubResource("ShaderMaterial_3xbfi")
+surface_material_override/0 = SubResource("ShaderMaterial_qivtu")
 
 [node name="Swatch8" type="MeshInstance3D" parent="Stations/ColorPanel/Swatches" unique_id=1601305326]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.36, -0.1, 0)
 mesh = SubResource("Mesh_swatch")
-surface_material_override/0 = SubResource("ShaderMaterial_0g7rb")
+surface_material_override/0 = SubResource("ShaderMaterial_cd85t")
 
 [node name="Lamp" type="OmniLight3D" parent="Stations/ColorPanel" unique_id=291720852]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.56, 0.3)
@@ -501,12 +502,12 @@ shape = SubResource("Shape_reach_clipboard")
 
 [node name="Board" type="MeshInstance3D" parent="Stations/Clipboard" unique_id=452591366]
 mesh = SubResource("Mesh_clipboard")
-surface_material_override/0 = SubResource("ShaderMaterial_qivtu")
+surface_material_override/0 = SubResource("ShaderMaterial_3wi1a")
 
 [node name="Paper" type="MeshInstance3D" parent="Stations/Clipboard" unique_id=1890076253]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.04, 0.04)
 mesh = SubResource("Mesh_paper")
-surface_material_override/0 = SubResource("ShaderMaterial_cd85t")
+surface_material_override/0 = SubResource("ShaderMaterial_5fodp")
 
 [node name="Lamp" type="OmniLight3D" parent="Stations/Clipboard" unique_id=874578819]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0.3)
@@ -517,7 +518,7 @@ omni_range = 1.5
 [node name="Pen" type="MeshInstance3D" parent="Stations/Clipboard" unique_id=1131141923]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.24, -0.3, 0.06)
 mesh = SubResource("Mesh_pen")
-surface_material_override/0 = SubResource("ShaderMaterial_3wi1a")
+surface_material_override/0 = SubResource("ShaderMaterial_tna2a")
 
 [node name="Close" type="Node3D" parent="Stations/Clipboard" unique_id=1369857557]
 
@@ -529,7 +530,7 @@ near = 0.02
 [node name="Sheet" type="MeshInstance3D" parent="Stations/Clipboard/Close" unique_id=450105432]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.08)
 mesh = SubResource("Mesh_sheet")
-surface_material_override/0 = SubResource("ShaderMaterial_5fodp")
+surface_material_override/0 = SubResource("ShaderMaterial_tiw8x")
 
 [node name="Viewport" type="SubViewport" parent="Stations/Clipboard/Close/Sheet" unique_id=2109957367]
 disable_3d = true
@@ -597,12 +598,12 @@ shape = SubResource("Shape_reach_radio")
 
 [node name="Housing" type="MeshInstance3D" parent="Stations/Radio" unique_id=67535189]
 mesh = SubResource("Mesh_radio")
-surface_material_override/0 = SubResource("ShaderMaterial_tna2a")
+surface_material_override/0 = SubResource("ShaderMaterial_7d5fh")
 
 [node name="Dial" type="MeshInstance3D" parent="Stations/Radio" unique_id=806848593]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.06, 0.1)
 mesh = SubResource("Mesh_dial")
-surface_material_override/0 = SubResource("ShaderMaterial_tiw8x")
+surface_material_override/0 = SubResource("ShaderMaterial_stiwm")
 
 [node name="Lamp" type="OmniLight3D" parent="Stations/Radio" unique_id=115627227]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.32, 0.26)
@@ -631,7 +632,7 @@ script = ExtResource("12_board")
 [node name="Sheet" type="MeshInstance3D" parent="Stations/WallContract" unique_id=1598688348]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.03)
 mesh = SubResource("Mesh_wall_sheet")
-surface_material_override/0 = SubResource("ShaderMaterial_7d5fh")
+surface_material_override/0 = SubResource("ShaderMaterial_sbncx")
 
 [node name="Viewport" type="SubViewport" parent="Stations/WallContract/Sheet" unique_id=2087487278]
 disable_3d = true
@@ -762,4 +763,4 @@ text = "+"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="PauseMenu" parent="." instance=ExtResource("99_pause")]
+[node name="PauseMenu" parent="." unique_id=2000003907 instance=ExtResource("99_pause")]

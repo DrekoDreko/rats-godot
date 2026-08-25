@@ -17,6 +17,7 @@ config/icon="res://icon.svg"
 
 [autoload]
 
+Carteira="*res://scripts/economia/carteira.gd"
 SteamManager="*res://scripts/steam/steam_manager.gd"
 LobbyManager="*res://scripts/steam/lobby_manager.gd"
 Wallet="*res://scripts/economy/wallet.gd"
