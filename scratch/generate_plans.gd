@@ -340,9 +340,11 @@ func _draw_poi_hole(img: Image, pos: Vector2i, label: String) -> void:
 	var bottom := IMAGE_SIZE - MARGIN - 24
 
 	if pos.y < top:
+		@warning_ignore("integer_division") # Centring on a whole pixel.
 		_draw_label(img, label, Vector2i(pos.x - text_width / 2, pos.y + 10), HOLE_COLOR)
 		return
 	if pos.y > bottom:
+		@warning_ignore("integer_division") # Centring on a whole pixel.
 		_draw_label(img, label, Vector2i(pos.x - text_width / 2, pos.y - 13), HOLE_COLOR)
 		return
 

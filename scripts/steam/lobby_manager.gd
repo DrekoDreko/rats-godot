@@ -611,6 +611,7 @@ func _ping_echo(stamp: int) -> void:
 	var from := multiplayer.get_remote_sender_id()
 	if from == 0:
 		return
+	@warning_ignore("integer_division") # Half the round trip is the one-way time we want.
 	_pings[from] = maxi(0, Time.get_ticks_msec() - stamp) / 2
 
 

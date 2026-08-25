@@ -150,6 +150,7 @@ func _draw_clock(seconds_left: float) -> void:
 ## it.
 func _clock_text(seconds_left: float) -> String:
 	var whole := int(ceil(maxf(0.0, seconds_left)))
+	@warning_ignore("integer_division") # Whole minutes: the remainder is the seconds field beside it.
 	return "%d:%02d" % [whole / 60, whole % 60]
 
 # --- The last ten seconds ---------------------------------------------------

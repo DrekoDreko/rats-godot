@@ -95,17 +95,17 @@ func _ready() -> void:
 ## Swaps to a slot. Returns false when it could not be done: there is no such
 ## slot, it is the one already out, the weapon in hand is busy, or the phase has
 ## barred it.
-func equip(index: int) -> bool:
-	if index < 0 or index >= slot_count() or index == _index:
+func equip(slot: int) -> bool:
+	if slot < 0 or slot >= slot_count() or slot == _index:
 		return false
 	if holds_belt():
 		return false
-	if is_barred(index):
+	if is_barred(slot):
 		if _refusal_audio != null:
 			_refusal_audio.play()
-		refused.emit(index)
+		refused.emit(slot)
 		return false
-	_swap_to(index, _pick(index))
+	_swap_to(slot, _pick(slot))
 	return true
 
 
@@ -137,8 +137,8 @@ func bar_slots(indices: Array[int]) -> void:
 
 
 ## Whether the phase has barred a slot.
-func is_barred(index: int) -> bool:
-	return _barred.has(index)
+func is_barred(slot: int) -> bool:
+	return _barred.has(slot)
 
 
 ## Whether anything at all is barred — what a hotbar asks before it greys itself
@@ -180,10 +180,10 @@ func hands() -> Weapon:
 	return get_node_or_null(hands_path) as Weapon
 
 ## The weapon in a slot, or null if the slot is empty or does not exist.
-func weapon_in(index: int) -> Node:
-	if index < 0 or index >= slots.size():
+func weapon_in(slot: int) -> Node:
+	if slot < 0 or slot >= slots.size():
 		return null
-	var path := slots[index]
+	var path := slots[slot]
 	if path.is_empty():
 		return null
 	var node := get_node_or_null(path)
@@ -193,18 +193,18 @@ func weapon_in(index: int) -> Node:
 
 ## The weapon a slot actually puts in the hand: the one it points at, unless it
 ## has not been bought yet or has run out — an empty box is an empty loop.
-func _pick(index: int) -> Weapon:
-	var weapon := weapon_in(index)
+func _pick(slot: int) -> Weapon:
+	var weapon := weapon_in(slot)
 	if weapon == null or not weapon.available():
 		return null
 	return weapon
 
 ## Puts one weapon away and the next one out, and says so. It is the only place
 ## that moves the belt: whoever calls it has already decided the swap is allowed.
-func _swap_to(index: int, weapon: Weapon) -> void:
+func _swap_to(slot: int, weapon: Weapon) -> void:
 	if _current != null:
 		_current.unequip()
-	_index = index
+	_index = slot
 	_current = weapon
 	if _current != null:
 		_current.equip()

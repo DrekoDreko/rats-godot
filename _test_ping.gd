@@ -166,6 +166,7 @@ func _check_a_stranger_is_unknown() -> bool:
 ## is the sum and the bookkeeping, which is where the mistake would be.
 func _check_the_echo_halves_the_trip() -> bool:
 	var stamp := Time.get_ticks_msec() - 100
+	@warning_ignore("integer_division") # Half the round trip, same as the lobby does.
 	_lobby._pings[_guest_id] = maxi(0, Time.get_ticks_msec() - stamp) / 2
 	var filed: int = _lobby._pings[_guest_id]
 	_expect(filed >= 45 and filed <= 60,
@@ -174,6 +175,7 @@ func _check_the_echo_halves_the_trip() -> bool:
 	# A stamp from the future — two machines whose clocks disagree — floors at
 	# zero rather than going negative and reading as "unknown".
 	var ahead := Time.get_ticks_msec() + 500
+	@warning_ignore("integer_division") # Half the round trip, same as the lobby does.
 	_lobby._pings[_guest_id] = maxi(0, Time.get_ticks_msec() - ahead) / 2
 	_expect(_lobby._pings[_guest_id] == 0, "a stamp from the future floors at zero")
 	_lobby._pings.erase(_guest_id)

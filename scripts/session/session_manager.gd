@@ -128,8 +128,8 @@ func count() -> int:
 ## Puts a player in a colour. It does not check whether anybody else is already
 ## wearing it — that is the host's call, and it is made before this is reached
 ## (see `is_color_taken`).
-func set_color(steam_id: int, color: Color) -> void:
-	_write(steam_id, "color", color)
+func set_color(steam_id: int, new_color: Color) -> void:
+	_write(steam_id, "color", new_color)
 
 
 ## What colour a player is wearing, or white for somebody who is not in the

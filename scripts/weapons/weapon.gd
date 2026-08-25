@@ -19,16 +19,20 @@ extends Node3D
 ## the whole animal gets more; whoever takes it apart, less.
 
 ## One use of the weapon. `hit` is false when there was no rat in the sights.
+@warning_ignore("unused_signal") # Emitted by subclasses (see hands.gd, glue_weapon.gd).
 signal used(hit: bool)
 
 # The three signals of a weapon that *holds* a rat instead of settling it in one
 # blow. A weapon that never occupies the player simply does not emit them, and
 # the HUD never opens.
 ## Caught the rat and is busy with it from now on.
+@warning_ignore("unused_signal") # Emitted by subclasses (see hands.gd, glue_weapon.gd).
 signal caught(rat: Node3D)
 ## How far along the job is, from 0 to 1.
+@warning_ignore("unused_signal") # Emitted by subclasses (see hands.gd, glue_weapon.gd).
 signal pressure_changed(fraction: float)
 ## Let go of the rat: `killed` says whether it died or got away.
+@warning_ignore("unused_signal") # Emitted by subclasses (see hands.gd, glue_weapon.gd).
 signal finished(killed: bool)
 
 ## What the weapon is called on the player's belt.

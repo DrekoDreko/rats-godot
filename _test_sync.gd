@@ -462,6 +462,7 @@ func _check_a_late_wire() -> bool:
 		_late_guest.multiplayer_peer = guest_peer
 		set_multiplayer(_late_guest, NodePath("/root/LateB"))
 		return false
+	@warning_ignore("integer_division") # Half the patience is the halfway mark of the wait.
 	if _clock < PATIENCE / 2:
 		var a := _late_a.get_node("LobbyVan/Players") as Node3D
 		var b := _late_b.get_node("LobbyVan/Players") as Node3D
