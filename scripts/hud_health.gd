@@ -40,6 +40,12 @@ func _ready() -> void:
 	set_process(false)
 	# Wait one frame so the player is already in the tree.
 	await get_tree().process_frame
+	# A phase can end on the frame this HUD is waiting through — the board in the
+	# van does exactly that — and a node that wakes up under a freed scene has no
+	# tree left to look a player up in. There is nobody to wire to in that case,
+	# and the HUD is on its way out with the rest of the scene anyway.
+	if not is_inside_tree():
+		return
 	var player := get_tree().get_first_node_in_group("player")
 	if player == null:
 		return

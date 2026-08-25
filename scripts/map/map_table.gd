@@ -42,14 +42,6 @@ func _ready() -> void:
 	PhaseManager.phase_changed.connect(_on_phase_changed)
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	if _reader == null:
-		return
-	if event.is_action_pressed("cancel") or event.is_action_pressed("interact"):
-		_close()
-		get_viewport().set_input_as_handled()
-
-
 func use(by: Node3D) -> void:
 	super.use(by)
 	if _reader != null:

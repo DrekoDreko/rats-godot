@@ -9,6 +9,12 @@ var _time := 0.0
 func _ready() -> void:
 	# Wait one frame so every rat is already in the tree.
 	await get_tree().process_frame
+	# A phase can end on the frame this HUD is waiting through — the board in the
+	# van does exactly that — and a node that wakes up under a freed scene has no
+	# tree left to look a player up in. There is nobody to wire to in that case,
+	# and the HUD is on its way out with the rest of the scene anyway.
+	if not is_inside_tree():
+		return
 	_update()
 
 func _process(delta: float) -> void:

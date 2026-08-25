@@ -208,6 +208,21 @@ func _unhandled_input(event: InputEvent) -> void:
 		# (`_update_hold`).
 		if not _focused.is_held_work():
 			_focused.use(self)
+			# The press is spent here. A station that opens a screen off `use()`
+			# listens for the same key to close it again, and the player sits
+			# below those in the tree: without this the one press would reach
+			# them too and shut what it had just opened.
+			#
+			# Asked for rather than assumed, because `use()` can end the phase.
+			# The board in the moving van is the case: the last man to slap it
+			# takes the crew to the survey, and `change_scene_to_file` pulls this
+			# body out of the tree before the call even returns — so by here
+			# there is no viewport left to hand the press back to. There is also
+			# nothing left to swallow it on behalf of: the listeners that would
+			# have seen it went out with the same scene.
+			var viewport := get_viewport()
+			if viewport != null:
+				viewport.set_input_as_handled()
 	elif event.is_action_pressed("attack"):
 		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 			inventory.try_use()
@@ -546,4 +561,3 @@ func toggle_flashlight() -> void:
 func set_flashlight(enabled: bool) -> void:
 	if flashlight != null:
 		flashlight.visible = enabled
-

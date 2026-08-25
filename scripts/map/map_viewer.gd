@@ -62,7 +62,15 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
 		return
 
-	if event.is_action_pressed("cancel") or event.is_action_pressed("interact"):
+	# The way out is `E`, and Esc by its key and not by its action: `cancel` is
+	# bound to the right mouse button too, and over the plan that button means
+	# "take that pin off" (`_handle_right_click_remove`). Asking for the action
+	# here would shut the viewer on every attempt to remove a pin, and the
+	# removal below would never be reached at all.
+	var closing := event.is_action_pressed("interact")
+	if event is InputEventKey and event.pressed and (event as InputEventKey).keycode == KEY_ESCAPE:
+		closing = true
+	if closing:
 		close()
 		get_viewport().set_input_as_handled()
 		return

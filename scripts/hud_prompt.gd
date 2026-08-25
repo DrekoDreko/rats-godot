@@ -8,17 +8,23 @@ extends Label
 ## announces null and the line leaves the screen.
 
 func _ready() -> void:
-    hide()
-    # Wait one frame so the player is already in the tree.
-    await get_tree().process_frame
-    var player := get_tree().get_first_node_in_group("player")
-    if player == null:
-        return
-    player.interactable_changed.connect(_on_interactable_changed)
+	hide()
+	# Wait one frame so the player is already in the tree.
+	await get_tree().process_frame
+	# A phase can end on the frame this HUD is waiting through — the board in the
+	# van does exactly that — and a node that wakes up under a freed scene has no
+	# tree left to look a player up in. There is nobody to wire to in that case,
+	# and the HUD is on its way out with the rest of the scene anyway.
+	if not is_inside_tree():
+		return
+	var player := get_tree().get_first_node_in_group("player")
+	if player == null:
+		return
+	player.interactable_changed.connect(_on_interactable_changed)
 
 func _on_interactable_changed(interactable: Interactable) -> void:
-    if interactable == null:
-        hide()
-        return
-    text = "E — %s" % interactable.prompt
-    show()
+	if interactable == null:
+		hide()
+		return
+	text = "E — %s" % interactable.prompt
+	show()
