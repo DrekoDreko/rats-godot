@@ -5,7 +5,9 @@
 [resource]
 script = ExtResource("1_item")
 id = "mousetrap"
-display_name = "Mousetrap"
-description = "Snaps shut. Three to a box."
+display_name = "Ratoeira"
+description = "Fecha de uma vez só. Três por caixa."
 kind = 2
 weapon_node = "Mousetrap"
+price = 25
+amount = 3

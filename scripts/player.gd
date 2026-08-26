@@ -547,7 +547,7 @@ func _announce_focus() -> void:
 	interactable_changed.emit(_focused)
 
 ## Hands a screen the player, or gives him back. Whoever opens one is the one who
-## closes it (`scripts/hud_shop.gd`): the mouse comes loose to click with, and
+## closes it (`scripts/ui/store_screen.gd`): the mouse comes loose to click with, and
 ## the body stops in place until it is gone.
 func set_ui_open(open: bool) -> void:
 	if _ui_open == open:

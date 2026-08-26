@@ -63,11 +63,11 @@ const OPEN_PHASE: Phase.Type = Phase.Type.TRAVEL
 ## thing done with it is putting it on a screen and buzzing beside it.
 const REFUSAL_POOR := "Not enough money for that."
 ## And what he is told when the van is not on the road.
-const REFUSAL_SHUT := "The shelf is shut."
+const REFUSAL_SHUT := "The store is shut."
 ## An id that is on nobody's shelf. It should not be reachable from the station,
 ## which only ever offers what it was handed; it is here for a packet that
 ## arrived from a machine with a different folder on disk.
-const REFUSAL_UNKNOWN := "That is not on the shelf."
+const REFUSAL_UNKNOWN := "That is not in the store."
 
 ## Everything on the shelf, sorted by price and then by id so that all four
 ## machines number the shelf the same way. Read once on the way up: the folder
