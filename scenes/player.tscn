@@ -8,6 +8,7 @@
 [ext_resource type="PackedScene" path="res://scenes/traps/mousetrap.tscn" id="6_mousetrap_scene"]
 [ext_resource type="PackedScene" path="res://scenes/traps/glue_trap.tscn" id="7_glue_scene"]
 [ext_resource type="PackedScene" path="res://scenes/player_model.tscn" id="8_model"]
+[ext_resource type="PackedScene" uid="uid://ck8y2v1rw4mqn" path="res://scenes/player_view_model.tscn" id="9_view_model"]
 
 [sub_resource type="CapsuleShape3D" id="Shape_body"]
 radius = 0.4
@@ -37,7 +38,10 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
 [node name="Camera" type="Camera3D" parent="Head" unique_id=258756619]
 current = true
 fov = 80.0
+near = 0.03
 far = 500.0
+
+[node name="ViewModel" parent="Head/Camera" unique_id=1298374651 instance=ExtResource("9_view_model")]
 
 [node name="Interact" type="RayCast3D" parent="Head/Camera" unique_id=2081203818]
 target_position = Vector3(0, 0, -2.2)

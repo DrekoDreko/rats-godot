@@ -46,6 +46,9 @@ const ALBEDO_COLOR_UNIFORM := "albedo_color"
 var _original_materials: Dictionary[MeshInstance3D, Array] = {}
 
 func _ready() -> void:
+	# The scene this one replaced has finished being torn down by now, so the
+	# materials it left behind can be let go of (`_handed_out`).
+	_sweep_handed_out()
 	_apply()
 
 	# Meshes that arrive after this point — a rat spawned into the level, a crew
@@ -56,6 +59,45 @@ func _ready() -> void:
 	# per-child signals only fire for direct children.
 	if not Engine.is_editor_hint():
 		get_tree().node_added.connect(_on_node_added)
+
+
+## Every material this applier has handed out, kept alive past its own death.
+##
+## It exists to silence four errors a scene change used to print, and the reason
+## is worth writing down because the obvious fix is the wrong one. The materials
+## `_apply_to` hands out are duplicates, and the references keeping one alive are
+## the surface override and this node's own dictionary. A scene being torn down
+## frees its nodes in no guaranteed order, so the applier can go before the
+## meshes it dressed do — and the moment it does, the duplicate's last reference
+## goes with it, leaving a `MeshInstance3D` pointing at a freed material for as
+## long as the frame in flight takes to draw. The rendering server then says so,
+## once per thing it wanted to ask:
+##
+##     material_casts_shadows: Parameter "material" is null.
+##     material_is_animated: Parameter "material" is null.
+##     material_get_instance_shader_parameters: Parameter "material" is null.
+##     material_update_dependency: Parameter "material" is null.
+##
+## Putting the surfaces back on the way out does not fix it: writing overrides
+## into meshes that are themselves being freed is the same race, one step over.
+## What does fix it is refusing to be the one holding the last reference —
+## the duplicates outlive every mesh that could still be drawn holding one.
+##
+## Held against the mesh it was put on, so the list can be swept: an entry whose
+## mesh has been freed is one nothing can still be drawing, and the material goes
+## with it. The sweep runs when an applier comes up rather than when one goes
+## down — by then the previous scene's teardown is over, which is exactly the
+## moment it is safe to let go. Without it this grows by every surface in every
+## scene ever loaded, which over an evening of shifts is a real leak.
+static var _handed_out: Array[Dictionary] = []
+
+## Drops the materials whose meshes are gone. See `_handed_out`.
+static func _sweep_handed_out() -> void:
+	var kept: Array[Dictionary] = []
+	for entry in _handed_out:
+		if is_instance_valid(entry["mesh"]):
+			kept.append(entry)
+	_handed_out = kept
 
 ## Re-applies the material to the whole subtree. Call it after changing a
 ## surface's texture. Meshes added at runtime are picked up on their own.
@@ -146,6 +188,10 @@ func _apply_to(mesh_instance: MeshInstance3D) -> void:
 		surface_material.set_shader_parameter(ALBEDO_COLOR_UNIFORM, color)
 
 		mesh_instance.set_surface_override_material(surface, surface_material)
+		# Held past this applier's own lifetime, so that a scene being torn down
+		# cannot free the material out from under a mesh still being drawn
+		# (`_handed_out`).
+		_handed_out.append({"mesh": mesh_instance, "material": surface_material})
 
 ## The albedo texture a surface already uses, or null when it has none — plenty
 ## of low-poly models are painted by color alone.

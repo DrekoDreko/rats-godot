@@ -127,6 +127,20 @@ func set_tint(color: Color) -> void:
 			_mesh.set_surface_override_material(surface, own)
 
 
+## The skinned surface itself, for the one caller that has to reach past the
+## seam this file otherwise keeps shut: `PlayerViewModel` cuts the player's own
+## arms out of this mesh, and to do that it needs the vertices, the weights and
+## the `Skin` — none of which can be described in terms of states and
+## animations.
+##
+## It stays a deliberate exception rather than an invitation. Everything else
+## about the body is asked for through `set_state`, `set_tint` and
+## `set_shadows_only`, and anything new that wants the mesh should ask itself
+## whether it really wants the mesh or only wants the body to look different.
+func mesh_instance() -> MeshInstance3D:
+	return _mesh
+
+
 ## Draws the body as a shadow and nothing else. It is what the player's own copy
 ## is set to: he is inside this model looking out of it, so the mesh itself would
 ## be the inside of his own head, but the shadow he casts on the floor is his and

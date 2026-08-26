@@ -211,7 +211,13 @@ func _ready() -> void:
 	# Not drawn yet either way: ours is never drawn at all, and anybody else's
 	# waits for the wire to say where he is.
 	visible = false
-	if is_multiplayer_authority():
+	# With no wire under it `is_multiplayer_authority` has no id to read and
+	# complains for the question; solo there is one machine and every avatar on
+	# it is ours.
+	var ours := not multiplayer.has_multiplayer_peer() \
+		or multiplayer.multiplayer_peer is OfflineMultiplayerPeer \
+		or is_multiplayer_authority()
+	if ours:
 		# We are the source, so there is nothing to ease towards.
 		set_process(false)
 		return

@@ -97,7 +97,10 @@ func prey() -> Node3D:
 ## two later and is the only honest answer available: the alternative is two
 ## machines each counting the same rat.
 func _on_body_entered(body: Node3D) -> void:
-	if not is_multiplayer_authority():
+	# `is_multiplayer_authority` asks the scene multiplayer for our own id and
+	# logs an error when there is no peer to ask, so a solo hunt answers the
+	# question without it: one machine, and it decides.
+	if _on_the_wire() and not is_multiplayer_authority():
 		return
 	if not _armed or not body.is_in_group("rats"):
 		return

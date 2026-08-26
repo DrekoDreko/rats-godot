@@ -134,6 +134,11 @@ const BOB_SETTLE := 8.0
 ## with (`scripts/player_model.gd`), so his walk on their screens and his shadow
 ## on his own come off one animation.
 @onready var model: PlayerModel = $Model
+## His own arms, hanging off his camera. It is the same model as `model`, cut
+## down to the arms alone (`scripts/player_view_model.gd`), and it is fed the
+## same state — so a gesture animated once is a gesture he sees himself make and
+## a gesture his colleagues see him make.
+@onready var view_model: PlayerViewModel = $Head/Camera/ViewModel
 
 var _start_position: Vector3
 var _air_time := 0.0
@@ -170,6 +175,11 @@ var _hold_time := 0.0
 ## A screen has the player: the mouse is loose on it and the body is out of the
 ## game until it closes.
 var _ui_open := false
+## How far the head turned since the arms were last moved, in radians — yaw in
+## `x`, pitch in `y`. The mouse writes into it and `_physics_process` spends it,
+## which is what keeps a flick reported over four events worth as much swing as
+## the same flick reported over one.
+var _look := Vector2.ZERO
 
 func _ready() -> void:
 	_start_position = global_position
@@ -185,8 +195,10 @@ func _ready() -> void:
 	_camera_rest_y = camera.position.y
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	# He is inside his own body, so the mesh would be the inside of his own head.
-	# The shadow it throws is still his and still worth having.
+	# The shadow it throws is still his and still worth having, and his arms come
+	# back to him separately (`view_model`).
 	model.set_shadows_only(true)
+	_dress_view_model()
 	# Every weapon on the belt is wired up once, and not the one in hand at each
 	# swap: a weapon that is put away never reaches `_use()`, so it never has
 	# anything to announce.
@@ -197,6 +209,57 @@ func _ready() -> void:
 		weapon.finished.connect(func(killed: bool) -> void: capture_finished.emit(killed))
 	inventory.equipped.connect(func(slot: int, weapon: Weapon) -> void: weapon_changed.emit(slot, weapon))
 
+## Paints the player's own sleeves in the colour the crew says he is wearing,
+## and keeps them painted when he picks another one.
+##
+## It exists because until the arms did, a player never saw a stitch of his own
+## suit: only the avatars standing for the *other* players were ever tinted
+## (`scripts/steam/player_avatar.gd`), which was right when his own body was a
+## shadow on the floor. Now that his sleeves are in front of him, a man who
+## picked blue and sees yellow arms would reasonably think the pick did not take.
+##
+## The autoloads are reached through the tree rather than by their global names,
+## the same way `player_avatar.gd` reaches them and for the same reason: a bench
+## run with `--script` has no autoloads, and a global name that is not a name
+## fails the whole class to compile. Here it also covers the plainer case of a
+## solo game with no Steam behind it, where there is no crew to ask — and the
+## honest answer to "what colour is this man" is then the one the model was
+## built in.
+func _dress_view_model() -> void:
+	var loop := Engine.get_main_loop() as SceneTree
+	if loop == null:
+		return
+	var colors := loop.root.get_node_or_null(^"ColorManager")
+	if colors != null:
+		colors.color_changed.connect(_on_crew_color_changed)
+	_repaint_view_model()
+
+
+## Somebody's colour was settled. Only ours changes what is in front of us.
+func _on_crew_color_changed(changed_id: int, _color: Color) -> void:
+	var loop := Engine.get_main_loop() as SceneTree
+	var lobby := loop.root.get_node_or_null(^"LobbyManager") if loop != null else null
+	if lobby == null or changed_id != lobby.our_steam_id():
+		return
+	_repaint_view_model()
+
+
+## The sleeves, in whatever colour the crew has us down for. A player the crew
+## has never heard of — a solo run, a bench — keeps the suit's own yellow.
+func _repaint_view_model() -> void:
+	var loop := Engine.get_main_loop() as SceneTree
+	if loop == null:
+		return
+	var lobby := loop.root.get_node_or_null(^"LobbyManager")
+	var session := loop.root.get_node_or_null(^"SessionManager")
+	if lobby == null or session == null:
+		return
+	var steam_id: int = lobby.our_steam_id()
+	if steam_id == 0 or not session.has_player(steam_id):
+		return
+	view_model.set_tint(session.color(steam_id))
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	# With a screen open the player is not in the map: the mouse belongs to the
 	# buttons, and neither the camera nor the belt hears anything. The key that
@@ -205,12 +268,24 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		# The whole body turns horizontally; only the head looks up and down.
-		rotation.y -= event.relative.x * mouse_sensitivity
+		var motion := (event as InputEventMouseMotion).relative
+		var yaw := -motion.x * mouse_sensitivity
+		var before := head.rotation.x
+		rotation.y += yaw
 		head.rotation.x = clampf(
-			head.rotation.x - event.relative.y * mouse_sensitivity,
+			head.rotation.x - motion.y * mouse_sensitivity,
 			deg_to_rad(-MAX_PITCH),
 			deg_to_rad(MAX_PITCH)
 		)
+		# Kept for the arms, which swing a little behind a turn. Added up rather
+		# than written down, because the mouse can report several times between
+		# two frames and the arms are moved once per frame — taking the last event
+		# alone would throw away most of a fast flick.
+		#
+		# The pitch is the movement the head actually made and not the one that
+		# was asked for: against the limit, looking further up is no turn at all,
+		# and arms that swung anyway would drift while the view stood still.
+		_look += Vector2(yaw, head.rotation.x - before)
 	# Before the mouse toggle, because the two share Esc: a strip of glue half
 	# laid is the first thing Esc can mean, and only once there is none of it
 	# does the key go back to meaning what it usually means. The belt answers
@@ -303,7 +378,19 @@ func _physics_process(delta: float) -> void:
 	# After the move, not before: `animation_state()` reads what the body did
 	# this frame, and asking it beforehand would draw him doing what he was doing
 	# a frame ago — walking into a wall included.
-	model.set_state(animation_state())
+	#
+	# The body he casts a shadow with and the arms he sees are told the same
+	# thing, in the same breath. Two calls rather than one because the arms are
+	# not under the body — they hang off the camera — but there is only ever one
+	# state, and it is read here once.
+	var state := animation_state()
+	model.set_state(state)
+	view_model.set_state(state)
+	# The arms lag a little behind the turn. The reading is spent as it is used,
+	# so a frame in which the mouse did not move is a frame in which the arms
+	# settle back rather than one in which they hold the last flick.
+	view_model.sway(delta, _look)
+	_look = Vector2.ZERO
 	# After the move as well, and for the same reason: the sway is drawn from the
 	# ground he actually covered this frame, not from the keys he was holding.
 	_update_bob(delta)
@@ -396,6 +483,15 @@ func _apply_crouch() -> void:
 	shape.height = height
 	collision.position.y = _stand_collision_y - (_stand_height - height) * 0.5
 	head.position.y = lerpf(_stand_head, _stand_head * CROUCH_SCALE, _crouch)
+	# And the arms travel with it. They hang off the camera, which the line above
+	# has just brought down, but the crouch *animation* lowers them a second time
+	# on top of that — so without this they leave the bottom of his own screen
+	# exactly when he ducks behind something to look at it.
+	#
+	# Guarded because the crouch is applied once from `_ready`, before the
+	# `@onready` variables further down the file have been filled in.
+	if view_model != null:
+		view_model.set_crouch(_crouch)
 
 ## Is there a ceiling in the way of standing back up? The cast is the standing
 ## capsule put where the standing capsule would sit, asked once and only when he
@@ -443,6 +539,11 @@ func respawn() -> void:
 	# died falling would otherwise stand at the van still folded into the pose of
 	# the jump, until the next physics frame thought better of it.
 	model.set_state(PlayerAvatar.State.IDLE)
+	# And the arms in front of him with it, still swung out from whatever turn he
+	# was making on the way down.
+	view_model.set_state(PlayerAvatar.State.IDLE)
+	_look = Vector2.ZERO
+	view_model.sway(1.0, Vector2.ZERO)
 	global_position = _start_position
 
 ## What he looks like he is doing, for the benefit of the other players' screens
