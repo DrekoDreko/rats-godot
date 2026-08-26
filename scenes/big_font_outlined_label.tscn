@@ -1,0 +1,22 @@
+[gd_scene format=3 uid="uid://b4wetum1hnqtu"]
+
+[ext_resource type="Script" uid="uid://cep0d52ovr72h" path="res://scripts/big_font_outlined_label.gd" id="1_d4as4"]
+[ext_resource type="FontFile" uid="uid://b3vvnk0rcn80q" path="res://assets/fonts/matchup.ttf" id="1_rp8gk"]
+
+[sub_resource type="FontVariation" id="FontVariation_pkbn7"]
+base_font = ExtResource("1_rp8gk")
+spacing_top = -4
+spacing_bottom = -1
+
+[node name="BigFontOutlinedLabel" type="MarginContainer" unique_id=776359099]
+offset_right = 13.0
+offset_bottom = 9.0
+theme_override_constants/margin_left = 1
+theme_override_constants/margin_top = 1
+script = ExtResource("1_d4as4")
+
+[node name="Label" type="Label" parent="." unique_id=840654655]
+layout_mode = 2
+theme_override_constants/outline_size = 4
+theme_override_fonts/font = SubResource("FontVariation_pkbn7")
+text = "Hello World"

@@ -21,9 +21,6 @@ extends Node3D
 ## from a shift, being redirected by `NetworkGuard`, and accepting an invite from
 ## outside the game all arrive here with one in hand.
 
-## The whole game is drawn at this size, where 8 px is the normal height of a
-## letter. Same constant, same reason, as `lobby_screen.gd`.
-const FONT_SIZE := 8
 
 ## The colours the status line reads in, matching `lobby_screen.gd` so that the
 ## same kind of news is the same colour on both screens.
@@ -35,13 +32,16 @@ const IDLE_COLOR := Color(1, 1, 1, 0.6)
 ## on a crouched body, so the picture sits above him rather than on him.
 const CARD_HEIGHT := 1.62
 
+## The card itself, dressed in its own scene so the font and the sizes are set
+## where they can be seen.
+const CARD_SCENE := preload("res://scenes/menu_player_card.tscn")
+
 @onready var _crew: MenuCrew = $Crew
 @onready var _camera: Camera3D = $Camera
 @onready var _cards: Control = $UI/Cards
 @onready var _photo: TextureRect = $UI/LocalPlayer/Photo
 @onready var _name: Label = $UI/LocalPlayer/Name
 @onready var _play: Button = $UI/Center/Play
-@onready var _invite: Button = $UI/Center/Invite
 @onready var _public: Button = $UI/Center/PublicLobbies
 @onready var _settings: Button = $UI/Center/Settings
 @onready var _status: Label = $UI/Status
@@ -58,11 +58,7 @@ func _ready() -> void:
 	# The player may be arriving from a hunt, where the mouse was captured.
 	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 
-	for button in [_play, _invite, _public, _settings]:
-		button.add_theme_font_size_override("font_size", FONT_SIZE)
-
 	_play.pressed.connect(_on_play_pressed)
-	_invite.pressed.connect(_on_invite_pressed)
 	_public.pressed.connect(_on_public_pressed)
 	_settings.disabled = true
 
@@ -163,10 +159,6 @@ func _on_play_pressed() -> void:
 	ReadyManager.request_toggle(LobbyManager.our_crew_id())
 
 
-func _on_invite_pressed() -> void:
-	if not LobbyManager.invite_friends():
-		_say("Steam is not running.", ERROR_COLOR)
-
 
 func _on_public_pressed() -> void:
 	_modal.show()
@@ -210,7 +202,6 @@ func _crew_on_screen() -> Array[Dictionary]:
 ## looking at it.
 func _draw_local_player() -> void:
 	_name.text = LobbyManager.our_name()
-	_name.add_theme_font_size_override("font_size", FONT_SIZE)
 	_photo.texture = SteamAvatars.texture_of(LobbyManager.our_steam_id())
 
 
@@ -226,7 +217,7 @@ func _refresh_cards(crew: Array[Dictionary]) -> void:
 		seen[steam_id] = true
 		var card: MenuPlayerCard = _card_of.get(steam_id)
 		if card == null:
-			card = MenuPlayerCard.new()
+			card = CARD_SCENE.instantiate()
 			_card_of[steam_id] = card
 			_cards.add_child(card)
 			card.setup(steam_id, String(player["name"]))

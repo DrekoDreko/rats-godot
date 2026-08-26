@@ -1,0 +1,49 @@
+[gd_scene format=3 uid="uid://r6380qbonva8"]
+
+[ext_resource type="FontFile" uid="uid://b3vvnk0rcn80q" path="res://assets/fonts/matchup.ttf" id="1_xnj1e"]
+
+[sub_resource type="FontVariation" id="FontVariation_13sgg"]
+base_font = ExtResource("1_xnj1e")
+spacing_top = -6
+spacing_bottom = -2
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xnj1e"]
+content_margin_left = 10.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.39215687)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6w0uq"]
+content_margin_left = 10.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.5882353)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_uqtqq"]
+content_margin_left = 10.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.47058824)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_sgyve"]
+content_margin_left = 10.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(0, 0, 0, 0.19607843)
+
+[node name="BlackButton" type="Button" unique_id=1313306122]
+offset_right = 84.0
+offset_bottom = 18.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+theme_override_fonts/font = SubResource("FontVariation_13sgg")
+theme_override_font_sizes/font_size = 32
+theme_override_styles/normal = SubResource("StyleBoxFlat_xnj1e")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_6w0uq")
+theme_override_styles/hover = SubResource("StyleBoxFlat_uqtqq")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_sgyve")
+text = "BUTTON"
