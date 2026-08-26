@@ -10,36 +10,46 @@ extends Node3D
 ## squeezed, an arm going out, would happen off screen on the one machine that
 ## most needs to see it.
 ##
-## This is that something. It is the *same scene* as the body everybody else
-## sees, played by the same `AnimationPlayer` off the same states, with the
-## torso, legs and head cut out of the mesh. That the animation is shared is the
-## whole reason it is built this way rather than as a separate pair of hands: a
-## swing animated once shows up in the third person and in the first, and
-## neither `player.gd` nor anything in `scripts/weapons/` has to know there are
-## two bodies.
+## This is that something: `models/hazmat_hand.glb` held up in the corner of the
+## frame. There are two of them in the scene, the left being the right one
+## mirrored, and only the right is drawn — see `show_left` for why, and for what
+## turning the other one back on costs.
 ##
-## ## Why the mesh is cut rather than the bones hidden
+## ## Why a model of its own rather than the body's arms
 ##
-## The obvious move is to scale the unwanted bones to nothing and let the arms
-## stay. It does not work, and it is worth writing down why so that nobody
-## spends an afternoon rediscovering it: a bone's transform is inherited by its
-## children, and both `set_bone_pose_scale` and `set_bone_global_pose_override`
-## collapse the whole chain below them. The arms hang off `Spine2`, which hangs
-## off `Hips` — flattening the torso takes the arms down with it. There is no
-## per-bone visibility in a `Skeleton3D`, because a skinned mesh has no such
-## thing: the torso and the arms are one surface of one mesh, and a vertex
-## belongs to bones by weight, not to a bone by name.
+## Because the body's arms were never arms. What stood here before was
+## `player_model.tscn` — the same suit everybody else sees — pushed up against
+## the lens with everything that was not a forearm cut out of the mesh at load,
+## triangle by triangle, by skin weight. It worked, and it cost a rig-shaped
+## dependency for every part of it: the cut was keyed to Mixamo bone names, the
+## pose that bent the hands into frame was a `SkeletonModifier3D` fighting five
+## third-person clips for control of the same bones, and the crouch needed a
+## correction on top because the clip lowered arms the camera had already
+## lowered. Three mechanisms, all of them there to undo an animation meant for
+## somebody else's screen.
 ##
-## So the cut is made where the difference actually lives — in the vertices. On
-## the way up, the surface is rebuilt keeping only the triangles whose three
-## corners are weighted to the arm chain (`ARM_BONES`), and the result is handed
-## to a `MeshInstance3D` that shares the original's `Skin`. The skeleton still
-## animates every bone; the torso's bones simply have nothing left attached to
-## them.
+## The hand model is the arm alone, exported from Blender at the length it
+## should read at, pointing down its own +Z. Nothing has to be cut off it and
+## nothing has to be bent back into frame, so there is no rig to match and no
+## clip to argue with — which is the whole reason it replaced the cut.
 ##
-## It is done once, at load, over 907 vertices and 400 triangles. There is no
-## per-frame cost at all, and nothing in `models/hazmat.glb` had to be touched —
-## which matters, because the same file is what dresses the four men in the van.
+## ## Where the movement comes from
+##
+## From this file, and from nowhere else. The model carries no skeleton and no
+## animation, so the arms are moved the way a first-person game moves them: as
+## rigid objects, offset from a rest pose by what the player is doing.
+##
+## - **The walk** rides the same phase `player.gd` swings the camera on, handed
+##   over rather than re-derived, so a hand rises on the step the view rises on
+##   instead of a beat off it (`bob`).
+## - **The turn** swings them behind the camera (`sway`), which is what makes
+##   them read as arms attached to a man rather than as a decal on the screen.
+## - **The crouch** pulls them back and down a little, on the same fraction the
+##   capsule shrinks by (`set_crouch`).
+##
+## What is deliberately *not* here is a pose per animation state. `set_state` is
+## still taken and still ignored, because the player has one to give and the day
+## there are first-person clips is the day it becomes useful — see there.
 ##
 ## ## Where it is drawn
 ##
@@ -50,110 +60,103 @@ extends Node3D
 ## clip into a wall the player is pressed against, which is what nearly every
 ## game of this vintage did too.
 
-## The bones the arms are made of, and the cut is made at the *elbow* rather than
-## at the shoulder: forearms, hands and fingers are kept, and the upper arms and
-## shoulders go with the torso.
+## Where each arm rests relative to the camera, before anything moves it: the
+## right one's offset, with the left one taking it mirrored in `x`.
 ##
-## That is not a detail, it is the difference between arms and a mess. The rig
-## has to be pushed close enough to the lens for the hands to be in the frame, and
-## at that distance an upper arm ends up four centimetres from it — near enough
-## that the sleeve is drawn as a wall of flat yellow across a quarter of the
-## screen, and near enough to straddle the near plane and be torn in half by it.
-## It also happens to be what nearly every first-person game shows: a forearm
-## coming in from the corner, never a shoulder. Cutting at the elbow leaves the
-## upper arm to hold the geometry up out of sight while the visible part is only
-## ever the half that reads properly this close.
-##
-## The names are Mixamo's, with the colon the exporter uses turned into an
-## underscore on import. They are matched by name rather than by index because
-## an index is whatever the importer felt like that day, and a rig swapped for
-## another one should fail loudly here rather than quietly cut the wrong half of
-## the man off.
-const ARM_BONES: Array[StringName] = [
-	&"mixamorig_LeftForeArm",
-	&"mixamorig_LeftHand",
-	&"mixamorig_LeftHandIndex1",
-	&"mixamorig_LeftHandIndex2",
-	&"mixamorig_LeftHandIndex3",
-	&"mixamorig_LeftHandIndex4",
-	&"mixamorig_LeftHandThumb1",
-	&"mixamorig_LeftHandThumb2",
-	&"mixamorig_LeftHandThumb3",
-	&"mixamorig_LeftHandThumb4",
-	&"mixamorig_RightForeArm",
-	&"mixamorig_RightHand",
-	&"mixamorig_RightHandIndex1",
-	&"mixamorig_RightHandIndex2",
-	&"mixamorig_RightHandIndex3",
-	&"mixamorig_RightHandIndex4",
-	&"mixamorig_RightHandThumb1",
-	&"mixamorig_RightHandThumb2",
-	&"mixamorig_RightHandThumb3",
-	&"mixamorig_RightHandThumb4",
-]
-
-## How much of a vertex has to belong to the arms for it to be kept, out of the
-## four influences it carries.
-##
-## The hazmat rig turns out not to need a considered number — the seam at the
-## shoulder is clean enough that everything from a fifth to two thirds cuts the
-## same 235 vertices — so this is set where it says what it means: a vertex that
-## is more arm than not is an arm. It is here as a knob for the day the model is
-## replaced by one with a softer seam, where a threshold too low drags a collar
-## of torso along and one too high opens a hole at the shoulder.
-const ARM_WEIGHT := 0.5
-
-## How many influences the importer packs per vertex. Godot's skinned formats
-## are four or eight, and eight only when a mesh needs it; the hazmat is four,
-## and reading the arrays is what settles it rather than this constant — this is
-## only the fallback for a mesh with no weights at all, where the arithmetic
-## must not divide by nothing.
-const INFLUENCES := 4
-
-## Where the arms sit relative to the camera, and how big they are.
-##
-## The model is a man about 1.8 metres tall and his arms are drawn at the scale
-## of the rest of him. Seen from inside his own head at 80 degrees of field of
-## view they would be enormous and, worse, they would begin behind the near
-## plane: the shoulder is level with the eye. So the whole rig is pushed down
-## and back until the arms enter the frame from the bottom the way a first
-## person game's do.
-##
-## The height was found by sweeping it against where the hands land on screen,
-## along with the arm angles it works with (`scripts/view_model_arms_pose.gd`) —
-## the two are one setting in two files, and moving either alone moves the hands.
-##
-## **`x` is not zero, and that is the model rather than a mistake.** The hazmat
-## rig is not built symmetrically about its own origin: the head sits at -0.04
-## and the two shoulders at +0.16 and -0.20, so a rig hung straight off the
-## camera puts the man's centre line to one side of the player's. Both hands then
-## crowd the left of the frame however the arms are angled — which is exactly
-## what happens, and no amount of swinging an arm outwards fixes it, because
-## rotating a bone moves one hand and the problem is that *both* are off centre.
-## Sliding the whole rig back the other way is the one correction that moves
-## them together, and it is a translation, so it costs nothing in the pose.
-##
-## These are exported rather than fixed because they are the numbers most likely
-## to want an eye on them once there are gestures to watch, and moving them in
-## the editor with the game running is the only sane way to find them.
-@export var offset := Vector3(0.54, -1.52, 0.0):
+## `z` is negative because the camera looks down its own -Z, so this is how far
+## in front of the lens the arm's origin sits. The model runs from its elbow at
+## -Z to its fingertips at +Z over about 70 centimetres, and it is turned to face
+## the camera's forward by `ARM_FACING` — so the origin being *behind* the lens
+## is right: what is in the frame is the far half of the arm, and the near half
+## is off screen behind the near plane where an elbow this close to a lens
+## belongs.
+@export var rest_offset := Vector3(0.26, -0.22, -0.20):
 	set(value):
-		offset = value
-		_apply_placement()
+		rest_offset = value
+		_apply()
 
-## The arms' size relative to the body's. Slightly under one: a man's own arms
-## fill less of his view than a stranger's arms would at the same distance,
-## because he is looking down the length of them rather than at them.
-@export_range(0.1, 2.0, 0.01) var scale_factor := 0.95:
+## How each arm is turned at rest, in degrees, before the mirror.
+##
+## `x` tips the fingertips down towards the floor, `y` swings the arm in
+## towards the middle of the frame, `z` rolls it about its own length. They are
+## added to `ARM_FACING`, which is the fixed half-turn that takes the model's
+## own +Z onto the camera's forward — so these read as a pose rather than as a
+## coordinate correction.
+@export var rest_rotation := Vector3(-12.0, 20.0, 0.0):
+	set(value):
+		rest_rotation = value
+		_apply()
+
+## The hand's size relative to the model's own.
+##
+## Under one, and it is the model rather than the taste: the arm was exported at
+## the length it has on the body, about seventy centimetres from the shoulder's
+## cut to the fingertips, and at eighty degrees of field of view the whole of
+## that length is more arm than a man sees of his own.
+##
+## This and `rest_offset.z` are one setting in two numbers, and pulling them the
+## same way is what fixes the arm reading as *long*: a hand further off has to
+## be drawn bigger to stay legible, and a bigger hand further off is exactly the
+## silhouette of a stretched arm. Bringing it in and growing it together keeps
+## the hand the size it was on screen while the sleeve behind it shortens, which
+## is the whole difference between a hand held up and an arm reaching out.
+##
+## Found by photographing the sweep rather than by arithmetic, because what is
+## being judged is whether it reads as a hand.
+@export_range(0.1, 2.0, 0.01) var scale_factor := 0.74:
 	set(value):
 		scale_factor = value
-		_apply_placement()
+		_apply()
 
-## How far down the player is, from 0 standing to 1 on his knees. It is the same
-## fraction `player.gd` moves his capsule and his head by, handed over rather
-## than read back, because the arms have to travel with the crouch and not
-## behind it.
-var _crouch := 0.0
+## The half-turn that takes the model's own forward onto the camera's.
+##
+## The mesh points down +Z — elbow at the back, fingers at the front, measured
+## off the exported bounds — and a Godot camera looks down -Z. Without this the
+## player would be shown the backs of two arms walking away from him.
+##
+## It is a constant rather than baked into `rest_rotation` so that the exported
+## angles stay readable as a pose: dragging `rest_rotation.y` in the editor
+## swings the arm in and out from the body, and it would read as neither if it
+## were 180 degrees away from where it looked.
+const ARM_FACING := Vector3(0.0, 180.0, 0.0)
+
+## Whether the left hand is drawn at all.
+##
+## Off, and one hand is what the player sees. That is not a stand-in for the
+## second one being unfinished — it is what the game asks for today: a rat is
+## held in one hand and a trap set with the other, and until there is a gesture
+## that needs both at once, a second hand riding the corner of the screen is a
+## thing to look at rather than a thing doing anything. One hand also reads
+## better this close, where two crowd the bottom of the frame between them.
+##
+## It is a knob rather than a deleted node because the left hand costs nothing
+## while it is hidden and everything to rebuild: the mirror, the pose and the
+## tint all already work on it (`_place`), so the day a gesture wants both hands
+## this is the whole of turning it back on.
+@export var show_left := false:
+	set(value):
+		show_left = value
+		_apply()
+
+## How far the arms swing on a step, in metres, at a full run.
+##
+## The vertical is twice the horizontal because that is what a walk looks like
+## from inside it: an arm rises and falls with the shoulder it hangs off far
+## more than it crosses the body. Both are small — this is a sway to walk to,
+## not a shake, and it is drawn on top of a camera that is already swaying by
+## `player.gd:bob_amount`.
+@export var bob_amount := Vector2(0.012, 0.024):
+	set(value):
+		bob_amount = value
+		_apply()
+
+## How far the arms roll on a step, in degrees at a full run. It is what stops
+## the bob reading as the whole rig being winched up and down: a real arm tips
+## as it rises.
+@export_range(0.0, 20.0, 0.5) var bob_roll := 3.5:
+	set(value):
+		bob_roll = value
+		_apply()
 
 ## How far the arms lag behind the camera when the player turns, in seconds to
 ## cover the gap. It is the one thing here that is not a still pose: a rig
@@ -168,66 +171,104 @@ var _crouch := 0.0
 ## ceiling a spin on the spot would throw them across the whole frame.
 const MAX_SWAY := 0.09
 
-## How far the rig is lifted when the player is all the way down on his knees,
-## in metres.
-##
-## The crouch animations lower the arms on their own — `CrouchIdle` and
-## `CrouchedWalking` bend the whole body forward and down, which is right for a
-## man seen from across the room and puts his hands below the bottom of his own
-## screen. Meanwhile the camera has come down too, so nothing about the offset
-## catches it: measured standing the hands sit at four fifths of the way down the
-## frame, and crouched the same rig puts them half a frame below it.
-##
-## So the arms are lifted by exactly what the crouch takes off them, and it turns
-## out to be most of a metre's worth of animation: without it the right hand sits
-## at 1.56 of the way down a frame that ends at 1.0, and with it at 0.84 —
-## roughly where it sits standing up. It is the one number here that is a
-## *correction* rather than a placement, which is why it is separate from
-## `offset`: mixing the two would mean re-finding the standing pose every time
-## the crouch was adjusted.
-const CROUCH_LIFT := 0.55
+## How far a turn moves the arms sideways as well as turning them, in metres per
+## radian of swing. Rotation alone pivots them about the camera, which from
+## inside the camera is barely visible; the slide is what actually reads.
+const SWAY_SLIDE := 0.5
 
-## The model the arms are cut from, and whose animation they follow. It is the
-## same scene as the body — `PlayerModel` — so everything the third person view
-## learns, the first person view learns with it.
-@onready var _model: PlayerModel = $Model
+## Where the arms are pulled to when the player is all the way down on his
+## knees, in metres — in towards his chest, and *up*.
+##
+## Up is the part that reads wrong until it is measured. The camera has already
+## come down with the head, so an offset that is a fixed distance below the lens
+## comes down with it and nothing needs correcting — except that crouching also
+## brings the head forward over the knees, which shortens the arms' reach and
+## drops the hands towards the bottom edge. Measured, they leave the frame
+## entirely: standing they sit at 0.85 of the way down the picture, and crouched
+## the same offset puts them at 1.01, which is off the bottom of it.
+##
+## So they are lifted by what the crouch takes off them, and pulled back towards
+## the chest, which is what a man does with his arms when he folds up.
+const CROUCH_PULL := Vector3(0.0, 0.05, 0.09)
 
-## The rebuilt surface: the arms alone, sharing the original's skeleton and skin.
-var _arms: MeshInstance3D
-## What bends the arms up into the frame, on this copy of the body and no other.
-var _pose: ViewModelArmsPose
-## Where the camera was pointing last frame, for the sway.
+## The two arms, right and left. The left one is the right one with its `x`
+## mirrored — offset, rotation and mesh alike — which the hand model allows
+## because it was exported as one arm rather than as a pair.
+@onready var _right: Node3D = $Right
+@onready var _left: Node3D = $Left
+
+## How far down the player is, from 0 standing to 1 on his knees.
+var _crouch := 0.0
+## Where the camera was pointing last frame, for the sway: yaw in `x`, pitch in
+## `y`, in radians.
 var _sway := Vector2.ZERO
+## Where the player is in his walking cycle, in radians, and how much of the
+## step is being applied — both handed over by `player.gd` rather than counted
+## again in here. See `bob`.
+var _bob_phase := 0.0
+var _bob_weight := 0.0
 
 
 func _ready() -> void:
-	_cut_arms()
-	_apply_placement()
+	# The mesh flags are set here rather than in the scene because both arms are
+	# instances of an imported GLB, whose inner nodes the editor cannot reach.
+	for mesh in _meshes():
+		# Nothing in here casts a shadow. The body still standing in the world is
+		# the one that throws the player's shadow on the floor (`player.gd`), and
+		# a second pair of arms an arm's length from the camera would throw a
+		# second one across everything he looks at.
+		mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		# The arms sit inches from the near plane, where the engine's own culling
+		# has little to work with once the rig swings on a turn. The margin is
+		# generous because the whole thing is 56 triangles an arm — cheaper to
+		# always draw than to ever wrongly cull.
+		mesh.extra_cull_margin = 4.0
+	_apply()
 
 
-## What the body is doing, handed straight on to the model underneath. The
-## player calls this with the same state he sends over the wire, so his own arms
-## and the arms his colleagues see him wave are playing the same frame of the
-## same animation.
-func set_state(state: PlayerAvatar.State) -> void:
-	_model.set_state(state)
+## What the body is doing. Taken and ignored, and it is worth saying why rather
+## than dropping the call: the player has exactly one state for the body and the
+## arms, and handing it to both of them is what will make a first-person clip
+## line up with the third-person one the day there is art for either. Until then
+## the arms are moved by what the player is doing rather than by what he looks
+## like doing, and there is nothing here for a state to change.
+func set_state(_state: PlayerAvatar.State) -> void:
+	pass
 
 
 ## The suit's colour, so a man's own sleeves match the ones the others see on
-## him. Handed on for the same reason `set_state` is.
+## him.
+##
+## It has to cope with two different materials for the same reason
+## `PlayerModel.set_tint` does — `PS1MaterialApplier` may have swapped the
+## imported `StandardMaterial3D` for the shader by now, and on that one the
+## colour is a shader parameter rather than a property. Writing to the wrong one
+## fails silently and looks like a bug in `ColorManager`.
 func set_tint(color: Color) -> void:
-	_model.set_tint(color)
-	# The tint lands on the model's own mesh, which is the one hidden behind these
-	# arms. They are a separate instance with a material of their own, so the
-	# repaint has to be picked up rather than waited for.
-	refresh_material()
+	for mesh in _meshes():
+		for surface in mesh.get_surface_override_material_count():
+			var material := mesh.get_active_material(surface)
+			if material is ShaderMaterial:
+				var shader_material := material as ShaderMaterial
+				shader_material.set_shader_parameter(&"recolor_target", color)
+				shader_material.set_shader_parameter(&"recolor_strength", 1.0)
+			elif material is BaseMaterial3D:
+				# The imported material is baked into the mesh, which both arms
+				# share with every other instance of the model: painting it in
+				# place would dress the whole van in one man's colour.
+				var own := (material as BaseMaterial3D).duplicate() as BaseMaterial3D
+				own.albedo_color = color.lerp(Color.WHITE, PlayerModel.TINT_WHITENING)
+				mesh.set_surface_override_material(surface, own)
 
 
-## The animation now running, by name. It is here for the benches, and it is the
-## sharpest thing they can ask: that the arms on the player's own screen are
-## playing what his body is playing.
+## The animation now running, by name. There is none — the arms are posed rather
+## than animated — and the empty name is the honest answer rather than a lie
+## about a clip that is not playing.
+##
+## It stays because the benches ask it of both bodies, and because the day the
+## hands carry clips of their own this is where the answer comes from.
 func current_animation() -> StringName:
-	return _model.current_animation()
+	return &""
 
 
 ## How far down the player is, from 0 standing to 1 on his knees. Called every
@@ -240,7 +281,22 @@ func set_crouch(fraction: float) -> void:
 	if is_equal_approx(_crouch, fraction):
 		return
 	_crouch = fraction
-	_apply_placement()
+	_apply()
+
+
+## Where the player is in his step, handed over by `player.gd`.
+##
+## `phase` is the same angle his camera rides its sine on and `weight` the same
+## fraction of a full run it is scaled by. Both are taken rather than worked out
+## again in here, and that is the point of the call: an arm counting its own
+## steps off the velocity would drift a frame from the view it is drawn in
+## front of, and the two would visibly beat against each other.
+func bob(phase: float, weight: float) -> void:
+	if is_equal_approx(_bob_phase, phase) and is_equal_approx(_bob_weight, weight):
+		return
+	_bob_phase = phase
+	_bob_weight = weight
+	_apply()
 
 
 ## The arms, swung a little behind where the camera is pointing.
@@ -254,7 +310,7 @@ func sway(delta: float, look: Vector2) -> void:
 	if is_zero_approx(sway_lag):
 		if not _sway.is_zero_approx():
 			_sway = Vector2.ZERO
-			_apply_placement()
+			_apply()
 		return
 	# The turn pushes the arms out, and they come back on their own. Written as a
 	# rate rather than a spring because a spring would overshoot, and arms that
@@ -267,173 +323,81 @@ func sway(delta: float, look: Vector2) -> void:
 	_sway = _sway.lerp(wanted, weight)
 	if absf(_sway.x) < 0.0005 and absf(_sway.y) < 0.0005:
 		_sway = Vector2.ZERO
-	_apply_placement()
+	_apply()
 
 
-## Cuts the arms out of the imported mesh and puts them up as a mesh of their
-## own, leaving the original hidden behind them.
+## Puts both arms where everything above says they are. One place does it so
+## that the exported knobs, the sway, the bob, the crouch and `_ready` cannot
+## disagree about where the arms are.
 ##
-## The original is hidden rather than removed: it owns the `Skin` the new mesh
-## borrows, and `PlayerModel.set_tint` reaches for it by name. A hidden
-## `MeshInstance3D` costs nothing to keep.
-func _cut_arms() -> void:
-	var source := _model.mesh_instance()
-	if source == null:
-		push_warning("PlayerViewModel: the model has no mesh to cut arms out of.")
-		return
-	var skeleton := source.get_parent() as Skeleton3D
-	if skeleton == null:
-		push_warning("PlayerViewModel: the mesh is not under a Skeleton3D.")
-		return
-	var mesh := source.mesh as ArrayMesh
-	if mesh == null or mesh.get_surface_count() == 0:
-		push_warning("PlayerViewModel: the model's mesh is not an ArrayMesh.")
-		return
-
-	var cut := _arms_only(mesh, skeleton)
-	if cut == null:
-		return
-
-	# Drawn from the same skeleton as the body it was cut from, so the one
-	# `AnimationPlayer` moves both. The new instance is a sibling of the original
-	# under the skeleton, which is what makes `skeleton_path` and the shared
-	# `Skin` line up.
-	_arms = MeshInstance3D.new()
-	_arms.name = "Arms"
-	_arms.mesh = cut
-	skeleton.add_child(_arms)
-	_arms.transform = source.transform
-	_arms.skeleton = _arms.get_path_to(skeleton)
-	_arms.skin = source.skin
-	# Nothing in here casts a shadow. The body still standing in the world is the
-	# one that throws the player's shadow on the floor (`player.gd`), and a second
-	# pair of arms an arm's length from the camera would throw a second one across
-	# everything he looks at.
-	_arms.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	# The arms sit inches from the near plane, where the engine's own culling has
-	# nothing to work with: a skinned mesh's bounds are the rest pose's, and an
-	# arm thrown forward leaves them. The margin is generous because the whole
-	# thing is 116 triangles — cheaper to always draw than to ever wrongly cull.
-	_arms.extra_cull_margin = 4.0
-	# The material comes from the surface the arms were cut out of, whatever it
-	# is by then: `PS1MaterialApplier` may already have swapped the imported
-	# `StandardMaterial3D` for the shader, and it is `_ready` order that decides.
-	# Copying at this moment would freeze whichever one happened to be there, so
-	# the look is taken from the source every time it can change instead
-	# (`refresh_material`), and once here to cover the case where it never does.
-	refresh_material()
-	# The body the arms were cut from is not drawn at all on this copy — the whole
-	# model hangs off the camera, so its torso would be the inside of the player's
-	# own head, and it is precisely what the cut exists to remove.
-	source.visible = false
-	# And the arms are bent up into the frame, which the animations do not do on
-	# their own (`scripts/view_model_arms_pose.gd`). It goes up here rather than
-	# in the scene for the same reason the cut does: the skeleton lives inside the
-	# imported GLB, where nothing in the editor can reach it.
-	_pose = ViewModelArmsPose.new()
-	_pose.name = "ArmsPose"
-	skeleton.add_child(_pose)
-
-
-## Takes the arms' look from the model's own surface. Called on the way up, and
-## worth calling again after anything that repaints the suit — the applier's
-## material and the tint both land on the source mesh, and the arms are a
-## separate instance that has to be told.
-func refresh_material() -> void:
-	var source := _model.mesh_instance()
-	if _arms == null or source == null:
-		return
-	var material := source.get_active_material(0)
-	if material != null:
-		_arms.set_surface_override_material(0, material)
-
-
-## The surface with everything that is not an arm thrown away.
+## The right hand is placed and the left is the same placement mirrored in `x`:
+## the offset's `x` flips, and so do the two rotations that read as handedness —
+## the yaw that swings a hand in towards the middle and the roll about its own
+## length. The pitch does not, because tipping the fingers at the floor is the
+## same tip on both hands.
 ##
-## A triangle is kept when all three of its corners are arm; a triangle with one
-## corner on the torso is the seam at the shoulder, and dropping it is what
-## leaves a clean edge rather than a stretched flap of suit reaching towards the
-## middle of the man.
-##
-## The vertices themselves are kept whole and in place, indices and all. It costs
-## a few hundred unused vertices in the buffer and buys the one thing worth
-## having here: the skin weights, the bone indices and the UVs stay exactly as
-## the importer wrote them, so nothing has to be renumbered and nothing can be
-## renumbered wrongly.
-func _arms_only(mesh: ArrayMesh, skeleton: Skeleton3D) -> ArrayMesh:
-	var arrays: Array = mesh.surface_get_arrays(0)
-	var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
-	var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
-	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
-	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-	if bones.is_empty() or weights.is_empty() or indices.is_empty():
-		push_warning("PlayerViewModel: the mesh carries no skin weights to cut by.")
-		return null
-
-	var arm_bones := _arm_bone_ids(skeleton)
-	if arm_bones.is_empty():
-		push_warning("PlayerViewModel: none of the arm bones are in this rig.")
-		return null
-
-	# How many bones pull on each vertex. Read off the arrays rather than assumed,
-	# because Godot writes eight for a mesh that needs eight.
-	var influences := INFLUENCES
-	if vertices.size() > 0:
-		influences = bones.size() / vertices.size()
-
-	var is_arm := PackedByteArray()
-	is_arm.resize(vertices.size())
-	for vertex in vertices.size():
-		var pull := 0.0
-		for i in influences:
-			if arm_bones.has(bones[vertex * influences + i]):
-				pull += weights[vertex * influences + i]
-		is_arm[vertex] = 1 if pull >= ARM_WEIGHT else 0
-
-	var kept := PackedInt32Array()
-	for triangle in indices.size() / 3:
-		var a := indices[triangle * 3]
-		var b := indices[triangle * 3 + 1]
-		var c := indices[triangle * 3 + 2]
-		if is_arm[a] == 1 and is_arm[b] == 1 and is_arm[c] == 1:
-			kept.append_array([a, b, c])
-
-	if kept.is_empty():
-		push_warning("PlayerViewModel: the cut left no arms behind.")
-		return null
-
-	arrays[Mesh.ARRAY_INDEX] = kept
-	var cut := ArrayMesh.new()
-	# Built with the source's own format so the skin stays a skin: without
-	# `ARRAY_FORMAT_BONES` and `ARRAY_FORMAT_WEIGHTS` surviving the round trip the
-	# new mesh would be rigid geometry welded to the rest pose, which looks like
-	# arms until the moment they are supposed to move.
-	cut.add_surface_from_arrays(
-		Mesh.PRIMITIVE_TRIANGLES, arrays, [], {}, mesh.surface_get_format(0)
-	)
-	return cut
-
-
-## The arm bones this rig actually has, by index. A name that is not in the
-## skeleton is said out loud rather than skipped: it means the model was swapped
-## for one on a different rig, and the cut that follows would be silently wrong.
-func _arm_bone_ids(skeleton: Skeleton3D) -> Dictionary[int, bool]:
-	var ids: Dictionary[int, bool] = {}
-	for bone_name in ARM_BONES:
-		var id := skeleton.find_bone(bone_name)
-		if id < 0:
-			push_warning("PlayerViewModel: no bone named %s in this rig." % bone_name)
-			continue
-		ids[id] = true
-	return ids
-
-
-## Puts the rig where the offsets say, sway included. One place does it so that
-## the exported knobs, the sway and `_ready` cannot disagree about where the
-## arms are.
-func _apply_placement() -> void:
-	if _model == null:
+## The left is placed whether or not it is drawn (`show_left`), which costs a
+## transform on a hidden node and buys the mirror staying correct for free.
+func _apply() -> void:
+	if _right == null or _left == null:
 		return
-	position = offset + Vector3(0.0, CROUCH_LIFT * _crouch, 0.0)
-	rotation = Vector3(_sway.y, _sway.x, 0.0)
 	scale = Vector3.ONE * scale_factor
+
+	var step := sin(_bob_phase) * _bob_weight
+	# The horizontal rides at half the rate, so a full stride is one sideways
+	# sweep across two vertical ones — which is what a stride is: two steps.
+	var swing := sin(_bob_phase * 0.5) * _bob_weight
+
+	var offset := rest_offset
+	offset += CROUCH_PULL * _crouch
+	offset.y += step * bob_amount.y
+	offset.x += swing * bob_amount.x
+	# The turn slides the arms as well as turning them. Yaw moves them sideways
+	# and pitch moves them up, both against the turn, which is the direction the
+	# lag is already rotating them in.
+	offset.x += _sway.x * SWAY_SLIDE
+	offset.y += _sway.y * SWAY_SLIDE
+
+	var angles := rest_rotation + ARM_FACING
+	angles.y += rad_to_deg(_sway.x)
+	angles.x += rad_to_deg(_sway.y)
+	angles.z += step * bob_roll
+
+	_place(_right, offset, angles, 1.0)
+	# The left hand is placed even while it is hidden, so that turning it back on
+	# shows a hand that is already where it belongs rather than one that snaps
+	# into place on the next step.
+	_place(_left, offset, angles, -1.0)
+	_left.visible = show_left
+
+
+## One arm, put down at `offset` turned to `angles`, mirrored when `side` is -1.
+##
+## The mirror is a negative `x` scale on the node rather than a second model:
+## the hand was exported once, and scaling it through zero is what turns a right
+## arm into a left one without a second file to keep in step with the first.
+## It flips the winding of every triangle with it, which is why the imported
+## material is double-sided — the exporter wrote it that way, and it has to stay
+## that way for this to work.
+func _place(arm: Node3D, offset: Vector3, angles: Vector3, side: float) -> void:
+	arm.position = Vector3(offset.x * side, offset.y, offset.z)
+	arm.rotation_degrees = Vector3(angles.x, angles.y * side, angles.z * side)
+	arm.scale = Vector3(side, 1.0, 1.0)
+
+
+## Every surface of both arms. Small and walked rather than cached because the
+## imported scene's shape is the importer's business, and a cached path is a
+## thing that breaks silently the day the model is re-exported.
+func _meshes() -> Array[MeshInstance3D]:
+	var found: Array[MeshInstance3D] = []
+	for arm in [_right, _left]:
+		if arm != null:
+			_collect(arm, found)
+	return found
+
+
+func _collect(node: Node, into: Array[MeshInstance3D]) -> void:
+	if node is MeshInstance3D:
+		into.append(node as MeshInstance3D)
+	for child in node.get_children():
+		_collect(child, into)

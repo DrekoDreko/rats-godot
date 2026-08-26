@@ -134,10 +134,10 @@ const BOB_SETTLE := 8.0
 ## with (`scripts/player_model.gd`), so his walk on their screens and his shadow
 ## on his own come off one animation.
 @onready var model: PlayerModel = $Model
-## His own arms, hanging off his camera. It is the same model as `model`, cut
-## down to the arms alone (`scripts/player_view_model.gd`), and it is fed the
-## same state — so a gesture animated once is a gesture he sees himself make and
-## a gesture his colleagues see him make.
+## His own arms, hanging off his camera: a pair of `models/hazmat_hand.glb`
+## posed by hand rather than a cut of the body (`scripts/player_view_model.gd`).
+## It is fed his step, his turn and his crouch, which is everything that moves
+## them — there is no animation on them to feed.
 @onready var view_model: PlayerViewModel = $Head/Camera/ViewModel
 
 var _start_position: Vector3
@@ -382,7 +382,9 @@ func _physics_process(delta: float) -> void:
 	# The body he casts a shadow with and the arms he sees are told the same
 	# thing, in the same breath. Two calls rather than one because the arms are
 	# not under the body — they hang off the camera — but there is only ever one
-	# state, and it is read here once.
+	# state, and it is read here once. The arms have nothing to do with it today
+	# and are told anyway: the day the hands carry clips, the two are already in
+	# step (`PlayerViewModel.set_state`).
 	var state := animation_state()
 	model.set_state(state)
 	view_model.set_state(state)
@@ -444,6 +446,12 @@ func _update_bob(delta: float) -> void:
 	_bob_weight = move_toward(_bob_weight, gait, BOB_SETTLE * delta)
 	if moving:
 		_bob_phase = fposmod(_bob_phase + TAU * bob_frequency * gait * delta, TAU)
+	# The arms ride the same step the view does, and they are handed the phase
+	# rather than left to find it: an arm counting its own steps off the velocity
+	# would drift a frame from the camera it is drawn in front of, and the two
+	# would visibly beat against each other.
+	if view_model != null:
+		view_model.bob(_bob_phase, _bob_weight)
 	if is_zero_approx(_bob_weight):
 		camera.position.y = _camera_rest_y
 		return

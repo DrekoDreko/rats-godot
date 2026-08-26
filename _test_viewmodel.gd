@@ -7,70 +7,69 @@ extends SceneTree
 ## crouched, which is the part no assertion can make a judgement about:
 ##   godot --script _test_viewmodel.gd
 ##
-## What it is here to catch is the whole reason the arms are cut out of the mesh
-## rather than hidden by bone, so it asks the questions in that order:
+## The arms are two rigid copies of `models/hazmat_hand.glb` posed by hand
+## (`scripts/player_view_model.gd`), so what there is to get wrong is placement
+## rather than skinning, and the bench asks in that order:
 ##
-## - **There are arms at all.** The cut kept triangles, and the surface it built
-##   is still a skinned one — a mesh that lost `ARRAY_WEIGHTS` on the round trip
-##   looks like arms right up until they are supposed to move.
-## - **There is nothing but arms.** Every vertex left is weighted to the arm
-##   chain. This is the assertion that fails the day somebody swaps the model for
-##   one on a different rig, which would otherwise show up in the game as a torso
-##   filling the screen.
-## - **The player cannot see his own body.** Standing, crouched and looking
-##   straight down — the three cases the arms were asked for — nothing of the
-##   body model is drawn, because the whole of it is a shadow.
-## - **The arms are playing what the body is playing.** One state goes to both,
-##   so a gesture animated once is seen from inside and from outside.
+## - **There are two arms, and one of them is drawn.** Both meshes are in the
+##   scene and neither casts a shadow — the body in the world already casts the
+##   player's — and the left is hidden, which is what `PlayerViewModel.show_left`
+##   asks for.
+## - **They are a mirrored pair.** The left is the right with a negative `x`
+##   scale, asked of it while it is hidden because that is the state it has to be
+##   correct in: it is placed every frame so that showing it needs nothing else.
+## - **The player cannot see his own body.** Nothing of the body model is drawn:
+##   the whole of it is a shadow.
+## - **The hand is in the frame.** Standing, crouched, looking down and mid-step:
+##   in front of the near plane and inside the picture.
+## - **The elbows are not through the lens.** A forearm that straddles the near
+##   plane is drawn as a slab of sleeve across a quarter of the screen, which no
+##   measurement of the hands alone would catch.
+## - **The step reaches the arms.** The bob the camera rides is handed to them,
+##   and a rig that ignored it would sit dead still over a swaying view.
 ##
-## - **The hands are in the frame.** Standing, crouched and looking down, both
-##   hands are in front of the near plane, inside the picture, and one to each
-##   side of it. The last of those is not padding: the two shoulders come off the
-##   exporter on different rest orientations, so a pose mirrored from one side to
-##   the other puts both hands on the same side of the screen.
-##
-## The crouch is the case worth the bench on its own. The animation lowers the
-## body by a third of a metre and pushes the head forward, and the arms hang off
-## the camera rather than off the body — so this is where a rig welded to the
-## body's shoulder would put a shoulder through the middle of the frame.
+## The crouch is the case worth the bench on its own: the camera comes down with
+## the head, and the arms hang off the camera rather than off the body, so it is
+## where a rest pose measured standing quietly goes wrong.
 
 ## Frames of slack between one step and the next. The crouch travels over
-## several frames and an animation blend takes an eighth of a second.
+## several frames.
 const WAIT := 12
 ## Where the bench stands the player: the map's own starting point, which is
 ## open floor by construction.
 const STATION := Vector3(0.0, 0.1, 4.0)
 ## Window size for the picture-taking run.
 const SIZE := Vector2i(1141, 634)
-## How far in front of the lens an elbow has to stay, in metres. Nearer than this
-## and the forearm behind it is drawn as a wall of sleeve rather than as an arm —
-## it is comfortably outside the near plane at three centimetres, because what is
-## being avoided is not the clipping but the foreshortening in front of it.
-const ELBOW_CLEARANCE := 0.22
+## How far outside the picture an elbow that sits close to the lens has to be, as
+## a fraction of the frame.
+##
+## The elbow's place is out of shot: the forearm comes into the frame from a
+## bottom corner and the joint is off screen behind it, which is what nearly
+## every first-person game draws and what `PlayerViewModel.rest_offset` is set
+## for. Being close to the lens is therefore not the failure — being close to
+## the lens *and in the middle of the picture* is, because the triangles that
+## straddle the near plane are clipped away and the sleeve behind them is drawn
+## enormous, filling a quarter of the screen with flat yellow.
+##
+## So the question is asked in screen space rather than in metres, which is the
+## lesson the pose sweep taught: an elbow ten centimetres from the lens looked
+## alarming in the numbers and read perfectly in the picture, because it was a
+## fifth of a frame outside the bottom corner. Measuring depth alone would have
+## failed the pose that was actually right.
+const ELBOW_MARGIN := 0.08
+
+## How far in front of the lens an elbow has to be before where it sits on
+## screen stops mattering, in metres. Past this the foreshortening is gone and a
+## forearm crossing the middle of the picture is simply a forearm.
+const ELBOW_DEPTH := 0.35
 
 var _world: Node3D
 var _player: CharacterBody3D
 var _camera: Camera3D
-var _view_model: Node3D
+var _view_model: PlayerViewModel
 var _model: Node3D
-var _arms: MeshInstance3D
-
-## Where the hands were when the modifier last ran, in camera space. Read from
-## inside the skeleton's own update, because there is no reading it from
-## outside: a `SkeletonModifier3D` writes into the buffer the skin is built from,
-## and `get_bone_global_pose` asked from another node hands back the pose the
-## `AnimationPlayer` left — the arms as they hang, not the arms as they are
-## drawn.
-var _right_hand := Vector3.ZERO
-var _left_hand := Vector3.ZERO
-## And the elbows, which are what actually crowd the frame. A hand can sit
-## comfortably in the corner of the picture while the forearm behind it has come
-## through the near plane and filled half the screen with a slab of sleeve —
-## which is precisely what the first crouch correction did, and what no
-## measurement of the hands alone could have caught.
-var _right_elbow := Vector3.ZERO
-var _left_elbow := Vector3.ZERO
-var _pose: ViewModelArmsPose
+var _right: Node3D
+var _left: Node3D
 
 var _step := 0
 var _clock := 0
@@ -91,7 +90,6 @@ func _initialize() -> void:
 	_model = _player.get_node("Model")
 	# Nothing is typed at him: every step below drives the body by hand.
 	_player.set_process_unhandled_input(false)
-	_player.global_position = STATION
 
 
 func _process(_delta: float) -> bool:
@@ -100,18 +98,21 @@ func _process(_delta: float) -> bool:
 		return false
 	_clock = 0
 	match _step:
-		0: _check_arms_exist()
-		1: _check_arms_only()
-		2: _check_body_hidden()
-		3: _check_state_shared()
+		0: _stand_him_up()
+		1: _check_arms_exist()
+		2: _check_arms_mirrored()
+		3: _check_body_hidden()
 		4: _check_hands_in_frame("standing")
 		5: _shoot("standing")
-		6: _crouch()
-		7: _check_crouch_clear()
-		8: _shoot("crouched")
-		9: _look_down()
-		10: _check_looking_down()
-		11: _shoot("looking-down")
+		6: _check_bob_reaches_arms()
+		7: _check_hands_in_frame("mid-step")
+		8: _shoot("mid-step")
+		9: _crouch()
+		10: _check_crouch_clear()
+		11: _shoot("crouched")
+		12: _look_down()
+		13: _check_looking_down()
+		14: _shoot("looking-down")
 		_:
 			_report()
 			return true
@@ -119,86 +120,65 @@ func _process(_delta: float) -> bool:
 	return false
 
 
-## The cut produced a mesh, and it is still a skinned one.
+## Puts him on his mark. It is a step rather than a line in `_initialize`,
+## because `global_position` on a node that is not in the tree yet is an error
+## and a no-op — the scene has been instanced by then but not added.
+func _stand_him_up() -> void:
+	_player.global_position = STATION
+
+
+## There are two arms, neither throwing a second shadow across everything the
+## player looks at, and only the right one drawn.
 func _check_arms_exist() -> void:
-	var skeleton: Skeleton3D = _view_model.get_node_or_null(
-		"Model/Hazmat/Armature/Skeleton3D"
-	)
-	if skeleton == null:
-		_fail("the view model has no skeleton under it")
+	_right = _view_model.get_node_or_null("Right")
+	_left = _view_model.get_node_or_null("Left")
+	if _right == null or _left == null:
+		_fail("the view model is missing an arm")
 		return
-	_arms = skeleton.get_node_or_null("Arms") as MeshInstance3D
-	if _arms == null:
-		_fail("the cut left no Arms mesh behind")
+	var meshes := 0
+	for arm in [_right, _left]:
+		for mesh in _meshes_under(arm):
+			meshes += 1
+			var triangles := 0
+			if mesh.mesh != null:
+				triangles = mesh.mesh.get_faces().size() / 3
+			_say("%s: %d triangles" % [arm.name, triangles])
+			if triangles < 20:
+				_fail("%s has only %d triangles — that is not an arm" % [arm.name, triangles])
+			if mesh.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF:
+				_fail("%s casts a shadow, which the body is already doing" % arm.name)
+	if meshes < 2:
+		_fail("only %d arm mesh(es) in the view model" % meshes)
+	# One hand on screen. Two of them this close crowd the bottom of the frame
+	# between them, which is the whole reason the left is off (`show_left`).
+	_say("right drawn: %s, left drawn: %s" % [_right.visible, _left.visible])
+	if not _right.visible:
+		_fail("the right hand is hidden — the player has no hands at all")
+	if _left.visible != _view_model.show_left:
+		_fail("the left hand is drawn against what show_left asks for")
+
+
+## The left arm is the right one mirrored: the same mesh, turned inside out by a
+## negative `x` scale, sitting the same distance the other side of the middle.
+##
+## It is asked while the left is hidden on purpose. That is the state it lives in
+## today, and a mirror that quietly went wrong there would only be found by
+## whoever turned the second hand on — long after whatever broke it.
+func _check_arms_mirrored() -> void:
+	if _right == null or _left == null:
 		return
-	var mesh := _arms.mesh as ArrayMesh
-	if mesh == null or mesh.get_surface_count() == 0:
-		_fail("the Arms mesh is empty")
-		return
-	var triangles: int = (mesh.surface_get_arrays(0)[Mesh.ARRAY_INDEX] as PackedInt32Array).size() / 3
-	_say("arms: %d triangles" % triangles)
-	if triangles < 20:
-		_fail("only %d triangles survived the cut — that is not a pair of arms" % triangles)
-	# The weights are the whole point: without them the arms are welded to the
-	# rest pose and never move, which no picture of a still frame would show.
-	var format := mesh.surface_get_format(0)
-	if (format & Mesh.ARRAY_FORMAT_BONES) == 0 or (format & Mesh.ARRAY_FORMAT_WEIGHTS) == 0:
-		_fail("the cut mesh lost its skin — the arms will not animate")
-	if _arms.skin == null:
-		_fail("the Arms mesh has no skin, so it is not bound to the skeleton")
-	if _arms.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF:
-		_fail("the arms cast a shadow, which the body is already doing")
-	# The pose that bends the arms into the frame, and the only place the bent
-	# arms can be read from.
-	_pose = skeleton.get_node_or_null("ArmsPose") as ViewModelArmsPose
-	if _pose == null:
-		_fail("the arms were never bent up into the frame — no ArmsPose modifier")
-		return
-	_pose.probed = _on_posed
+	_say("right at %.2v scale %.2v, left at %.2v scale %.2v"
+		% [_right.position, _right.scale, _left.position, _left.scale])
+	if _left.scale.x >= 0.0:
+		_fail("the left arm is not mirrored — it will read as a second right hand")
+	if not is_equal_approx(_right.position.x, -_left.position.x):
+		_fail("the arms are not the same distance either side of the middle")
+	if not is_equal_approx(_right.position.y, _left.position.y) \
+			or not is_equal_approx(_right.position.z, _left.position.z):
+		_fail("the arms are at different heights or depths")
 
 
-## Nothing but arms survived: every vertex the cut kept belongs to the arm chain.
-## This is the assertion that catches a rig swapped underneath the cut.
-func _check_arms_only() -> void:
-	if _arms == null:
-		return
-	var skeleton := _arms.get_parent() as Skeleton3D
-	var arrays: Array = (_arms.mesh as ArrayMesh).surface_get_arrays(0)
-	var bones: PackedInt32Array = arrays[Mesh.ARRAY_BONES]
-	var weights: PackedFloat32Array = arrays[Mesh.ARRAY_WEIGHTS]
-	var indices: PackedInt32Array = arrays[Mesh.ARRAY_INDEX]
-	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
-	var influences: int = bones.size() / maxi(vertices.size(), 1)
-
-	var arm_ids := {}
-	for bone_name in PlayerViewModel.ARM_BONES:
-		var id := skeleton.find_bone(bone_name)
-		if id < 0:
-			_fail("no bone named %s in this rig" % bone_name)
-		else:
-			arm_ids[id] = true
-
-	# Only the vertices the indices actually reach are checked: the cut keeps the
-	# vertex buffer whole on purpose, so the torso's vertices are still in it —
-	# unreferenced, unrendered, and not what this is asking about.
-	var used := {}
-	for i in indices:
-		used[i] = true
-	var strays := 0
-	for vertex in used:
-		var pull := 0.0
-		for i in influences:
-			if arm_ids.has(bones[vertex * influences + i]):
-				pull += weights[vertex * influences + i]
-		if pull < PlayerViewModel.ARM_WEIGHT:
-			strays += 1
-	_say("drawn vertices: %d, none-arm among them: %d" % [used.size(), strays])
-	if strays > 0:
-		_fail("%d drawn vertices are not weighted to the arms" % strays)
-
-
-## The body the player is standing in is drawn as a shadow and nothing else, and
-## the copy the arms were cut from is not drawn at all.
+## The body the player is standing in is drawn as a shadow and nothing else.
 func _check_body_hidden() -> void:
 	var body: MeshInstance3D = _model.mesh_instance()
 	if body == null:
@@ -206,38 +186,35 @@ func _check_body_hidden() -> void:
 		return
 	if body.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY:
 		_fail("the player's own body is drawn, not just its shadow")
-	var source: MeshInstance3D = _view_model.get_node("Model").mesh_instance()
-	if source != null and source.visible:
-		_fail("the view model still draws the whole body behind its arms")
 
 
-## One state reaches both bodies, so the arms play what the body plays.
-func _check_state_shared() -> void:
-	var body: PlayerModel = _model
-	var arms_animation: StringName = _view_model.current_animation()
-	_say("standing: body plays %s, arms play %s" % [body.current_animation(), arms_animation])
-	if arms_animation != body.current_animation():
-		_fail("the arms and the body are playing different animations")
-	if arms_animation == &"":
-		_fail("the arms are playing nothing at all")
+## The step the camera rides reaches the arms. It is asked by driving the bob
+## straight rather than by walking the player into it: a bench that had to reach
+## a full run first would be measuring the acceleration curve as much as this.
+func _check_bob_reaches_arms() -> void:
+	_view_model.bob(0.0, 0.0)
+	var still := _right.position
+	# A quarter through the cycle is the top of the step, which is where the
+	# vertical swing is at its largest.
+	_view_model.bob(PI * 0.5, 1.0)
+	var stepping := _right.position
+	_say("bob moves the arm by %.3v" % (stepping - still))
+	if stepping.is_equal_approx(still):
+		_fail("the step never reaches the arms — they sit dead still over a swaying view")
+	if absf(stepping.y - still.y) < 0.001:
+		_fail("the step does not lift the arms")
 
 
 func _crouch() -> void:
 	Input.action_press("crouch")
 
 
-## Crouched, the animation drops the body and pushes the head forward — the case
-## the arms were asked for. Nothing of the body may reach the frame, and since
-## the body is shadows-only that is asked of the arms instead: they are what is
-## drawn, and they must still be in front of the camera rather than behind it.
+## Crouched, the head comes down and the arms come with it — the case the rest
+## pose was not measured in, and the one it is most likely to be wrong in.
 func _check_crouch_clear() -> void:
 	if not _player.is_crouching():
 		_fail("the player did not crouch")
 		return
-	_say("crouched: body plays %s, arms play %s"
-		% [_model.current_animation(), _view_model.current_animation()])
-	if _view_model.current_animation() != _model.current_animation():
-		_fail("crouched, the arms and the body are playing different animations")
 	_check_hands_in_frame("crouched")
 
 
@@ -252,29 +229,40 @@ func _check_looking_down() -> void:
 	_check_hands_in_frame("looking down")
 
 
-## The hands are where a pair of hands belongs: in front of the camera, below
-## its middle, and one to each side of it.
+## The hands are where a pair of hands belongs: in front of the camera, inside
+## the picture, and one to each side of it.
 ##
-## The numbers come from `_on_posed`, which the pose modifier calls with the
-## skeleton once it has bent the arms — the only moment the reading is the one
-## that will be drawn. Asked from out here it would be the animation's pose, in
-## which both hands hang below and behind the head in every one of the five
-## clips: a bench measuring that would report the hands off screen while the
-## player could plainly see them, which is a worse failure than no bench at all.
+## The reading is taken off the mesh's own bounds rather than off a bone,
+## because there are no bones: the model runs from its elbow at -Z to its
+## fingertips at +Z, so the two ends of its `AABB` along that axis are the two
+## joints this wants. Taken through each arm's own transform, the mirror
+## included, so the left hand is measured where the left hand actually is.
 func _check_hands_in_frame(where: String) -> void:
-	if _right_hand.is_zero_approx() and _left_hand.is_zero_approx():
-		_fail("%s: the pose modifier never reported where the hands are" % where)
+	if _right == null or _left == null:
 		return
-	_say("%s: right hand at %.2v, left at %.2v (camera space)" % [where, _right_hand, _left_hand])
-	# Negative Z is forward in Godot's camera space, and the near plane is at
-	# three centimetres — a hand closer than that is a hand not drawn at all.
-	for hand in [["right", _right_hand], ["left", _left_hand]]:
-		var name: String = hand[0]
-		var at: Vector3 = hand[1]
-		if at.z > -_camera.near:
+	# Only what is drawn is measured. A hidden hand is allowed to be anywhere —
+	# it is placed for the day it is shown (`PlayerViewModel.show_left`), not for
+	# the frame it is in now, and failing it for being off screen would be
+	# failing it for doing as it was told.
+	var drawn := [["right", _right]]
+	if _left.visible:
+		drawn.append(["left", _left])
+	for side in drawn:
+		var name: String = side[0]
+		var arm: Node3D = side[1]
+		var ends := _arm_ends(arm)
+		if ends.is_empty():
+			_fail("%s: the %s arm has no mesh to measure" % [where, name])
+			continue
+		var hand: Vector3 = ends[0]
+		var elbow: Vector3 = ends[1]
+		_say("%s: %s hand at %.2v (camera space)" % [where, name, hand])
+		# Negative Z is forward in Godot's camera space, and the near plane is at
+		# three centimetres — a hand closer than that is a hand not drawn at all.
+		if hand.z > -_camera.near:
 			_fail("%s: the %s hand is behind the near plane" % [where, name])
 			continue
-		var on_screen := _screen_position(at)
+		var on_screen := _screen_position(hand)
 		_say("%s: %s hand at (%.2f, %.2f) of the frame" % [where, name, on_screen.x, on_screen.y])
 		# A generous frame: the hands are meant to come in from the bottom
 		# corners, so this asks that they are *in* the picture rather than that
@@ -285,43 +273,72 @@ func _check_hands_in_frame(where: String) -> void:
 			_fail("%s: the %s hand is off the side of the frame" % [where, name])
 		if on_screen.y < 0.0 or on_screen.y > 1.0:
 			_fail("%s: the %s hand is off the top or bottom of the frame" % [where, name])
-	# And the elbows are behind the hands rather than through the lens. An elbow
-	# that comes closer to the camera than the near plane is not clipped away
-	# tidily: the triangles that straddle the plane are, and the sleeve behind
-	# them is drawn enormous, filling a quarter of the screen with flat yellow.
-	# `ELBOW_CLEARANCE` is where a slab of sleeve starts to be a slab rather than
-	# an arm.
-	for elbow in [["right", _right_elbow], ["left", _left_elbow]]:
-		var name: String = elbow[0]
-		var at: Vector3 = elbow[1]
-		_say("%s: %s elbow %.2f m from the lens" % [where, name, -at.z])
-		if at.z > -ELBOW_CLEARANCE:
-			_fail("%s: the %s elbow is %.2f m from the lens — the sleeve will fill the frame"
-				% [where, name, -at.z])
-	# One hand to each side. Both on the same side is what a mirrored pose does
-	# on a rig whose shoulders are not mirrors of each other, and it is the exact
-	# mistake the separate left and right angles exist to prevent.
-	if _right_hand.x <= 0.0 or _left_hand.x >= 0.0:
+		# And the elbow is out of the picture rather than across the middle of it.
+		# See `ELBOW_MARGIN`: an elbow near the lens is fine where it belongs, off
+		# the edge of the frame, and is a slab of sleeve where it does not.
+		var depth := -elbow.z
+		if depth <= 0.0:
+			_say("%s: %s elbow %.2f m behind the lens" % [where, name, -depth])
+		elif depth >= ELBOW_DEPTH:
+			_say("%s: %s elbow %.2f m in front of the lens" % [where, name, depth])
+		else:
+			var elbow_screen := _screen_position(elbow)
+			_say("%s: %s elbow %.2f m out, at (%.2f, %.2f) of the frame"
+				% [where, name, depth, elbow_screen.x, elbow_screen.y])
+			var outside := elbow_screen.x < -ELBOW_MARGIN or elbow_screen.x > 1.0 + ELBOW_MARGIN \
+				or elbow_screen.y < -ELBOW_MARGIN or elbow_screen.y > 1.0 + ELBOW_MARGIN
+			if not outside:
+				_fail("%s: the %s elbow is %.2f m from the lens and inside the frame — the sleeve will fill it"
+					% [where, name, depth])
+	# One hand to each side, asked only when there are two up. Both on the same
+	# side is what a mirror applied to the wrong axis does, and it is the exact
+	# mistake `_place` exists to avoid — but with the left hidden there is no
+	# crowding to catch, and `_check_arms_mirrored` is what guards the mirror.
+	if not _left.visible:
+		return
+	var right_ends := _arm_ends(_right)
+	var left_ends := _arm_ends(_left)
+	if right_ends.is_empty() or left_ends.is_empty():
+		return
+	if right_ends[0].x <= 0.0 or left_ends[0].x >= 0.0:
 		_fail("%s: both hands are on the same side of the screen" % where)
+
+
+## The two ends of an arm in camera space, fingertips first and elbow second.
+##
+## The model points down its own +Z, so the ends are the `AABB`'s two faces on
+## that axis, taken at the middle of each. Which of the two comes out in front
+## of the camera is the arm's own business — it is turned to face the lens — so
+## they are sorted by depth rather than assumed: the far one is the hand.
+func _arm_ends(arm: Node3D) -> Array:
+	var meshes := _meshes_under(arm)
+	if meshes.is_empty():
+		return []
+	var mesh := meshes[0]
+	var bounds := mesh.get_aabb()
+	var middle := bounds.get_center()
+	var into_camera := _camera.global_transform.affine_inverse() * mesh.global_transform
+	var a := into_camera * Vector3(middle.x, middle.y, bounds.position.z)
+	var b := into_camera * Vector3(middle.x, middle.y, bounds.end.z)
+	# Deeper into the screen is further from the camera, and that is the hand.
+	return [a, b] if a.z < b.z else [b, a]
+
+
+## Every mesh under a node, flattened. The imported scene's shape is the
+## importer's business, so it is walked rather than reached into by path.
+func _meshes_under(node: Node) -> Array[MeshInstance3D]:
+	var found: Array[MeshInstance3D] = []
+	if node is MeshInstance3D:
+		found.append(node as MeshInstance3D)
+	for child in node.get_children():
+		found.append_array(_meshes_under(child))
+	return found
 
 
 ## Where a point in camera space lands on screen, from 0 to 1 in each axis.
 func _screen_position(local: Vector3) -> Vector2:
 	var size := Vector2(_camera.get_viewport().get_visible_rect().size)
 	return _camera.unproject_position(_camera.global_transform * local) / size
-
-
-## Called by the pose modifier, from inside the skeleton's update.
-func _on_posed(skeleton: Skeleton3D) -> void:
-	var into_camera := _camera.global_transform.affine_inverse() * skeleton.global_transform
-	_right_hand = into_camera * skeleton.get_bone_global_pose(
-		skeleton.find_bone(&"mixamorig_RightHand")).origin
-	_left_hand = into_camera * skeleton.get_bone_global_pose(
-		skeleton.find_bone(&"mixamorig_LeftHand")).origin
-	_right_elbow = into_camera * skeleton.get_bone_global_pose(
-		skeleton.find_bone(&"mixamorig_RightForeArm")).origin
-	_left_elbow = into_camera * skeleton.get_bone_global_pose(
-		skeleton.find_bone(&"mixamorig_LeftForeArm")).origin
 
 
 ## A picture, on the runs that have a window to draw in. It is the only judge of
