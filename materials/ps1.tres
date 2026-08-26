@@ -6,7 +6,7 @@
 render_priority = 0
 shader = ExtResource("1_shader")
 shader_parameter/albedo_color = Color(1, 1, 1, 1)
-shader_parameter/jitter = 0.750000035625
+shader_parameter/jitter = 0.450000021375
 shader_parameter/jitter_z_coordinate = false
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
