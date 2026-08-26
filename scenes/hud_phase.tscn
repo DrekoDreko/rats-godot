@@ -63,6 +63,17 @@ theme_override_font_sizes/font_size = 16
 text = "0:00"
 horizontal_alignment = 1
 
+[node name="Wager" type="Label" parent="Panel/Margin/Rows"]
+visible = false
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+text = "x1"
+label_settings = SubResource("Label_hud_phase")
+horizontal_alignment = 1
+
 [node name="Ready" type="Label" parent="Panel/Margin/Rows"]
 layout_mode = 2
 mouse_filter = 2

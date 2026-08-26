@@ -39,11 +39,17 @@ var _inventory: Inventory
 func _ready() -> void:
 	_build_frames()
 	# Wait one frame so the player is already in the tree.
-	await get_tree().process_frame
-	# A phase can end on the frame this HUD is waiting through — the board in the
-	# van does exactly that — and a node that wakes up under a freed scene has no
-	# tree left to look a player up in. There is nobody to wire to in that case,
-	# and the HUD is on its way out with the rest of the scene anyway.
+	# Held onto before the wait rather than fetched again after it: a phase can
+	# end on the frame this HUD is waiting through — the board in the van does
+	# exactly that — and the node then resumes already out of the tree, where
+	# `get_tree()` is null and reaching through it throws.
+	var tree := get_tree()
+	if tree == null:
+		return
+	await tree.process_frame
+
+	# Out of the tree while we waited: the scene we belong to was freed, there is
+	# nobody left to wire to, and this HUD goes out with the rest of it.
 	if not is_inside_tree():
 		return
 	var player := get_tree().get_first_node_in_group("player")

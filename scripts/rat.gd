@@ -1455,7 +1455,6 @@ func _search_hideout() -> void:
 	# them some hundreds of times per search and the list does not change while
 	# it runs.
 	var eyes := _hunter_eyes()
-	var player_position := player.global_position
 	# Found a good hideout? Then it does not keep changing its mind halfway.
 	if _hideout_still_works(eyes):
 		return
@@ -1464,7 +1463,7 @@ func _search_hideout() -> void:
 	var best := INVALID_POINT
 	var best_score := -INF
 
-	for point in _candidates(eyes, player_position):
+	for point in _candidates(eyes):
 		# The point's score comes first because it is cheap; the path only
 		# subtracts, so anything already losing to the leader need not be asked
 		# about at all.
@@ -1497,12 +1496,12 @@ func _hunter_eyes() -> Array[Vector3]:
 
 ## The destinations it considers in this search, all already snapped to the mesh.
 ##
-## `eyes` is everybody, and `player_position` is the nearest man alone. The two
-## are used for different things and that is why both are passed: the blind spots
-## have to be behind cover from *every* pair of eyes, while the fan of points is
-## simply thrown in the direction the rat is already running, which is away from
-## whoever is closest.
-func _candidates(eyes: Array[Vector3], player_position: Vector3) -> Array[Vector3]:
+## `eyes` is everybody, and it is what the blind spots are measured against: a
+## hiding place has to be behind cover from *every* pair of eyes, not just the
+## nearest. The fan of points needs no such argument — it is thrown in the
+## direction the rat is already running, which `_away_from_hunters()` works out
+## from the same crew.
+func _candidates(eyes: Array[Vector3]) -> Array[Vector3]:
 	var points: Array[Vector3] = []
 
 	_cover_query.transform = Transform3D(Basis(), global_position)
@@ -1721,12 +1720,14 @@ func _path_direction() -> Vector3:
 func _navigable_point(point: Vector3) -> Vector3:
 	if not _map_ready():
 		return INVALID_POINT
-	var snapped := NavigationServer3D.map_get_closest_point(agent.get_navigation_map(), point)
-	if _flat_distance(snapped, point) > MESH_TOLERANCE:
+	# `on_mesh` and not `snapped`, which is a built-in method name that a local
+	# of that name hides for the rest of the function.
+	var on_mesh := NavigationServer3D.map_get_closest_point(agent.get_navigation_map(), point)
+	if _flat_distance(on_mesh, point) > MESH_TOLERANCE:
 		return INVALID_POINT
-	if absf(snapped.y - point.y) > MAX_HEIGHT_DROP:
+	if absf(on_mesh.y - point.y) > MAX_HEIGHT_DROP:
 		return INVALID_POINT
-	return snapped
+	return on_mesh
 
 ## Path to the point through the mesh. It comes back empty when the destination
 ## is on a separate island — on top of a platform, on the other side of a wall —

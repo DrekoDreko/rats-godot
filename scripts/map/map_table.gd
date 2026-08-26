@@ -15,16 +15,21 @@ extends Interactable
 const PROMPT_READ := "study the plan"
 const PROMPT_LEAVE := "step away from the table"
 
+## The lamp over the table, lit when there is a plan on it and dimmed when the
+## surface is bare. The same two levels the other stations light theirs with.
+const LAMP_ENERGY := 1.3
+const LAMP_ENERGY_OFF := 0.2
+
 @export var viewer_scene: PackedScene = preload("res://scenes/map/map_viewer.tscn")
 @export var lamp_path: NodePath = ^"Lamp"
 @export var sheet_path: NodePath = ^"PlanSurface"
 @export var open_sound_path: NodePath = ^"Open"
-@export var refused_sound_path: NodePath = ^"Refused"
 
 @onready var _lamp: OmniLight3D = get_node_or_null(lamp_path) as OmniLight3D
 @onready var _sheet: MeshInstance3D = get_node_or_null(sheet_path) as MeshInstance3D
 @onready var _open_sound: AudioStreamPlayer3D = get_node_or_null(open_sound_path) as AudioStreamPlayer3D
-@onready var _refused_sound: AudioStreamPlayer3D = get_node_or_null(refused_sound_path) as AudioStreamPlayer3D
+# No refusal sound: unlike the stations, this table turns nobody away — `use()`
+# opens the plan for whoever can take a screen, so there is nothing to buzz at.
 
 var _reader: Node3D
 var _viewer_instance: Control
@@ -99,15 +104,28 @@ func _setup_sheet() -> void:
 
 
 func _update_sheet_texture() -> void:
+	var plan := _has_plan()
+	# The lamp says from across the van what the sheet says up close: there is
+	# a job on the table, or there is not.
+	if _lamp != null:
+		_lamp.light_energy = LAMP_ENERGY if plan else LAMP_ENERGY_OFF
+
 	if _sheet_material == null:
 		return
-	var contract := ContractManager.current()
-	if contract != null and contract.floor_plan != null:
-		_sheet_material.albedo_texture = contract.floor_plan
+	if plan:
+		_sheet_material.albedo_texture = ContractManager.current().floor_plan
 		_sheet_material.albedo_color = Color.WHITE
 	else:
 		_sheet_material.albedo_texture = null
 		_sheet_material.albedo_color = Color(0.12, 0.16, 0.22, 1)
+
+
+## Whether there is a signed contract with a blueprint to draw. Both the lamp
+## and the sheet read it, so the two never disagree about whether the table has
+## anything on it.
+func _has_plan() -> bool:
+	var contract := ContractManager.current()
+	return contract != null and contract.floor_plan != null
 
 
 func _on_contract_signed(_id: String) -> void:

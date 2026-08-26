@@ -8,6 +8,13 @@ extends Node
 ## client asks, the host decides, and the host's answer is what every machine
 ## writes down (`request_sign` -> `_handle_request` -> `_apply`).
 ##
+## **The length of the hunt is settled here too**, and by the same rule and the
+## same road (`request_hunt_time` -> `_handle_hunt_time` -> `_apply_hunt_time`).
+## It sits beside the signature rather than in the phase machine because it is
+## the second half of one decision: the sheet says how bad the house is, and the
+## booking says how long the crew gives itself in it and what that is worth
+## (`HuntTime`). A crew reading one without the other is a crew betting blind.
+##
 ## Leafing is deliberately *not* on the wire. Which sheet a man happens to be
 ## looking at is his own business and nobody else's — four crew reading four
 ## different pages at once is the point of a clipboard, and replicating the page
@@ -30,6 +37,10 @@ extends Node
 ## The host signed something. `contract_id` is empty when the board was cleared,
 ## which is what the start of a new shift looks like.
 signal contract_signed(contract_id: String)
+
+## The host booked the hunt at a length. Fired on every machine, the host's
+## included, so that a clipboard drawing the wager never has to ask who it is.
+signal hunt_time_set(hunt_time: HuntTime.Type)
 
 ## We asked for something and were turned down. Emitted only on the machine that
 ## asked — the clipboard plays its buzzer and prints the sentence off this, and
@@ -55,6 +66,15 @@ const REFUSAL_UNDER_WAY := "The job is already signed for."
 ## clipboard, which only ever offers what it was handed; it is here for a packet
 ## that arrived from a machine with a different folder on disk.
 const REFUSAL_UNKNOWN := "That job is not on the board."
+## And what a client is told for reaching at the hunt length. The same rule as
+## the pen and worth the same sentence: how long the crew has in the house is the
+## leader's call, because it is the leader who signed for the job.
+const REFUSAL_NOT_HOST_TIME := "Only the crew leader sets the hunt time."
+## What anybody is told for changing it once the van has pulled off. It closes
+## with the board, and for a plainer reason than the signature does: the length
+## is what the crew shopped and set traps against, and moving it on the doorstep
+## would be moving the bet after the cards are down.
+const REFUSAL_TIME_UNDER_WAY := "The hunt time is settled."
 
 ## Every contract on disk, sorted by difficulty and then by id so that all four
 ## machines number the pages the same way. Read once on the way up: the folder
@@ -138,6 +158,31 @@ func is_open() -> bool:
 	return PhaseManager.current() == Phase.Type.LOBBY
 
 
+## How long the hunt is booked for. Read off `SessionManager`, which holds the
+## one copy — nothing here keeps a second that could disagree.
+func hunt_time() -> HuntTime.Type:
+	return SessionManager.hunt_time
+
+
+## Asks the host to book the hunt at a length. The same road the signature takes,
+## and for the same reason: nothing is written locally and corrected later, so
+## what a man reads on the sheet is always what the host settled on.
+func request_hunt_time(value: HuntTime.Type) -> void:
+	if PhaseManager.is_host():
+		_handle_hunt_time(value, _our_peer_id())
+		return
+	_request_hunt_time.rpc_id(HOST_PEER, value)
+
+
+## Books it outright, without asking. **Host only**, for the shift that is set up
+## rather than chosen — a bench, or a lobby entered from a command line.
+func set_hunt_time(value: HuntTime.Type) -> void:
+	if not PhaseManager.is_host():
+		push_warning("ContractManager: only the host sets the hunt time.")
+		return
+	_handle_hunt_time(value, 0)
+
+
 ## Asks the host to sign a job. **This is the only way in from the clipboard** —
 ## nothing is written locally and corrected later, so what a man sees on the
 ## wall is always what the host settled on.
@@ -171,6 +216,13 @@ func state() -> String:
 	return SessionManager.current_contract
 
 
+## And the length the hunt is booked at, for the same newcomer. Handed over
+## beside `state()` rather than folded into it, so that the packet `JoinGate`
+## already sends does not change shape for callers that only wanted the job.
+func hunt_time_state() -> int:
+	return SessionManager.hunt_time
+
+
 ## Takes a newcomer's copy of the board from the host's packet. It does not go
 ## through `_apply`: this is not a decision arriving, it is the state of one
 ## already made, and it lands on one machine rather than all of them.
@@ -182,6 +234,18 @@ func adopt(contract_id: String) -> void:
 			% contract_id)
 		return
 	_settle(contract_id)
+
+
+## Takes a newcomer's copy of the booked length, the same way `adopt` takes the
+## job. A value this build does not know is left alone rather than written: the
+## default is a length that certainly works, and a hunt with no duration would be
+## a hunt whose clock never starts.
+func adopt_hunt_time(value: int) -> void:
+	if not HuntTime.is_valid(value):
+		push_warning("ContractManager: the host booked hunt length %d, which we do not have."
+			% value)
+		return
+	_settle_hunt_time(value)
 
 # --- The wire ---------------------------------------------------------------
 
@@ -234,6 +298,56 @@ func _may_sign_from(from_peer: int) -> bool:
 	if from_peer == 0 or not multiplayer.has_multiplayer_peer():
 		return true
 	return from_peer == HOST_PEER
+
+
+## The host's decision about the hunt length, in one place, the same shape
+## `_handle_request` has. Two ways it is turned down and they are the two rules
+## the wager has: only the leader books it, and only while the van is parked.
+##
+## An unknown value is dropped without a sentence rather than refused out loud:
+## nothing on the clipboard can produce one, so the only way here is a packet
+## from a machine built against a different `HuntTime`, and there is no player to
+## explain that to.
+func _handle_hunt_time(value: HuntTime.Type, from_peer: int) -> void:
+	if not _may_sign_from(from_peer):
+		_refuse_to(from_peer, REFUSAL_NOT_HOST_TIME)
+		return
+	if not is_open():
+		_refuse_to(from_peer, REFUSAL_TIME_UNDER_WAY)
+		return
+	if not HuntTime.is_valid(value):
+		push_warning("ContractManager: peer %d asked for hunt length %d, which does not exist."
+			% [from_peer, value])
+		return
+	if SessionManager.hunt_time == value:
+		return
+	_apply_hunt_time.rpc(value)
+
+
+## A client asking for a length, arriving at the host. `any_peer` for the same
+## reason `_request` is: anybody may ask, and the host is the only one who acts.
+@rpc("any_peer", "reliable")
+func _request_hunt_time(value: HuntTime.Type) -> void:
+	if not PhaseManager.is_host():
+		push_warning("ContractManager: a hunt-time request reached a machine that is not the host.")
+		return
+	_handle_hunt_time(value, multiplayer.get_remote_sender_id())
+
+
+## The booking, run on every machine at once, the host included (`call_local`) —
+## a host counting ten minutes while the crew counts two is the same evening-long
+## bug the signature guards against, with money on top of it.
+@rpc("authority", "call_local", "reliable")
+func _apply_hunt_time(value: HuntTime.Type) -> void:
+	var sender := multiplayer.get_remote_sender_id()
+	if sender != 0 and sender != HOST_PEER:
+		push_warning("ContractManager: a hunt time from peer %d, which is not the host — ignored."
+			% sender)
+		return
+	if not HuntTime.is_valid(value):
+		push_warning("ContractManager: booked hunt length %d, which we do not have." % value)
+		return
+	_settle_hunt_time(value)
 
 
 ## The signature, run on every machine at once, the host included
@@ -294,6 +408,19 @@ func _settle(contract_id: String) -> void:
 		PhaseManager.set_house(contract.house_scene)
 	_update_block()
 	contract_signed.emit(contract_id)
+
+
+## Writes the booked length down and says so. Reached from the broadcast and
+## from a newcomer's state packet alike, so that a man who joined late is
+## counting the same clock as everybody else.
+##
+## Nothing is done to the phase machine here, on purpose: it asks
+## `SessionManager` for the hunt's length at the moment it starts the clock
+## (`PhaseManager.duration_of`), so a booking changed twice in the van needs no
+## undoing — the last one written is the one the house runs on.
+func _settle_hunt_time(value: HuntTime.Type) -> void:
+	SessionManager.set_hunt_time(value)
+	hunt_time_set.emit(value)
 
 
 ## Holds the van shut while the board is blank, and lets it go when it is not.

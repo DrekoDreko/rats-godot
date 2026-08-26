@@ -15,19 +15,21 @@ extends Node3D
 ## - Ready station at the front door allows the crew to advance early if all ready.
 ##
 ## **Hunt Phase (Card 13):**
-## - Perceptible transition: 1-second blackout with rat screech audio, followed by
-##   dark, atmospheric hunt lighting where flashlights become essential.
+## - The transition plays the rat screech, but the lights stay where survey left
+##   them: no blackout and no darkening, so the house reads the same in both phases.
 ## - Host spawns rats based on `SessionManager.random_seed` and the contract's
 ##   infestation level in nests far from player front-door spawns.
 ## - Visual highlights on rat holes are extinguished.
 ## - Attack weapons unlocked in the inventory belt.
 ## - Trap installation takes longer arming cooldown.
-## - No countdown timer: phase ends when all rats are eliminated or captured,
-##   advancing to RESULT.
+## - The phase ends on whichever comes first: the last rat cleared out of the
+##   house, or the clock the crew booked in the van running out (`HuntTime` —
+##   ten minutes at face value, five at double, two at five times). Either way
+##   the shift advances to RESULT, and whatever is still loose stays in the
+##   walls unpaid for.
 
 @export var traps_root_path: NodePath = ^"Traps"
 @export var rats_root_path: NodePath = ^"Rats"
-@export var holes_root_path: NodePath = ^"RatHoles"
 @export var geometry_root_path: NodePath = ^"Geometry"
 
 @export_group("Lighting Nodes")
@@ -40,19 +42,15 @@ extends Node3D
 @export_group("Audio")
 @export var screech_audio_path: NodePath = ^"Audio/Screech"
 
-const SURVEY_SUN_ENERGY := 0.65
-const SURVEY_AMBIENT_ENERGY := 0.35
-const SURVEY_HALLWAY_ENERGY := 1.2
-const SURVEY_KITCHEN_ENERGY := 1.1
-const SURVEY_LIVING_ENERGY := 1.2
+## House lighting. Survey and hunt share one set of energies: the hunt used to
+## cut them to a twentieth of these and open with a blackout, which read as the
+## screen going dark rather than as atmosphere.
+const SUN_ENERGY := 0.65
+const AMBIENT_ENERGY := 0.35
+const HALLWAY_ENERGY := 1.2
+const KITCHEN_ENERGY := 1.1
+const LIVING_ENERGY := 1.2
 
-const HUNT_SUN_ENERGY := 0.05
-const HUNT_AMBIENT_ENERGY := 0.08
-const HUNT_HALLWAY_ENERGY := 0.25
-const HUNT_KITCHEN_ENERGY := 0.2
-const HUNT_LIVING_ENERGY := 0.25
-
-const BLACKOUT_DURATION := 1.0
 const DEFAULT_INFESTATION := 6
 const RAT_SCENE_PATH := "res://scenes/rat.tscn"
 ## The peer that thinks for every rat on the map. It is the same 1 that
@@ -64,7 +62,8 @@ const HOST_PEER := 1
 
 @onready var _traps_root: Node3D = get_node_or_null(traps_root_path) as Node3D
 @onready var _rats_root: Node3D = get_node_or_null(rats_root_path) as Node3D
-@onready var _holes_root: Node3D = get_node_or_null(holes_root_path) as Node3D
+# No `_holes_root`: the holes are found by their `rat_holes` group instead, which
+# picks them up wherever the level put them rather than only under one node.
 @onready var _geometry_root: Node3D = get_node_or_null(geometry_root_path) as Node3D
 
 @onready var _sun: DirectionalLight3D = get_node_or_null(sun_path) as DirectionalLight3D
@@ -75,11 +74,8 @@ const HOST_PEER := 1
 @onready var _screech_audio: AudioStreamPlayer = get_node_or_null(screech_audio_path) as AudioStreamPlayer
 
 var _loaded_house_path := ""
-var _in_blackout := false
-var _hunt_lighting_active := false
 var _rats_spawned := false
 var _hunt_completed := false
-var _blackout_tween: Tween
 
 
 func _ready() -> void:
@@ -145,14 +141,11 @@ func active_rat_count() -> int:
 	return count
 
 
-## Whether the house is currently experiencing the 1-second transition blackout.
-func is_in_blackout() -> bool:
-	return _in_blackout
-
-
-## Whether the house is currently configured in dark hunt lighting.
-func is_hunt_lighting() -> bool:
-	return _hunt_lighting_active
+## Whether the house lights are lit at their normal energies. True from `_ready`
+## onward in every phase; kept as a hook for anything that needs to check that
+## the house is not sitting dark.
+func is_lit() -> bool:
+	return _sun == null or is_equal_approx(_sun.light_energy, SUN_ENERGY)
 
 
 ## Dynamically loads custom house geometry from the signed contract if specified.
@@ -226,73 +219,27 @@ func _update_phase_state(is_transition: bool = false) -> void:
 		if node.has_method("set_highlight"):
 			node.set_highlight(is_survey)
 
+	_apply_house_lighting()
+
 	if is_hunt:
-		if is_transition:
-			_start_blackout_transition()
-		else:
-			_apply_hunt_lighting()
+		if is_transition and _screech_audio != null:
+			_screech_audio.play()
 		_spawn_rats_if_needed()
-	elif is_survey:
-		_apply_survey_lighting()
 
 
-## Blackout transition: cuts lights for 1 second, plays screech audio, then applies dark hunt lighting.
-func _start_blackout_transition() -> void:
-	_in_blackout = true
-	_hunt_lighting_active = false
-
-	if _blackout_tween != null and _blackout_tween.is_running():
-		_blackout_tween.kill()
-
-	# Instant blackout
-	_set_light_energies(0.0, 0.0, 0.0, 0.0, 0.0)
-
-	# Play rat screech sound effect
-	if _screech_audio != null:
-		_screech_audio.play()
-
-	_blackout_tween = create_tween()
-	_blackout_tween.tween_interval(BLACKOUT_DURATION)
-	_blackout_tween.tween_callback(func() -> void:
-		_in_blackout = false
-		_apply_hunt_lighting()
-	)
-
-
-func _apply_survey_lighting() -> void:
-	_in_blackout = false
-	_hunt_lighting_active = false
-	_set_light_energies(
-		SURVEY_SUN_ENERGY,
-		SURVEY_AMBIENT_ENERGY,
-		SURVEY_HALLWAY_ENERGY,
-		SURVEY_KITCHEN_ENERGY,
-		SURVEY_LIVING_ENERGY
-	)
-
-
-func _apply_hunt_lighting() -> void:
-	_hunt_lighting_active = true
-	_set_light_energies(
-		HUNT_SUN_ENERGY,
-		HUNT_AMBIENT_ENERGY,
-		HUNT_HALLWAY_ENERGY,
-		HUNT_KITCHEN_ENERGY,
-		HUNT_LIVING_ENERGY
-	)
-
-
-func _set_light_energies(sun_e: float, amb_e: float, hall_e: float, kit_e: float, liv_e: float) -> void:
+## Lights the house at its normal energies. Applied in every phase, so entering
+## the hunt no longer changes how bright the house is.
+func _apply_house_lighting() -> void:
 	if _sun != null:
-		_sun.light_energy = sun_e
+		_sun.light_energy = SUN_ENERGY
 	if _environment != null and _environment.environment != null:
-		_environment.environment.ambient_light_energy = amb_e
+		_environment.environment.ambient_light_energy = AMBIENT_ENERGY
 	if _hallway_light != null:
-		_hallway_light.light_energy = hall_e
+		_hallway_light.light_energy = HALLWAY_ENERGY
 	if _kitchen_light != null:
-		_kitchen_light.light_energy = kit_e
+		_kitchen_light.light_energy = KITCHEN_ENERGY
 	if _living_light != null:
-		_living_light.light_energy = liv_e
+		_living_light.light_energy = LIVING_ENERGY
 
 
 ## Spawns the rats authoritative on the host using SessionManager.random_seed and Contract.infestation.
@@ -380,6 +327,10 @@ func _on_rat_died(_rat: Node3D, _type: int) -> void:
 		_check_hunt_completion()
 
 
+## Whether the house is clear, and if it is, on to the pay slip. This is one of
+## the two ways the hunt ends; the other is the booked clock running out, which
+## is the phase machine's own timer and needs nothing from here — the guard above
+## sees the phase has already moved and this stops asking.
 func _check_hunt_completion() -> void:
 	if _hunt_completed or not _rats_spawned:
 		return
@@ -392,6 +343,12 @@ func _check_hunt_completion() -> void:
 
 
 func _on_phase_changed(previous: Phase.Type, current: Phase.Type) -> void:
+	# The hunt is over however it ended. Latched here as well as in the check
+	# above, because a hunt the clock ended leaves rats alive and would otherwise
+	# never set this — and a `_process` still asking after the house is clear is
+	# a question with no phase left to answer it.
+	if previous == Phase.Type.HUNT:
+		_hunt_completed = true
 	var is_survey_to_hunt := previous == Phase.Type.SURVEY and current == Phase.Type.HUNT
 	_update_phase_state(is_survey_to_hunt)
 

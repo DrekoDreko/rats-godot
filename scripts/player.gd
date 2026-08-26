@@ -29,6 +29,12 @@ extends CharacterBody3D
 ## anything, which is the only way a click can reach a button instead of being
 ## spent grabbing the camera back.
 ##
+## What he sees sways a little while he walks (`_update_bob`): the camera rides
+## up and down on a sine wave scaled by how fast he is actually moving, and comes
+## back to rest the moment he stops. It is drawn on the camera alone, so nothing
+## that aims — the ray out of it, the flashlight, the weapon on the head — is
+## moved by it.
+##
 ## And he is being watched. In a lobby, everything the other players see of him
 ## is read off two things — `animation_state()` and the `attacked` signal — by
 ## the avatar that stands for him on their screens
@@ -79,6 +85,14 @@ signal hold_finished(completed: bool)
 @export var gravity := 22.0
 @export var mouse_sensitivity := 0.0035
 
+@export_group("Camera")
+## How far the camera travels from its resting height, in metres, at a full run.
+## Small on purpose: this is a sway to walk to, not a shake.
+@export var bob_amount := 0.045
+## Steps per second at a full run. Slower gaits use the same rhythm scaled down,
+## so the sway keeps time with the legs instead of running away from them.
+@export var bob_frequency := 1.9
+
 @export_group("Health")
 ## How much flesh the player has. It is read once, when the shift starts, and
 ## again at every respawn.
@@ -100,6 +114,9 @@ const CROUCH_SCALE := 0.55
 const CROUCH_SPEED := 9.0
 ## Height at which the character is sent back to his starting point.
 const MIN_HEIGHT := -20.0
+## How fast the sway settles back to nothing once he stops, in fractions of the
+## way per second. Quick enough not to be a drift, slow enough not to be a snap.
+const BOB_SETTLE := 8.0
 
 @onready var head: Node3D = $Head
 @onready var camera: Camera3D = $Head/Camera
@@ -121,6 +138,17 @@ const MIN_HEIGHT := -20.0
 
 var _start_position: Vector3
 var _air_time := 0.0
+## Where the camera is in the walking cycle, in radians. It keeps running while
+## he walks and is left where it stopped when he stands still — picked back up
+## from there on the next step, so setting off again does not jerk the view.
+var _bob_phase := 0.0
+## How much of the sway is being applied, from 0 standing still to 1 at a full
+## run. It travels rather than switching so that stopping eases the camera back
+## to its resting height instead of dropping it there.
+var _bob_weight := 0.0
+## The camera's height in the head, read once off the scene: the sway is drawn
+## around it, never away from it.
+var _camera_rest_y := 0.0
 ## How far down he is, from 0 standing to 1 fully crouched. It is a fraction and
 ## not a flag because the body moves through it: everything that depends on his
 ## height is read off this and follows it down.
@@ -155,6 +183,7 @@ func _ready() -> void:
 	_stand_height = shape.height
 	_stand_collision_y = collision.position.y
 	_stand_head = head.position.y
+	_camera_rest_y = camera.position.y
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	# He is inside his own body, so the mesh would be the inside of his own head.
 	# The shadow it throws is still his and still worth having.
@@ -167,7 +196,7 @@ func _ready() -> void:
 		weapon.caught.connect(func(rat: Node3D) -> void: capture_started.emit(rat))
 		weapon.pressure_changed.connect(func(fraction: float) -> void: capture_progress.emit(fraction))
 		weapon.finished.connect(func(killed: bool) -> void: capture_finished.emit(killed))
-	inventory.equipped.connect(func(index: int, weapon: Weapon) -> void: weapon_changed.emit(index, weapon))
+	inventory.equipped.connect(func(slot: int, weapon: Weapon) -> void: weapon_changed.emit(slot, weapon))
 
 func _unhandled_input(event: InputEvent) -> void:
 	# With a screen open the player is not in the map: the mouse belongs to the
@@ -276,6 +305,9 @@ func _physics_process(delta: float) -> void:
 	# this frame, and asking it beforehand would draw him doing what he was doing
 	# a frame ago — walking into a wall included.
 	model.set_state(animation_state())
+	# After the move as well, and for the same reason: the sway is drawn from the
+	# ground he actually covered this frame, not from the keys he was holding.
+	_update_bob(delta)
 
 	if global_position.y < MIN_HEIGHT:
 		respawn()
@@ -305,6 +337,31 @@ func _desired_direction() -> Vector3:
 	var direction := base.z * input.y + base.x * input.x
 	direction.y = 0.0
 	return direction.normalized()
+
+# --- The sway ---------------------------------------------------------------
+
+## The camera rides a sine wave while he walks. Both how far it travels and how
+## fast are scaled by the ground he is covering, measured against his run: a walk
+## sways less and slower than a run, and a crouch-crawl barely at all, without
+## any of the three being written down anywhere here.
+##
+## Off the floor there is no sway — nothing is stepping — and it eases out rather
+## than cutting, so a jump does not chop the view in half.
+##
+## It moves the camera and nothing else. The ray out of it, the flashlight and
+## the weapon on the head all hang from the head, or from the camera's rest, so
+## what he is aiming at does not sway with what he is seeing.
+func _update_bob(delta: float) -> void:
+	var speed := Vector2(velocity.x, velocity.z).length()
+	var moving := is_on_floor() and speed >= IDLE_SPEED
+	var gait := clampf(speed / run_speed, 0.0, 1.0) if moving else 0.0
+	_bob_weight = move_toward(_bob_weight, gait, BOB_SETTLE * delta)
+	if moving:
+		_bob_phase = fposmod(_bob_phase + TAU * bob_frequency * gait * delta, TAU)
+	if is_zero_approx(_bob_weight):
+		camera.position.y = _camera_rest_y
+		return
+	camera.position.y = _camera_rest_y + sin(_bob_phase) * bob_amount * _bob_weight
 
 # --- Down on his knees ------------------------------------------------------
 
@@ -378,6 +435,11 @@ func respawn() -> void:
 	# until he thought to press Ctrl and let go of it.
 	_crouch = 0.0
 	_apply_crouch()
+	# And with the camera where the scene put it. Waking up mid-step would leave
+	# the view a finger off its resting height until he walked again.
+	_bob_phase = 0.0
+	_bob_weight = 0.0
+	camera.position.y = _camera_rest_y
 	# And on his feet in the drawing too, not only in the collision. A man who
 	# died falling would otherwise stand at the van still folded into the pose of
 	# the jump, until the next physics frame thought better of it.

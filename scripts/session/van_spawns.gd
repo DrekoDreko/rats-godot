@@ -53,11 +53,16 @@ func _ready() -> void:
 	# have run his own `_ready` yet, and the crew list can still be arriving off
 	# the wire. Standing him somewhere wrong and moving him a frame later is
 	# visible; waiting a frame is not.
-	await get_tree().process_frame
-	# The frame that was waited for is a frame in which the scene can have
-	# changed under this node — a phase arriving off the wire as the van comes
-	# up. Resuming into a freed node would reach for a tree that is no longer
-	# there; there is nobody left to place.
+	# The tree is held before the wait, not fetched again after it: the frame
+	# that was waited for is a frame in which the scene can have changed under
+	# this node — a phase arriving off the wire as the van comes up — and
+	# `get_tree()` on the freed node then comes back null.
+	var tree := get_tree()
+	if tree == null:
+		return
+	await tree.process_frame
+
+	# Freed while we waited: there is nobody left to place.
 	if not is_inside_tree():
 		return
 	_place_player()

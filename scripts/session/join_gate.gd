@@ -386,6 +386,7 @@ func _snapshot() -> Dictionary:
 	return {
 		"crew": crew,
 		"contract": SessionManager.current_contract,
+		"hunt_time": ContractManager.hunt_time_state(),
 		"phase": SessionManager.phase,
 		"seed": SessionManager.random_seed,
 		"pins": MapManager.state(),
@@ -419,6 +420,12 @@ func _apply_welcome(state: Dictionary) -> void:
 	# at the house and takes the hold off the ready boards. A newcomer who only
 	# copied the id would stand in a van whose boards still refused to leave.
 	ContractManager.adopt(String(state.get("contract", "")))
+	# The wager goes with the job: a newcomer counting ten minutes in a house the
+	# crew booked for two would be a man watching the wrong clock and paid at the
+	# wrong rate. Adopted here rather than left at the default for the same reason
+	# the signature is — the default is a length, and a wrong length is worse than
+	# no length at all.
+	ContractManager.adopt_hunt_time(int(state.get("hunt_time", HuntTime.DEFAULT)))
 	MapManager.adopt(state.get("pins", []))
 	SessionManager.random_seed = int(state.get("seed", 0))
 	var phase: Phase.Type = state.get("phase", Phase.Type.LOBBY)

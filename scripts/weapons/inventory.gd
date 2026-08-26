@@ -37,12 +37,16 @@ extends Node
 ## `_ready` yet has no camera to give back and no resting rotation to return to.
 
 ## The equipped slot changed. `weapon` comes in null on an empty slot, and
-## `index` comes in `HANDS_INDEX` when what is out is the hands.
-signal equipped(index: int, weapon: Weapon)
+## `slot` comes in `HANDS_INDEX` when what is out is the hands.
+##
+## Named `slot` and not `index` because `index()` is a method on this class, and
+## a parameter wearing a method's name shadows it for every closure that takes
+## the signal.
+signal equipped(slot: int, weapon: Weapon)
 
 ## A slot was asked for and the belt would not give it. It is what a station or
 ## a HUD plays a buzzer off — the belt itself makes no noise.
-signal refused(index: int)
+signal refused(slot: int)
 
 ## What `index()` reads while the hands are out. It is no slot at all: it sits
 ## before the first one on purpose, so everything that walks the belt by index

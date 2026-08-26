@@ -24,7 +24,6 @@ const RESULT := 4
 const ANA := 111
 const BRUNO := 222
 const WAIT := 8
-const BLACKOUT_FRAMES := 65
 
 var _session: Node
 var _phase: Node
@@ -55,7 +54,7 @@ func _physics_process(_delta: float) -> bool:
 		0: return _check_setup_survey()
 		1: return _check_survey_initial_state()
 		2: return _check_transition_to_hunt()
-		3: return _check_blackout_and_lighting()
+		3: return _check_lighting_unchanged()
 		4: return _check_hunt_environment_and_weapons()
 		5: return _check_rat_spawning_and_nests()
 		6: return _check_hunt_completion_to_result()
@@ -119,17 +118,20 @@ func _check_transition_to_hunt() -> bool:
 	_expect(_phase.current() == HUNT, "phase transitioned to HUNT")
 	_expect(current_scene == _house_node, "same house scene kept on screen")
 	_expect(_house_node.get_meta("house_instance_id") == _house_node.get_instance_id(), "no scene reload occurred")
-	_expect(_house_node.is_in_blackout(), "1-second blackout active immediately on transition")
+	_expect(_house_node.is_lit(), "house stays lit through the transition, no blackout")
 	return _advance()
 
 
-func _check_blackout_and_lighting() -> bool:
-	# Wait for 1-second blackout duration to complete
-	if _clock < BLACKOUT_FRAMES:
+## The hunt used to blacken the screen and then run at a twentieth of the survey
+## energies. Both are gone: the lights read the same on either side of the change.
+func _check_lighting_unchanged() -> bool:
+	if _clock < WAIT:
 		return false
 
-	_expect(not _house_node.is_in_blackout(), "blackout ended after 1 second")
-	_expect(_house_node.is_hunt_lighting(), "dark hunt lighting applied")
+	_expect(_house_node.is_lit(), "house still lit once the hunt is running")
+	var sun: DirectionalLight3D = _house_node.get_node_or_null("Sun") as DirectionalLight3D
+	if sun != null:
+		_expect(is_equal_approx(sun.light_energy, 0.65), "sun kept its survey energy in the hunt")
 	return _advance()
 
 

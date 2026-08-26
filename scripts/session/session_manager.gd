@@ -41,6 +41,9 @@ signal player_left(steam_id: int)
 signal player_changed(steam_id: int)
 ## The contract was settled on.
 signal contract_changed(contract_id: String)
+## How long the hunt was booked for, and so what every rat in it is worth. The
+## clipboard writes it and the sheet on the wall reads it back.
+signal hunt_time_changed(hunt_time: HuntTime.Type)
 
 ## The colours a crew can wear, saturated and few, the way a PSX palette is.
 ## Eight for four players, so that there is a real choice left for the last one
@@ -74,6 +77,14 @@ var current_contract := ""
 ## Where in the shift we are. The phase machine is what moves it; everybody else
 ## reads it.
 var phase: Phase.Type = Phase.Type.LOBBY
+
+## How long the crew gave itself in the house, and so what multiplies every rat
+## it brings out (`HuntTime`). It lives here rather than on the contract because
+## it is the crew's wager and not the client's terms: the same house can be
+## worked in ten minutes or in two, and which of those was chosen has to reach
+## the phase machine that times the hunt and the wallet that pays for it, both of
+## which are two scenes away from the van it was picked in.
+var hunt_time: HuntTime.Type = HuntTime.DEFAULT
 
 ## The number every random thing about this house is drawn from — which room the
 ## nests are in, which holes are real. The host rolls it once and hands it to
@@ -258,6 +269,27 @@ func set_contract(contract_id: String) -> void:
 	contract_changed.emit(contract_id)
 
 
+## Books the hunt at a length and says so. A value that is not one of the three
+## is refused rather than written: everything downstream of this reads a duration
+## and a multiplier off it, and neither has an answer for a setting that does not
+## exist.
+func set_hunt_time(value: HuntTime.Type) -> void:
+	if not HuntTime.is_valid(value):
+		push_warning("SessionManager: %d is not a hunt length." % value)
+		return
+	if hunt_time == value:
+		return
+	hunt_time = value
+	hunt_time_changed.emit(value)
+
+
+## What every rat delivered this shift is multiplied by. Asked by the wallet, and
+## here rather than there so that the wager is read off the one place it is
+## stored.
+func hunt_multiplier() -> float:
+	return HuntTime.multiplier(hunt_time)
+
+
 ## Rolls the number the house is built from and returns it. The host calls this
 ## once; everybody else is handed the answer and writes `random_seed` directly.
 func roll_seed() -> int:
@@ -278,7 +310,9 @@ func reset() -> void:
 	current_contract = ""
 	phase = Phase.Type.LOBBY
 	random_seed = 0
+	hunt_time = HuntTime.DEFAULT
 	contract_changed.emit("")
+	hunt_time_changed.emit(hunt_time)
 
 
 ## A blank crew member. The colour is settled here, on the way in, so that

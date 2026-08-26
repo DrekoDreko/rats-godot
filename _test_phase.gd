@@ -200,8 +200,13 @@ func _check_the_clock_ends_the_phase() -> bool:
 	_expect(_changes.size() == 1 and _changes[0][1] == Phase.Type.HUNT,
 		"and the shift walked on without anybody saying ready")
 	_expect(_phase.current() == Phase.Type.HUNT, "into the hunt")
-	_expect(not _phase.has_timer(), "which has no clock")
-	_expect(_phase.seconds_left == 0.0, "so there is nothing left to show")
+	# The hunt has a clock now, and how long it is was booked by the crew back in
+	# the van (`HuntTime`). A bench that never booked one gets the default, which
+	# is the ten-minute shift — so what is checked here is that the clock started
+	# at all and is counting something, and how the three settings differ is
+	# `_test_hunt_time.gd`'s business rather than this one's.
+	_expect(_phase.has_timer(), "which is timed by whatever the crew booked")
+	_expect(_phase.seconds_left > 0.0, "and started counting it down")
 	return _advance()
 
 ## A machine that is not the host does not get to decide. There is no wire here

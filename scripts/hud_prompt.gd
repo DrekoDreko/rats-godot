@@ -10,11 +10,20 @@ extends Label
 func _ready() -> void:
 	hide()
 	# Wait one frame so the player is already in the tree.
-	await get_tree().process_frame
-	# A phase can end on the frame this HUD is waiting through — the board in the
-	# van does exactly that — and a node that wakes up under a freed scene has no
-	# tree left to look a player up in. There is nobody to wire to in that case,
-	# and the HUD is on its way out with the rest of the scene anyway.
+	#
+	# Awaited on the *tree* signal rather than on `get_tree().process_frame`
+	# fetched again after the wait: a phase can end on the frame this HUD is
+	# waiting through — the board in the van does exactly that — and the node
+	# then resumes already out of the tree, where `get_tree()` is null. Reaching
+	# through it for `get_first_node_in_group` is what threw
+	# `Parameter "data.tree" is null`.
+	var tree := get_tree()
+	if tree == null:
+		return
+	await tree.process_frame
+
+	# Out of the tree while we waited: the scene we belong to was freed, there is
+	# nobody left to wire to, and this HUD is on its way out with it.
 	if not is_inside_tree():
 		return
 	var player := get_tree().get_first_node_in_group("player")

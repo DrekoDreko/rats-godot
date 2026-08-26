@@ -25,6 +25,14 @@ extends Interactable
 ## refusal is played and printed — because a button that silently does nothing
 ## is indistinguishable from a key that is not working.
 ##
+## **The clock is booked on the same board.** How long the crew gives itself in
+## the house — ten minutes at face value, five at double, two at five times
+## (`HuntTime`) — is set with the up and down keys, and it is the leader's to set
+## for exactly the reason the signature is his. It belongs on this sheet and not
+## on a panel of its own because it is only a decision when it is read against
+## the infestation printed two lines above it: forty rats in two minutes is a
+## different bet from six.
+##
 ## **The sheet is drawn from the resource, every time.** Nothing here stores a
 ## contract: the page is an index, the sheet is redrawn off `ContractManager`,
 ## and the signed job is read off `SessionManager` through it. That is why the
@@ -43,6 +51,14 @@ const COLOR_PEN := Color("ffb229")
 const COLOR_PEN_DEAD := Color("140f08")
 ## And the green a sheet is stamped with once it is the signed one.
 const COLOR_SIGNED := Color("29c443")
+## What the wager line is written in as the bet gets steeper: face value in
+## white, double in amber, five times in red. The colour is the warning — a man
+## who has stopped reading the sheet still sees the line go red.
+const COLOR_WAGER := {
+	HuntTime.Type.LONG: Color("ffffff"),
+	HuntTime.Type.MEDIUM: Color("ffb229"),
+	HuntTime.Type.SHORT: Color("ff4b3a"),
+}
 
 ## How bright the lamp over the board burns while somebody may sign, and what it
 ## falls to otherwise. Not zero: an unlit board in a dark van is a board nobody
@@ -139,6 +155,7 @@ func _ready() -> void:
 	# No `_process`: a board polling the host sixty times a second for an answer
 	# that changes once a lobby is work for nothing.
 	ContractManager.contract_signed.connect(_on_contract_signed)
+	ContractManager.hunt_time_set.connect(_on_hunt_time_set)
 	ContractManager.request_refused.connect(_on_refused)
 	PhaseManager.phase_changed.connect(_on_phase_changed)
 
@@ -182,6 +199,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		_leaf(-1)
 	elif event.is_action_pressed("move_right"):
 		_leaf(1)
+	elif event.is_action_pressed("move_forward"):
+		_book(-1)
+	elif event.is_action_pressed("move_back"):
+		_book(1)
 	elif event.is_action_pressed("attack"):
 		_press_pen()
 	else:
@@ -279,6 +300,28 @@ func _leaf(step: int) -> void:
 	_redraw()
 
 
+## Books the hunt one setting longer or shorter. Like the pen and unlike the
+## arrows, it writes nothing itself: it asks the host, and what comes back is
+## what every sheet in every van reads.
+##
+## A client is refused here as well as by the host, for the same reason the pen
+## is — the buzzer belongs at the moment of the press rather than a round trip
+## later, and the host refusing it again is what makes the rule true rather than
+## merely displayed.
+##
+## `direction` is +1 or -1 and wraps, so the three settings are reachable with one
+## key held the way the pages are.
+func _book(direction: int) -> void:
+	if not ContractManager.may_sign():
+		_on_refused(ContractManager.REFUSAL_NOT_HOST_TIME)
+		return
+	if not ContractManager.is_open():
+		_on_refused(ContractManager.REFUSAL_TIME_UNDER_WAY)
+		return
+	_play(_page_sound)
+	ContractManager.request_hunt_time(HuntTime.step(ContractManager.hunt_time(), direction))
+
+
 ## The pen. It never writes anything: it asks, and what the host answers is what
 ## the sheet ends up reading.
 ##
@@ -331,6 +374,12 @@ func _redraw() -> void:
 	_rows.add_child(_line("DIFFICULTY   %s" % _pips(contract.difficulty)))
 	_rows.add_child(_line("PAYS         %d" % contract.reward))
 	_rows.add_child(_line(""))
+	# The wager, on every page rather than only on the signed one: it belongs to
+	# the shift and not to the job, and a man comparing two houses wants to read
+	# each of them against the clock he is actually going to have.
+	var booked := ContractManager.hunt_time()
+	_rows.add_child(_line("HUNT TIME    %s" % HuntTime.label_of(booked), _wager_color(booked)))
+	_rows.add_child(_line(""))
 	if not contract.notes.is_empty():
 		var notes := _line(contract.notes)
 		notes.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -349,7 +398,7 @@ func _footer(signed: bool) -> String:
 		return "THE JOB IS UNDER WAY"
 	if not ContractManager.may_sign():
 		return "ONLY THE LEADER SIGNS"
-	return "CLICK - SIGN   A/D - LEAF   E - BACK"
+	return "CLICK-SIGN  A/D-LEAF  W/S-TIME  E-BACK"
 
 
 ## The pen and the lamp over the board: lit where a signature is possible from
@@ -381,6 +430,12 @@ func _line(text: String, color := Color.WHITE) -> Label:
 	return label
 
 
+## What the wager line is written in. Falls back to white for a setting with no
+## colour of its own, so that a length added to `HuntTime` later still draws.
+func _wager_color(booked: HuntTime.Type) -> Color:
+	return COLOR_WAGER.get(booked, Color.WHITE)
+
+
 ## The difficulty as a row of marks rather than a number, so that three jobs can
 ## be told apart at a glance without reading. Filled and empty are the same
 ## width, so the row does not shuffle between pages.
@@ -389,6 +444,12 @@ func _pips(difficulty: int) -> String:
 	return "#".repeat(filled) + ".".repeat(5 - filled)
 
 # --- What wakes it up -------------------------------------------------------
+
+## The host booked the clock. Every board redraws, held or not, so that a man who
+## picks one up next reads the bet the crew is actually on.
+func _on_hunt_time_set(_hunt_time: HuntTime.Type) -> void:
+	_redraw()
+
 
 ## The host signed something. Everybody's board turns to it, including the boards
 ## nobody is holding — a man who picks it up next should not have to hunt for

@@ -123,24 +123,26 @@ func use(_by: Node3D) -> void:
 ## function to read rather than four that have to agree.
 func _redraw() -> void:
 	var active := ReadyManager.is_active()
-	var ready := active and ReadyManager.is_ready(_our_steam_id())
+	# `is_ready` and not `ready`, which is a signal on `Node` that a local of
+	# that name would shadow for the rest of the function.
+	var is_ready := active and ReadyManager.is_ready(_our_steam_id())
 
 	# A board where ready means nothing still offers the prompt it would offer,
 	# so that a player who presses it hears why rather than wondering whether
 	# the key is broken. What goes is the light, not the prompt.
-	prompt = PROMPT_STAND_DOWN if ready else PROMPT_READY_UP
+	prompt = PROMPT_STAND_DOWN if is_ready else PROMPT_READY_UP
 
-	var color := COLOR_READY if ready else COLOR_WAITING
+	var color := COLOR_READY if is_ready else COLOR_WAITING
 	if _lamp != null:
 		_lamp.light_color = color
-		_lamp.light_energy = LAMP_ENERGY if ready else LAMP_ENERGY_OFF
+		_lamp.light_energy = LAMP_ENERGY if is_ready else LAMP_ENERGY_OFF
 		_lamp.visible = active
 	if _plate_material != null:
 		_plate_material.albedo_color = color if active else CREW_DARK
 		# Unshaded and emissive together are what make a PSX panel read as lit
 		# from inside rather than as a surface somebody is shining a torch on.
 		_plate_material.emission = color
-		_plate_material.emission_energy_multiplier = 1.0 if (ready and active) else 0.0
+		_plate_material.emission_energy_multiplier = 1.0 if (is_ready and active) else 0.0
 	_redraw_crew(active)
 
 

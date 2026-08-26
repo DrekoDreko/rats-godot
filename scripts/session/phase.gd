@@ -17,7 +17,8 @@ extends RefCounted
 ## - **SURVEY.** Inside the house with the lights on and no rats out. A minute
 ##   to walk it, find the holes and set the traps.
 ## - **HUNT.** The same house, the same traps, the rats loose. It ends when the
-##   house is clear rather than when a clock says so.
+##   house is clear, or when the clock the crew booked in the van runs out —
+##   whichever comes first.
 ## - **RESULT.** What the shift paid.
 ##
 ## This class is only a table: nothing is ever instantiated from it.
@@ -31,8 +32,15 @@ enum Type {
 }
 
 ## How long each phase lasts, in seconds. Zero means there is no clock on it:
-## `LOBBY` waits on the crew and `HUNT` waits on the last rat, and neither one
+## `LOBBY` waits on the crew and `RESULT` waits on it being read, and neither one
 ## should be hurried by a number.
+##
+## **The hunt is not in this table, and that is the point of it being zero here.**
+## Its length is not a property of the phase but of the shift — the crew books it
+## at ten minutes, five or two, and is paid accordingly (`HuntTime`). Ask
+## `PhaseManager.duration_of` rather than this for a length that has to be right
+## for the shift in hand; this table is what that function falls back on for
+## every other phase.
 const DURATION := {
 	Type.LOBBY: 0.0,
 	Type.TRAVEL: 120.0,
@@ -54,7 +62,9 @@ const NAMES := {
 static func duration(type: Type) -> float:
 	return DURATION.get(type, 0.0)
 
-## Whether a clock runs during this phase. The HUD asks before it draws one.
+## Whether a clock runs during this phase, by the table alone. Whoever wants the
+## answer for the shift actually being played asks `PhaseManager.has_timer`,
+## which knows what the hunt was booked at.
 static func has_timer(type: Type) -> bool:
 	return duration(type) > 0.0
 

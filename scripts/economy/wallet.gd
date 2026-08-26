@@ -8,8 +8,10 @@ extends Node
 ## groups.
 ##
 ## The one who credits is always the rat, when its hunt comes to an end (see
-## `_pay_reward` in `rat.gd`). The price comes from here: species times the
-## death discount. On screen it is `hud_money.gd` that listens.
+## `_pay_reward` in `rat.gd`). The price comes from here: species times the death
+## discount times whatever the crew's hurry is worth — a hunt booked at two
+## minutes pays five times what the same rat pays in a ten-minute one
+## (`HuntTime`). On screen it is `hud_money.gd` that listens.
 
 ## The total changed. `gain` is what just came in.
 signal money_changed(total: int, gain: int)
@@ -80,7 +82,17 @@ func _receive(species_path: String, death_type: Death.Type, size: float) -> void
 func collect(species: RatSpecies, death_type: Death.Type, size := 1.0) -> int:
 	if species == null:
 		return 0
-	var value := species.value(death_type, size)
+	# The wager, applied last and to the whole animal: what the species is worth,
+	# less what the death cost it, times what the crew's hurry is worth. It is
+	# read off `SessionManager` at the moment of payment rather than carried in
+	# with the rat, because the shift is booked once and every rat in it is paid
+	# at the same rate — a number passed down from the rat would be the same
+	# number four hundred times, with four hundred chances to be the wrong one.
+	#
+	# Rounded once, at the end, and floored at one: a rat crushed in a x1 shift is
+	# still a rat delivered, and the same rounding rule `RatSpecies.value` already
+	# holds to.
+	var value := maxi(1, roundi(species.value(death_type, size) * _hunt_multiplier()))
 	money += value
 	catches += 1
 	if LOG_TO_TERMINAL:
@@ -103,6 +115,19 @@ func spend(amount: int) -> bool:
 		print("-$%d — total $%d" % [amount, money])
 	money_changed.emit(money, -amount)
 	return true
+
+## What the shift's booked length multiplies every rat by.
+##
+## Asked of `SessionManager` rather than stored, and asked defensively: this
+## autoload is older than the shift state and is used by benches that never stand
+## one up, so a wallet that cannot find the setting pays face value rather than
+## refusing to pay at all.
+func _hunt_multiplier() -> float:
+	var session := get_node_or_null(^"/root/SessionManager")
+	if session == null:
+		return 1.0
+	return session.hunt_multiplier()
+
 
 ## Wipes everything: the start of a shift, and the start of every test bench.
 func reset() -> void:

@@ -26,8 +26,18 @@ func _ready() -> void:
 		if marker != null:
 			_spots.append(marker)
 
-	# A frame of delay so siblings have completed initialization
-	await get_tree().process_frame
+	# A frame of delay so siblings have completed initialization. The tree is
+	# held across the wait rather than asked for again after it: a phase can
+	# arrive off the wire on that very frame and free this scene, and a node
+	# resuming out of the tree has no `get_tree()` to reach through.
+	var tree := get_tree()
+	if tree == null:
+		return
+	await tree.process_frame
+
+	# Freed while we waited: there is nobody left to place.
+	if not is_inside_tree():
+		return
 	_place_player()
 	_apply_belt_lock()
 

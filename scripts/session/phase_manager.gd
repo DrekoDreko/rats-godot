@@ -149,16 +149,40 @@ func current() -> Phase.Type:
 ## all, which is what makes a solo game work without a special case anywhere:
 ## the only player is his own host.
 func is_host() -> bool:
-	var peer := multiplayer.multiplayer_peer
-	if peer == null or peer is OfflineMultiplayerPeer:
+	if not _on_the_wire():
 		return true
 	return multiplayer.get_unique_id() == HOST_PEER
+
+
+## Whether there is anybody to say it to. An `rpc` with no wire under it is an
+## error in the log twice a second for a packet that had no one to reach: solo
+## play never has a wire, and a host whose last client just left has stopped
+## having one. Every call that goes out from here asks first. The same question
+## `TrapManager._on_the_wire` asks, and for the same reason.
+func _on_the_wire() -> bool:
+	return multiplayer.has_multiplayer_peer() \
+		and not multiplayer.multiplayer_peer is OfflineMultiplayerPeer
 
 
 ## Whether a clock is running on the phase we are in. The HUD asks before it
 ## draws one.
 func has_timer() -> bool:
-	return Phase.has_timer(current())
+	return duration_of(current()) > 0.0
+
+
+## How long a phase runs on this shift, in seconds, or zero for one nothing is
+## timing.
+##
+## Every phase but the hunt reads its length off `Phase.DURATION`, which is the
+## same on every shift. The hunt does not: the crew books it in the van, at ten
+## minutes, five or two, and the shorter the booking the more each rat is worth
+## (`HuntTime`). So the length has to be asked of the shift rather than of the
+## table — and asked *here*, in the one place, so that the clock the host starts
+## and the clock the HUD decides to draw can never be two different answers.
+func duration_of(phase: Phase.Type) -> float:
+	if phase == Phase.Type.HUNT:
+		return HuntTime.duration(SessionManager.hunt_time)
+	return Phase.duration(phase)
 
 
 ## The phase after this one, or `RESULT` at the end of the list — a shift that
@@ -209,8 +233,7 @@ func go_to(phase: Phase.Type) -> void:
 		return
 	if phase == current():
 		return
-	var peer := multiplayer.multiplayer_peer
-	if peer != null and not peer is OfflineMultiplayerPeer:
+	if _on_the_wire():
 		_apply.rpc(phase)
 	else:
 		_apply(phase)
@@ -289,7 +312,7 @@ func _change_scene(path: String, previous: Phase.Type, phase: Phase.Type) -> voi
 ## starting one at zero, so that a HUD asking `has_timer()` and a HUD reading
 ## `seconds_left` never disagree.
 func _start_clock(phase: Phase.Type) -> void:
-	var duration := Phase.duration(phase)
+	var duration := duration_of(phase)
 	if duration <= 0.0:
 		_stop_clock()
 		return
@@ -299,7 +322,8 @@ func _start_clock(phase: Phase.Type) -> void:
 		return
 	_until_sync = SYNC_INTERVAL
 	_timer.start(duration)
-	_sync.rpc(seconds_left)
+	if _on_the_wire():
+		_sync.rpc(seconds_left)
 
 
 func _stop_clock() -> void:
@@ -323,7 +347,8 @@ func _tick_host(delta: float) -> void:
 	if _until_sync > 0.0:
 		return
 	_until_sync = SYNC_INTERVAL
-	_sync.rpc(seconds_left)
+	if _on_the_wire():
+		_sync.rpc(seconds_left)
 
 
 ## The host's clock, landing on everybody else. `unreliable_ordered` on purpose:

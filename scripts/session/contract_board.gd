@@ -32,6 +32,14 @@ const UNSIGNED_HINT := "READ THE CLIPBOARD"
 
 ## The green a signed sheet is stamped in, matching the clipboard's own stamp.
 const COLOR_SIGNED := Color("29c443")
+## And what the booked clock is written in as the bet steepens, matching the
+## clipboard's own colours — the two sheets say the same thing about the same
+## wager, so they had better say it in the same ink.
+const COLOR_WAGER := {
+	HuntTime.Type.LONG: Color("ffffff"),
+	HuntTime.Type.MEDIUM: Color("ffb229"),
+	HuntTime.Type.SHORT: Color("ff4b3a"),
+}
 ## And the amber a blank one is written in — not red, because nothing is wrong
 ## yet, only unfinished.
 const COLOR_UNSIGNED := Color("ffb229")
@@ -54,6 +62,7 @@ func _ready() -> void:
 	# sixty times a second for a line that changes once a lobby is work for
 	# nothing.
 	ContractManager.contract_signed.connect(_on_contract_signed)
+	ContractManager.hunt_time_set.connect(_on_hunt_time_set)
 	PhaseManager.phase_changed.connect(_on_phase_changed)
 
 	_redraw()
@@ -95,6 +104,13 @@ func _write(contract: Contract) -> void:
 	_add(_line(""))
 	_add(_line("INFESTATION  %d" % contract.infestation))
 	_add(_line("PAYS         %d" % contract.reward))
+	# The clock the crew booked itself, in the colour of how steep the bet is.
+	# It is on the wall and not only on the clipboard because it is the number
+	# the crew argues about, and an argument nobody can see the terms of is an
+	# argument had four times.
+	var booked := ContractManager.hunt_time()
+	_add(_line("HUNT TIME    %s" % HuntTime.label_of(booked),
+		COLOR_WAGER.get(booked, Color.WHITE)))
 
 	if _plan == null:
 		return
@@ -125,6 +141,12 @@ func _line(text: String, color := Color.WHITE) -> Label:
 # --- What wakes it up -------------------------------------------------------
 
 func _on_contract_signed(_contract_id: String) -> void:
+	_redraw()
+
+
+## The clock was booked or changed. The sheet redraws for the same reason it does
+## on a signature: it is a term of the job the crew is about to walk into.
+func _on_hunt_time_set(_hunt_time: HuntTime.Type) -> void:
 	_redraw()
 
 

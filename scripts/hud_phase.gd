@@ -49,6 +49,15 @@ const WARNING_MIN_ALPHA := 0.35
 ## ready — dimmed rather than greyed, so that a crew colour is still a crew
 ## colour while its man is still deciding.
 const WAITING_ALPHA := 0.45
+## What the multiplier line reads in, by how steep the bet is — the same three
+## colours the clipboard and the wall sheet write it in, because it is the same
+## number and a player should recognise it from the van.
+const WAGER_COLOR := {
+	HuntTime.Type.LONG: Color(1, 1, 1, 1),
+	HuntTime.Type.MEDIUM: Color("ffb229"),
+	HuntTime.Type.SHORT: Color("ff4b3a"),
+}
+
 ## The mark beside a name, ready and not. Two characters of the same width, so
 ## that a man going ready does not shuffle the column he is in.
 const READY_MARK := "*"
@@ -65,6 +74,7 @@ const BEEP_DB := -14.0
 
 @onready var _phase_label: Label = $Panel/Margin/Rows/Phase
 @onready var _clock_label: Label = $Panel/Margin/Rows/Clock
+@onready var _wager_label: Label = $Panel/Margin/Rows/Wager
 @onready var _ready_label: Label = $Panel/Margin/Rows/Ready
 @onready var _crew_rows: VBoxContainer = $Crew/Margin/Rows
 @onready var _beep: AudioStreamPlayer = $Beep
@@ -114,7 +124,28 @@ func _process(_delta: float) -> void:
 ## occasions, so they are drawn together.
 func _draw_phase() -> void:
 	_phase_label.text = Phase.name_of(PhaseManager.current()).to_upper()
+	_draw_wager()
 	_draw_ready()
+
+
+## What each rat is worth this shift, shown in the hunt and nowhere else.
+##
+## In the van it would be noise — the sheet on the wall says it, and says it
+## better, with the infestation next to it. In the house it is the one number the
+## clock is worth watching for: a man deciding whether to chase the last rat into
+## the cellar with forty seconds left is deciding it against this.
+##
+## Hidden rather than drawn as "x1" on a face-value shift: the line is a warning,
+## and a warning that is always there is not one.
+func _draw_wager() -> void:
+	var booked: HuntTime.Type = SessionManager.hunt_time
+	if PhaseManager.current() != Phase.Type.HUNT or HuntTime.multiplier(booked) <= 1.0:
+		_wager_label.hide()
+		return
+	_wager_label.text = "x%d PAY" % int(HuntTime.multiplier(booked))
+	_wager_label.add_theme_color_override("font_color",
+		WAGER_COLOR.get(booked, NORMAL_COLOR))
+	_wager_label.show()
 
 
 ## "2/4 READY". It is the count and not the list, which is what the side column
@@ -185,8 +216,14 @@ func _stop_warning() -> void:
 	_clock_label.add_theme_color_override("font_color", NORMAL_COLOR)
 
 
+## The beep, if there is anybody left to hear it. A strip whose scene has been
+## freed under it still gets the phase machine's `timer_updated` for the frame —
+## the autoload fires it every frame and this node is not disconnected until it
+## is actually gone — and a player asked to play from outside the tree throws.
+## It became reachable the moment the hunt grew a clock: the warning of the last
+## ten seconds is the one thing here that fires on a phase about to end.
 func _play_beep() -> void:
-	if _beep.stream != null:
+	if _beep.stream != null and _beep.is_inside_tree():
 		_beep.play()
 
 
