@@ -18,28 +18,6 @@
 [ext_resource type="Script" path="res://scripts/map/map_table.gd" id="15_table"]
 [ext_resource type="PackedScene" path="res://scenes/pause_menu.tscn" id="99_pause"]
 
-[sub_resource type="ProceduralSkyMaterial" id="Sky_material"]
-sky_top_color = Color(0.09, 0.1, 0.14, 1)
-sky_horizon_color = Color(0.19, 0.2, 0.24, 1)
-ground_bottom_color = Color(0.05, 0.05, 0.06, 1)
-ground_horizon_color = Color(0.16, 0.16, 0.19, 1)
-
-[sub_resource type="Sky" id="Sky"]
-sky_material = SubResource("Sky_material")
-
-[sub_resource type="Environment" id="Environment"]
-background_mode = 2
-sky = SubResource("Sky")
-ambient_light_source = 3
-ambient_light_color = Color(0.5, 0.53, 0.62, 1)
-ambient_light_energy = 0.16
-fog_enabled = true
-fog_mode = 1
-fog_light_color = Color(0.06, 0.065, 0.085, 1)
-fog_density = 0.6
-fog_depth_begin = 14.0
-fog_depth_end = 46.0
-
 [sub_resource type="StandardMaterial3D" id="Mat_ground"]
 albedo_color = Color(0.11, 0.11, 0.12, 1)
 roughness = 0.95
@@ -206,14 +184,6 @@ script = ExtResource("11_travel")
 
 [node name="PS1PostProcess" parent="." instance=ExtResource("16_ps1post")]
 
-[node name="Environment" type="WorldEnvironment" parent="."]
-environment = SubResource("Environment")
-
-[node name="Moon" type="DirectionalLight3D" parent="."]
-transform = Transform3D(0.7071, 0.4082, -0.5774, 0, 0.8165, 0.5774, 0.7071, -0.4082, 0.5774, 0, 12, 0)
-light_color = Color(0.62, 0.68, 0.88, 1)
-light_energy = 0.2
-
 [node name="Road" type="Node3D" parent="."]
 script = ExtResource("12_road")
 
@@ -246,13 +216,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1, 2.52, 0)
 mesh = SubResource("Mesh_bulb")
 surface_material_override/0 = SubResource("Mat_bulb")
 
-[node name="Lamp" type="OmniLight3D" parent="Road/Props/PoleL1"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1, 2.3, 0)
-light_color = Color(1, 0.85, 0.55, 1)
-light_energy = 2.2
-omni_range = 9.0
-omni_attenuation = 1.8
-
 [node name="PoleL2" type="Node3D" parent="Road/Props"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.4, 2.75, -18)
 
@@ -270,13 +233,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1, 2.52, 0)
 mesh = SubResource("Mesh_bulb")
 surface_material_override/0 = SubResource("Mat_bulb")
 
-[node name="Lamp" type="OmniLight3D" parent="Road/Props/PoleL2"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1, 2.3, 0)
-light_color = Color(1, 0.85, 0.55, 1)
-light_energy = 2.2
-omni_range = 9.0
-omni_attenuation = 1.8
-
 [node name="PoleR1" type="Node3D" parent="Road/Props"]
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 7.4, 2.75, 2)
 
@@ -293,13 +249,6 @@ surface_material_override/0 = SubResource("Mat_pole")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1, 2.52, 0)
 mesh = SubResource("Mesh_bulb")
 surface_material_override/0 = SubResource("Mat_bulb")
-
-[node name="Lamp" type="OmniLight3D" parent="Road/Props/PoleR1"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1, 2.3, 0)
-light_color = Color(1, 0.85, 0.55, 1)
-light_energy = 2.2
-omni_range = 9.0
-omni_attenuation = 1.8
 
 [node name="FenceL1" type="MeshInstance3D" parent="Road/Props"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.2, 0.8, 12)
@@ -372,20 +321,6 @@ mesh = SubResource("Mesh_shutter")
 surface_material_override/0 = SubResource("Mat_shutter")
 
 [node name="Lamps" type="Node3D" parent="Van"]
-
-[node name="Front" type="OmniLight3D" parent="Van/Lamps"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.85, -1.9)
-light_color = Color(1, 0.93, 0.76, 1)
-light_energy = 1.35
-omni_range = 4.6
-omni_attenuation = 1.6
-
-[node name="Rear" type="OmniLight3D" parent="Van/Lamps"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.85, 1.9)
-light_color = Color(1, 0.9, 0.72, 1)
-light_energy = 0.9
-omni_range = 4.2
-omni_attenuation = 1.6
 
 [node name="CabinShake" type="Node" parent="."]
 script = ExtResource("13_shake")
@@ -472,12 +407,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, -0.22, 0.02)
 mesh = SubResource("Mesh_good")
 surface_material_override/0 = SubResource("Mat_good_pistol")
 
-[node name="Lamp" type="OmniLight3D" parent="Stations/Shop"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.68, 0.34)
-light_color = Color(0.9, 0.88, 0.78, 1)
-light_energy = 0.25
-omni_range = 1.7
-
 [node name="Refused" type="AudioStreamPlayer3D" parent="Stations/Shop"]
 unit_size = 3.0
 max_distance = 12.0
@@ -511,12 +440,6 @@ surface_material_override/0 = SubResource("Mat_table")
 [node name="PlanSurface" type="MeshInstance3D" parent="Stations/MapTable"]
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0.04, 0)
 mesh = SubResource("Mesh_table_sheet")
-
-[node name="Lamp" type="OmniLight3D" parent="Stations/MapTable"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0.2)
-light_color = Color(0.9, 0.86, 0.7, 1)
-light_energy = 0.4
-omni_range = 1.8
 
 [node name="Open" type="AudioStreamPlayer3D" parent="Stations/MapTable"]
 unit_size = 3.0
@@ -581,12 +504,6 @@ custom_minimum_size = Vector2(0, 96)
 mouse_filter = 2
 expand_mode = 1
 stretch_mode = 5
-
-[node name="Lamp" type="OmniLight3D" parent="Stations/WallContract"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.62, 0.42)
-light_color = Color(0.9, 0.86, 0.7, 1)
-light_energy = 0.5
-omni_range = 1.8
 
 [node name="Spawns" type="Node3D" parent="."]
 script = ExtResource("6_spawns")

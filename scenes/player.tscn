@@ -45,14 +45,6 @@ collision_mask = 8
 collide_with_areas = true
 collide_with_bodies = false
 
-[node name="Flashlight" type="SpotLight3D" parent="Head/Camera" unique_id=2081203819]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, -0.2, -0.1)
-light_color = Color(1, 0.94, 0.82, 1)
-light_energy = 1.8
-spot_range = 16.0
-spot_angle = 38.0
-spot_attenuation = 1.2
-
 [node name="Hands" type="Node3D" parent="Head" unique_id=266121770]
 transform = Transform3D(1, 0, 0, 0, 0.574, -0.819, 0, 0.819, 0.574, 0.33, -0.3, -0.3)
 script = ExtResource("2_hands")

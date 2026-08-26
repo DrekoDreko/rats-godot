@@ -1,18 +1,17 @@
 shader_type spatial;
-// `specular_phong` existed when this shader was written, but it left Godot in
-// 4.4: today only `specular_schlick_ggx` (the default) and `specular_disabled`
-// remain.
+// `unshaded` is what makes this look like a PS1 game rather than a modern one:
+// the console had no per-pixel lighting and no shadow maps, so surfaces were lit
+// once — baked into the texture or the vertex colour — and drawn flat. Skipping
+// the light pass entirely means no directional shading, no shadows and no SSAO
+// can ever touch these surfaces, whatever the scene puts around them.
 //
 // `cull_disabled` is here for the things the player walks *inside*. A model like
 // the van is a single shell with its faces looking outwards, so from the cargo
 // bay the walls are all back faces and the default culling throws them away: the
 // van turns to glass the moment you step into it. Drawing both sides costs a
 // little overdraw on geometry this simple and nothing at all on closed shapes,
-// which is what everything else in the map is. Lighting on the inside face comes
-// out of the outward normal — `vertex_lighting` settles it before anyone knows
-// which side is being drawn — and that is exactly the kind of wrong this look was
-// after anyway.
-render_mode vertex_lighting, skip_vertex_transform, diffuse_lambert_wrap, cull_disabled;
+// which is what everything else in the map is.
+render_mode unshaded, skip_vertex_transform, cull_disabled;
 
 // The hints changed names since 3.x too: `hint_black` became
 // `hint_default_black`, and the old `hint_black_albedo` split into
@@ -27,8 +26,6 @@ render_mode vertex_lighting, skip_vertex_transform, diffuse_lambert_wrap, cull_d
 // the import or a "Closest" chosen in Blender never reaches the surface. This
 // line is the only place in the chain that decides it.
 uniform sampler2D albedo: source_color, hint_default_white, filter_nearest;
-uniform sampler2D specular: hint_default_black, filter_nearest;
-uniform sampler2D emission: source_color, hint_default_black, filter_nearest;
 
 // Colour on top of the texture, as in `StandardMaterial3D`. It is what saves the
 // low-poly models painted with a solid colour alone — the ones from kits like
@@ -76,6 +73,4 @@ void fragment() {
 	ALPHA = color.a;
 	// In 3.x this built-in was called just `ALPHA_SCISSOR`.
 	ALPHA_SCISSOR_THRESHOLD = alpha_scissor;
-	EMISSION = texture(emission, uv).rgb;
-	SPECULAR = texture(specular, uv).r;
 }

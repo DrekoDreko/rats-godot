@@ -15,8 +15,8 @@ extends Node3D
 ## - Ready station at the front door allows the crew to advance early if all ready.
 ##
 ## **Hunt Phase (Card 13):**
-## - The transition plays the rat screech, but the lights stay where survey left
-##   them: no blackout and no darkening, so the house reads the same in both phases.
+## - The transition plays the rat screech; nothing about how the house is drawn
+##   changes, since the PS1 shader draws every surface unshaded.
 ## - Host spawns rats based on `SessionManager.random_seed` and the contract's
 ##   infestation level in nests far from player front-door spawns.
 ## - Visual highlights on rat holes are extinguished.
@@ -32,24 +32,8 @@ extends Node3D
 @export var rats_root_path: NodePath = ^"Rats"
 @export var geometry_root_path: NodePath = ^"Geometry"
 
-@export_group("Lighting Nodes")
-@export var sun_path: NodePath = ^"Sun"
-@export var environment_path: NodePath = ^"Environment"
-@export var hallway_light_path: NodePath = ^"HallwayLight"
-@export var kitchen_light_path: NodePath = ^"KitchenLight"
-@export var living_light_path: NodePath = ^"LivingLight"
-
 @export_group("Audio")
 @export var screech_audio_path: NodePath = ^"Audio/Screech"
-
-## House lighting. Survey and hunt share one set of energies: the hunt used to
-## cut them to a twentieth of these and open with a blackout, which read as the
-## screen going dark rather than as atmosphere.
-const SUN_ENERGY := 0.65
-const AMBIENT_ENERGY := 0.35
-const HALLWAY_ENERGY := 1.2
-const KITCHEN_ENERGY := 1.1
-const LIVING_ENERGY := 1.2
 
 const DEFAULT_INFESTATION := 6
 const RAT_SCENE_PATH := "res://scenes/rat.tscn"
@@ -66,11 +50,6 @@ const HOST_PEER := 1
 # picks them up wherever the level put them rather than only under one node.
 @onready var _geometry_root: Node3D = get_node_or_null(geometry_root_path) as Node3D
 
-@onready var _sun: DirectionalLight3D = get_node_or_null(sun_path) as DirectionalLight3D
-@onready var _environment: WorldEnvironment = get_node_or_null(environment_path) as WorldEnvironment
-@onready var _hallway_light: OmniLight3D = get_node_or_null(hallway_light_path) as OmniLight3D
-@onready var _kitchen_light: OmniLight3D = get_node_or_null(kitchen_light_path) as OmniLight3D
-@onready var _living_light: OmniLight3D = get_node_or_null(living_light_path) as OmniLight3D
 @onready var _screech_audio: AudioStreamPlayer = get_node_or_null(screech_audio_path) as AudioStreamPlayer
 
 var _loaded_house_path := ""
@@ -139,13 +118,6 @@ func active_rat_count() -> int:
 				continue
 			count += 1
 	return count
-
-
-## Whether the house lights are lit at their normal energies. True from `_ready`
-## onward in every phase; kept as a hook for anything that needs to check that
-## the house is not sitting dark.
-func is_lit() -> bool:
-	return _sun == null or is_equal_approx(_sun.light_energy, SUN_ENERGY)
 
 
 ## Dynamically loads custom house geometry from the signed contract if specified.
@@ -219,8 +191,6 @@ func _update_phase_state(is_transition: bool = false) -> void:
 		if node.has_method("set_highlight"):
 			node.set_highlight(is_survey)
 
-	_apply_house_lighting()
-
 	if is_hunt:
 		if is_transition and _screech_audio != null:
 			_screech_audio.play()
@@ -231,21 +201,6 @@ func _update_phase_state(is_transition: bool = false) -> void:
 		if is_transition:
 			ShiftReport.begin(_contract_infestation())
 		_spawn_rats_if_needed()
-
-
-## Lights the house at its normal energies. Applied in every phase, so entering
-## the hunt no longer changes how bright the house is.
-func _apply_house_lighting() -> void:
-	if _sun != null:
-		_sun.light_energy = SUN_ENERGY
-	if _environment != null and _environment.environment != null:
-		_environment.environment.ambient_light_energy = AMBIENT_ENERGY
-	if _hallway_light != null:
-		_hallway_light.light_energy = HALLWAY_ENERGY
-	if _kitchen_light != null:
-		_kitchen_light.light_energy = KITCHEN_ENERGY
-	if _living_light != null:
-		_living_light.light_energy = LIVING_ENERGY
 
 
 ## How many rats this contract puts in the walls. Asked in two places — by the

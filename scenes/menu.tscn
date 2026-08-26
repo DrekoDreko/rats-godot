@@ -13,43 +13,18 @@
 render_priority = 0
 shader = ExtResource("4_70i5f")
 shader_parameter/albedo_color = Color(1, 1, 1, 1)
-shader_parameter/jitter = 0.800000038
+shader_parameter/jitter = 0.450000021375
 shader_parameter/jitter_z_coordinate = false
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
-[sub_resource type="ProceduralSkyMaterial" id="Sky_material"]
-sky_top_color = Color(1, 1, 1, 1)
-sky_horizon_color = Color(1, 1, 1, 1)
-ground_bottom_color = Color(0.1, 0.1, 0.11, 1)
-ground_horizon_color = Color(0.16, 0.16, 0.18, 1)
-
-[sub_resource type="Sky" id="Sky"]
-sky_material = SubResource("Sky_material")
-
-[sub_resource type="Environment" id="Environment"]
-background_mode = 2
-sky = SubResource("Sky")
-ambient_light_color = Color(1, 1, 1, 1)
-ambient_light_energy = 0.55
-
 [sub_resource type="StandardMaterial3D" id="Mat_floor"]
-albedo_color = Color(0.14, 0.14, 0.16, 1)
+albedo_color = Color(0.6294602, 0.62969375, 0.67210025, 1)
 
 [sub_resource type="PlaneMesh" id="Mesh_floor"]
 material = SubResource("Mat_floor")
 size = Vector2(40, 40)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_i6lef"]
-render_priority = 0
-shader = ExtResource("4_70i5f")
-shader_parameter/albedo_color = Color(0.14, 0.14, 0.16, 1)
-shader_parameter/jitter = 0.800000038
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
-shader_parameter/alpha_scissor = 0.5
 
 [node name="Menu" type="Node3D" unique_id=2125750364]
 script = ExtResource("1_menu")
@@ -59,17 +34,8 @@ script = ExtResource("1_menu")
 [node name="PS1PostProcess" parent="." unique_id=667602802 instance=ExtResource("3_i6lef")]
 surface_material_override/0 = SubResource("ShaderMaterial_13sgg")
 
-[node name="Environment" type="WorldEnvironment" parent="." unique_id=2033860006]
-environment = SubResource("Environment")
-
-[node name="Fill" type="DirectionalLight3D" parent="." unique_id=1695235542]
-transform = Transform3D(0.866, 0.25, -0.433, 0, 0.866, 0.5, 0.5, -0.433, 0.75, 0, 6, 0)
-light_color = Color(1, 0.97, 0.92, 1)
-light_energy = 0.9
-
 [node name="Floor" type="MeshInstance3D" parent="." unique_id=564645654]
 mesh = SubResource("Mesh_floor")
-surface_material_override/0 = SubResource("ShaderMaterial_i6lef")
 
 [node name="Camera" type="Camera3D" parent="." unique_id=1721597996]
 transform = Transform3D(1, 0, 0, 0, 0.9848, 0.1736, 0, -0.1736, 0.9848, 0, 1.15, 4.1)

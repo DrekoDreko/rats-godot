@@ -73,12 +73,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.105, 0, 0)
 mesh = SubResource("Mesh_bulb")
 surface_material_override/0 = SubResource("Material_bulb")
 
-[node name="Lamp" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.32, -0.14)
-light_color = Color(1, 0.133, 0.133, 1)
-light_energy = 0.35
-omni_range = 1.6
-
 [node name="Press" type="AudioStreamPlayer3D" parent="."]
 unit_size = 3.0
 max_distance = 12.0

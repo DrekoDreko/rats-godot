@@ -1,7 +1,7 @@
 class_name ReadyStation
 extends Interactable
-## The board a player slaps to say he is ready: a plate on the wall of the van
-## with a lamp over it, red until he has said it and green after.
+## The board a player slaps to say he is ready: a plate on the wall of the van,
+## red until he has said it and green after.
 ##
 ## One node for all three phases. The board bolted inside the parked van, the one
 ## on the road and the button in the hall of the house are the same scene
@@ -10,13 +10,13 @@ extends Interactable
 ## for the answer to be wrong.
 ##
 ## **It decides nothing.** Slapping it asks `ReadyManager`, the host answers, and
-## what comes back is what turns the lamp. That round trip is visible — the light
-## does not move the instant the key is let go — and it is deliberate: a lamp
-## that goes green on our own say-so and red again a moment later when the host
+## what comes back is what turns the plate. That round trip is visible — the
+## colour does not move the instant the key is let go — and it is deliberate: a
+## plate that goes green on our own say-so and red again a moment later when the host
 ## disagrees is worse than one that takes a beat to be right. What is drawn here
 ## is never this machine's opinion, only the host's.
 ##
-## **It draws the whole crew and not only us.** The lamp is our own flag, and the
+## **It draws the whole crew and not only us.** The plate is our own flag, and the
 ## row of small bulbs beside it is one per player in the crew, in the order they
 ## walked in — so a man standing at the board can see who he is waiting on
 ## without opening anything. A bulb is lit in that player's own colour when he is
@@ -31,15 +31,6 @@ extends Interactable
 ## What it does *not* do is check whether the shift may move: that is the host's,
 ## in `ReadyManager`, and a board that tried to work it out locally would be a
 ## fourth machine with an opinion about when the van leaves.
-
-## How bright the lamp burns when it is on. Low, and a PSX light is a small pool
-## on the wall rather than a glow over the room.
-const LAMP_ENERGY := 2.0
-
-## What the lamp is worth when it is off. Not zero: an unlit board in a dark van
-## is a board nobody finds, and a dim red ember is what says there is something
-## here to press.
-const LAMP_ENERGY_OFF := 0.35
 
 ## The two colours the board reads in. Saturated and only two, the way a panel
 ## with two states on it was in 1998.
@@ -56,10 +47,9 @@ const CREW_DARK := Color("140a0a")
 const PROMPT_READY_UP := "ready up"
 const PROMPT_STAND_DOWN := "stand down"
 
-## The lamp over the plate, the plate itself and the row of crew bulbs. All three
-## are optional — a board built without a light still works, it just says less —
-## which is what lets the button in the hall of the house be a bare button.
-@export var lamp_path: NodePath = ^"Lamp"
+## The plate itself and the row of crew bulbs. Both are optional — a board built
+## without either still works, it just says less — which is what lets the button
+## in the hall of the house be a bare button.
 @export var plate_path: NodePath = ^"Plate"
 @export var crew_path: NodePath = ^"Crew"
 
@@ -69,7 +59,6 @@ const PROMPT_STAND_DOWN := "stand down"
 @export var press_sound_path: NodePath = ^"Press"
 @export var refused_sound_path: NodePath = ^"Refused"
 
-@onready var _lamp: OmniLight3D = get_node_or_null(lamp_path) as OmniLight3D
 @onready var _plate: MeshInstance3D = get_node_or_null(plate_path) as MeshInstance3D
 @onready var _crew: Node3D = get_node_or_null(crew_path) as Node3D
 @onready var _press_sound: AudioStreamPlayer3D = \
@@ -129,14 +118,10 @@ func _redraw() -> void:
 
 	# A board where ready means nothing still offers the prompt it would offer,
 	# so that a player who presses it hears why rather than wondering whether
-	# the key is broken. What goes is the light, not the prompt.
+	# the key is broken. What goes is the colour, not the prompt.
 	prompt = PROMPT_STAND_DOWN if is_ready else PROMPT_READY_UP
 
 	var color := COLOR_READY if is_ready else COLOR_WAITING
-	if _lamp != null:
-		_lamp.light_color = color
-		_lamp.light_energy = LAMP_ENERGY if is_ready else LAMP_ENERGY_OFF
-		_lamp.visible = active
 	if _plate_material != null:
 		_plate_material.albedo_color = color if active else CREW_DARK
 		# Unshaded and emissive together are what make a PSX panel read as lit

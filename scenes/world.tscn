@@ -24,29 +24,6 @@
 [ext_resource type="PackedScene" path="res://scenes/result_screen.tscn" id="22_result"]
 [ext_resource type="PackedScene" path="res://scenes/pause_menu.tscn" id="99_pause"]
 
-[sub_resource type="ProceduralSkyMaterial" id="Sky_material"]
-sky_top_color = Color(0.36, 0.38, 0.41, 1)
-sky_horizon_color = Color(0.62, 0.63, 0.65, 1)
-ground_bottom_color = Color(0.3, 0.3, 0.32, 1)
-ground_horizon_color = Color(0.62, 0.63, 0.65, 1)
-
-[sub_resource type="Sky" id="Sky"]
-sky_material = SubResource("Sky_material")
-
-[sub_resource type="Environment" id="Environment"]
-background_mode = 2
-background_color = Color(1, 1, 1, 1)
-sky = SubResource("Sky")
-ambient_light_source = 3
-ambient_light_color = Color(1, 1, 1, 1)
-ambient_light_energy = 0.45
-fog_enabled = true
-fog_mode = 1
-fog_light_color = Color(0.075, 0.08, 0.095, 1)
-fog_density = 0.55
-fog_depth_begin = 18.0
-fog_depth_end = 52.0
-
 [sub_resource type="StandardMaterial3D" id="Mat_floor"]
 albedo_color = Color(0.13, 0.13, 0.14, 1)
 metallic_specular = 0.1
@@ -519,31 +496,6 @@ script = ExtResource("16_house")
 
 [node name="PS1PostProcess" parent="." unique_id=124545275 instance=ExtResource("21_ps1post")]
 
-[node name="Environment" type="WorldEnvironment" parent="." unique_id=353208073]
-environment = SubResource("Environment")
-
-[node name="Sun" type="DirectionalLight3D" parent="." unique_id=1510908054]
-transform = Transform3D(0.8192, 0.4394, -0.3687, 0, 0.6428, 0.766, 0.5736, -0.6275, 0.5266, 0, 40, 0)
-light_energy = 1.1
-
-[node name="HallwayLight" type="OmniLight3D" parent="." unique_id=1609432493]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 14)
-light_color = Color(1, 0.88, 0.7, 1)
-light_energy = 1.2
-omni_range = 22.0
-
-[node name="KitchenLight" type="OmniLight3D" parent="." unique_id=2077346755]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 6, -12)
-light_color = Color(0.85, 0.9, 1, 1)
-light_energy = 1.1
-omni_range = 24.0
-
-[node name="LivingLight" type="OmniLight3D" parent="." unique_id=873892032]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 6, -12)
-light_color = Color(1, 0.82, 0.65, 1)
-light_energy = 1.2
-omni_range = 24.0
-
 [node name="Floor" type="StaticBody3D" parent="." unique_id=1458331643 groups=["scenery"]]
 
 [node name="Mesh" type="MeshInstance3D" parent="Floor" unique_id=804065504]
@@ -900,26 +852,6 @@ shape = SubResource("Shape_box_van_bench")
 
 [node name="Lamps" type="Node3D" parent="Van" unique_id=787649715]
 
-[node name="Front" type="OmniLight3D" parent="Van/Lamps" unique_id=873849921]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0073542595, 2.85, -2.6090755)
-light_color = Color(1, 0.93, 0.76, 1)
-light_energy = 1.35
-omni_range = 4.6
-omni_attenuation = 1.6
-
-[node name="Rear" type="OmniLight3D" parent="Van/Lamps" unique_id=1962062245]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.85, 1.9)
-light_color = Color(1, 0.9, 0.72, 1)
-light_energy = 1.1
-omni_range = 4.2
-omni_attenuation = 1.6
-
-[node name="Doorway" type="OmniLight3D" parent="Van/Lamps" unique_id=1511558452]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 4.2)
-light_color = Color(0.95, 0.88, 0.7, 1)
-light_energy = 0.65
-omni_range = 3.4
-
 [node name="MapTable" type="Area3D" parent="Van" unique_id=2031069548 groups=["map_station"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, -2.75)
 collision_layer = 8
@@ -939,12 +871,6 @@ surface_material_override/0 = SubResource("ShaderMaterial_e68xj")
 transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0.04, 0)
 mesh = SubResource("Mesh_table_sheet")
 surface_material_override/0 = SubResource("ShaderMaterial_5hglh")
-
-[node name="Lamp" type="OmniLight3D" parent="Van/MapTable" unique_id=1833651015]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0.2)
-light_color = Color(0.9, 0.86, 0.7, 1)
-light_energy = 0.4
-omni_range = 1.8
 
 [node name="Open" type="AudioStreamPlayer3D" parent="Van/MapTable" unique_id=729672593]
 unit_size = 3.0

@@ -6,9 +6,9 @@
 ## Tests:
 ## 1. House scene loads in SURVEY and transitions to HUNT without reloading the scene.
 ## 2. Placed traps from SURVEY persist in Traps container.
-## 3. Blackout sequence and transition to dark hunt lighting.
+## 3. No scene lighting at all: the PS1 shader draws every surface unshaded.
 ## 4. Rat hole visual highlights deactivated in HUNT.
-## 5. Player flashlight available.
+## 5. Player present in the house.
 ## 6. Attack weapons unbarred in HUNT, trap weapons have longer hunt cooldown.
 ## 7. Authoritative host spawns rats according to contract infestation in distant nests.
 ## 8. Eliminating all rats concludes HUNT phase and advances to RESULT.
@@ -54,7 +54,7 @@ func _physics_process(_delta: float) -> bool:
 		0: return _check_setup_survey()
 		1: return _check_survey_initial_state()
 		2: return _check_transition_to_hunt()
-		3: return _check_lighting_unchanged()
+		3: return _check_no_scene_lighting()
 		4: return _check_hunt_environment_and_weapons()
 		5: return _check_rat_spawning_and_nests()
 		6: return _check_hunt_completion_to_result()
@@ -96,12 +96,8 @@ func _check_survey_initial_state() -> bool:
 	test_trap.global_position = Vector3(2.0, 0.01, 3.0)
 	_expect(_house_node.installed_trap_count() > 0, "trap placed in survey")
 
-	# Check player flashlight
 	var player: Node = _house_node.get_node_or_null("Player")
 	_expect(player != null, "player in house")
-	if player != null:
-		var flashlight: Node = player.get_node_or_null("Head/Camera/Flashlight")
-		_expect(flashlight != null, "player has Flashlight SpotLight3D")
 
 	return _advance()
 
@@ -118,20 +114,21 @@ func _check_transition_to_hunt() -> bool:
 	_expect(_phase.current() == HUNT, "phase transitioned to HUNT")
 	_expect(current_scene == _house_node, "same house scene kept on screen")
 	_expect(_house_node.get_meta("house_instance_id") == _house_node.get_instance_id(), "no scene reload occurred")
-	_expect(_house_node.is_lit(), "house stays lit through the transition, no blackout")
 	return _advance()
 
 
-## The hunt used to blacken the screen and then run at a twentieth of the survey
-## energies. Both are gone: the lights read the same on either side of the change.
-func _check_lighting_unchanged() -> bool:
+## A PS1 game has no lit surfaces: the shader draws everything unshaded, so the
+## house carries no sun, no world environment and no room lamps to dim. The hunt
+## used to blacken the screen and then run at a twentieth of the survey
+## energies; there is nothing left for it to turn down.
+func _check_no_scene_lighting() -> bool:
 	if _clock < WAIT:
 		return false
 
-	_expect(_house_node.is_lit(), "house still lit once the hunt is running")
-	var sun: DirectionalLight3D = _house_node.get_node_or_null("Sun") as DirectionalLight3D
-	if sun != null:
-		_expect(is_equal_approx(sun.light_energy, 0.65), "sun kept its survey energy in the hunt")
+	_expect(_house_node.get_node_or_null("Sun") == null, "house carries no directional light")
+	_expect(_house_node.get_node_or_null("Environment") == null, "house carries no world environment")
+	for name in ["HallwayLight", "KitchenLight", "LivingLight"]:
+		_expect(_house_node.get_node_or_null(name) == null, "house carries no %s" % name)
 	return _advance()
 
 

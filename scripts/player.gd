@@ -32,7 +32,7 @@ extends CharacterBody3D
 ## What he sees sways a little while he walks (`_update_bob`): the camera rides
 ## up and down on a sine wave scaled by how fast he is actually moving, and comes
 ## back to rest the moment he stops. It is drawn on the camera alone, so nothing
-## that aims — the ray out of it, the flashlight, the weapon on the head — is
+## that aims — the ray out of it, the weapon on the head — is
 ## moved by it.
 ##
 ## And he is being watched. In a lobby, everything the other players see of him
@@ -129,7 +129,6 @@ const BOB_SETTLE := 8.0
 ## The reach of the hands for things that are not rats. It only sees the
 ## interactable layer, so it never trips over the scenery or over an animal.
 @onready var interact_ray: RayCast3D = $Head/Camera/Interact
-@onready var flashlight: SpotLight3D = get_node_or_null(^"Head/Camera/Flashlight") as SpotLight3D
 ## The body he is wearing. He never sees it — he is inside it — but it is what
 ## casts his shadow on the floor, and the same scene the other players are drawn
 ## with (`scripts/player_model.gd`), so his walk on their screens and his shadow
@@ -348,7 +347,7 @@ func _desired_direction() -> Vector3:
 ## Off the floor there is no sway — nothing is stepping — and it eases out rather
 ## than cutting, so a jump does not chop the view in half.
 ##
-## It moves the camera and nothing else. The ray out of it, the flashlight and
+## It moves the camera and nothing else. The ray out of it and
 ## the weapon on the head all hang from the head, or from the camera's rest, so
 ## what he is aiming at does not sway with what he is seeing.
 func _update_bob(delta: float) -> void:
@@ -613,13 +612,3 @@ func _die() -> void:
 	respawn()
 	_health = max_health
 	health_changed.emit(_health, max_health)
-
-## Toggles the player's flashlight on or off.
-func toggle_flashlight() -> void:
-	if flashlight != null:
-		flashlight.visible = not flashlight.visible
-
-## Enables or disables the player's flashlight.
-func set_flashlight(enabled: bool) -> void:
-	if flashlight != null:
-		flashlight.visible = enabled
