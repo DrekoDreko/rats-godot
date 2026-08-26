@@ -58,7 +58,7 @@ signal timer_expired(phase: Phase.Type)
 ## to the same path or the traps go in the bin — hence `set_house`, which is the
 ## one that should actually be called.
 var scenes := {
-	Phase.Type.LOBBY: "res://scenes/lobby_van.tscn",
+	Phase.Type.LOBBY: "res://scenes/menu.tscn",
 	Phase.Type.TRAVEL: "res://scenes/van_travel.tscn",
 	Phase.Type.SURVEY: "res://scenes/world.tscn",
 	Phase.Type.HUNT: "res://scenes/world.tscn",

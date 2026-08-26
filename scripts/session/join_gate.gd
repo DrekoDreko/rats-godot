@@ -75,7 +75,7 @@ const MAX_PLAYERS := 4
 ## Where a newcomer is put once he has been let in. The lobby phase's own scene,
 ## which is what card 07 asks for by name: an invite accepted with the game
 ## closed has to end in the van and not on the waiting-room screen.
-const LOBBY_SCENE := "res://scenes/lobby_van.tscn"
+const LOBBY_SCENE := "res://scenes/menu.tscn"
 
 ## What the host says when he turns somebody away. They are sentences and not
 ## codes because the only thing done with them is putting them on a screen.

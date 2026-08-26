@@ -1,0 +1,173 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/menu_screen.gd" id="1_menu"]
+[ext_resource type="Script" path="res://scripts/ui/menu_crew.gd" id="2_crew"]
+[ext_resource type="Script" path="res://scripts/ui/color_popup.gd" id="3_color"]
+[ext_resource type="Script" path="res://scripts/ui/contract_panel.gd" id="4_contract"]
+[ext_resource type="PackedScene" path="res://scenes/lobby.tscn" id="5_modal"]
+
+[sub_resource type="ProceduralSkyMaterial" id="Sky_material"]
+sky_top_color = Color(0.13, 0.13, 0.15, 1)
+sky_horizon_color = Color(0.18, 0.18, 0.2, 1)
+ground_bottom_color = Color(0.1, 0.1, 0.11, 1)
+ground_horizon_color = Color(0.16, 0.16, 0.18, 1)
+
+[sub_resource type="Sky" id="Sky"]
+sky_material = SubResource("Sky_material")
+
+[sub_resource type="Environment" id="Environment"]
+background_mode = 2
+sky = SubResource("Sky")
+ambient_light_source = 3
+ambient_light_color = Color(0.72, 0.74, 0.8, 1)
+ambient_light_energy = 0.55
+
+[sub_resource type="StandardMaterial3D" id="Mat_floor"]
+albedo_color = Color(0.14, 0.14, 0.16, 1)
+roughness = 1.0
+
+[sub_resource type="PlaneMesh" id="Mesh_floor"]
+material = SubResource("Mat_floor")
+size = Vector2(40, 40)
+
+[node name="Menu" type="Node3D"]
+script = ExtResource("1_menu")
+
+[node name="Environment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment")
+
+[node name="Fill" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, 0.25, -0.433, 0, 0.866, 0.5, 0.5, -0.433, 0.75, 0, 6, 0)
+light_color = Color(1, 0.97, 0.92, 1)
+light_energy = 0.9
+shadow_enabled = false
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+mesh = SubResource("Mesh_floor")
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.9848, 0.1736, 0, -0.1736, 0.9848, 0, 1.15, 4.1)
+fov = 45.0
+
+[node name="Crew" type="Node3D" parent="."]
+script = ExtResource("2_crew")
+
+[node name="Seats" type="Node3D" parent="Crew"]
+
+[node name="Seat1" type="Marker3D" parent="Crew/Seats"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.35, 0, 0)
+
+[node name="Seat2" type="Marker3D" parent="Crew/Seats"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.45, 0, 0)
+
+[node name="Seat3" type="Marker3D" parent="Crew/Seats"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.45, 0, 0)
+
+[node name="Seat4" type="Marker3D" parent="Crew/Seats"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.35, 0, 0)
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="LocalPlayer" type="HBoxContainer" parent="UI"]
+offset_left = 8.0
+offset_top = 8.0
+offset_right = 148.0
+offset_bottom = 40.0
+theme_override_constants/separation = 6
+alignment = 1
+
+[node name="Photo" type="TextureRect" parent="UI/LocalPlayer"]
+texture_filter = 1
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Name" type="Label" parent="UI/LocalPlayer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 8
+vertical_alignment = 1
+
+[node name="Cards" type="Control" parent="UI"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="ContractPanel" type="PanelContainer" parent="UI"]
+anchors_preset = 6
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_left = -168.0
+offset_top = -70.0
+offset_right = -8.0
+offset_bottom = 70.0
+grow_horizontal = 0
+grow_vertical = 2
+script = ExtResource("4_contract")
+
+[node name="Center" type="VBoxContainer" parent="UI"]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -70.0
+offset_top = -112.0
+offset_right = 70.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_constants/separation = 4
+
+[node name="Play" type="Button" parent="UI/Center"]
+custom_minimum_size = Vector2(140, 26)
+layout_mode = 2
+text = "PLAY"
+
+[node name="Invite" type="Button" parent="UI/Center"]
+custom_minimum_size = Vector2(140, 0)
+layout_mode = 2
+text = "INVITE FRIENDS"
+
+[node name="PublicLobbies" type="Button" parent="UI/Center"]
+custom_minimum_size = Vector2(140, 0)
+layout_mode = 2
+text = "PUBLIC LOBBIES"
+
+[node name="Settings" type="Button" parent="UI/Center"]
+custom_minimum_size = Vector2(140, 0)
+layout_mode = 2
+disabled = true
+text = "SETTINGS"
+
+[node name="Status" type="Label" parent="UI"]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = -16.0
+offset_right = -8.0
+offset_bottom = -4.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(1, 1, 1, 0.6)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 8
+horizontal_alignment = 1
+autowrap_mode = 2
+
+[node name="LobbyModal" parent="UI" instance=ExtResource("5_modal")]
+visible = false
+
+[node name="ColorPopup" type="PopupPanel" parent="UI"]
+script = ExtResource("3_color")

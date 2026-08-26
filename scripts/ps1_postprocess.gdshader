@@ -4,6 +4,16 @@
 // It is the screen-space half of the PS1 look: `ps1.gdshader` handles the
 // per-mesh half (vertex jitter and affine texture mapping). The two are meant to
 // run together and never touch the same pass, so neither replaces the other.
+//
+// **It does not pixelate.** That job belongs to the viewport: the project is set
+// to `stretch/mode="viewport"`, so the whole game — the HUD included, which no
+// 3D pass can reach — renders at 960x540 and is scaled up to the window with
+// nearest filtering. The chunky pixels come from that upscale and from nothing
+// else. This pass once had a `resolution_scale` that sampled the buffer in
+// blocks, and running it on top of an already-small viewport pixelated twice:
+// blocks of blocks, with the 4x4 dither smeared across them. One source of
+// pixel size is the whole point, so the block sampling is gone and every texel
+// here is read where it sits.
 shader_type spatial;
 render_mode unshaded, shadows_disabled, depth_test_disabled, depth_draw_never;
 
@@ -12,10 +22,6 @@ uniform int color_depth : hint_range(1, 8) = 5;
 
 /// Whether to dither, trading colour banding for a 4x4 ordered pattern.
 uniform bool dithering = true;
-
-/// Size in pixels of each sampled block, chunking the screen the way the low
-/// PS1 framebuffer resolution did.
-uniform int resolution_scale : hint_range(1, 16) = 4;
 
 /// The frame rendered so far, which this pass reads back and rewrites.
 uniform sampler2D screen_texture : hint_screen_texture, repeat_disable, filter_nearest;
@@ -51,13 +57,10 @@ void vertex() {
 }
 
 void fragment() {
-	ivec2 uv = ivec2(FRAGCOORD.xy / float(resolution_scale));
-
-	// Snapping the sample up to the block grid can land past the last texel on
-	// the right and bottom edges, where texelFetch is undefined and reads white
-	// on some drivers. Clamp it back inside the buffer.
-	ivec2 last_texel = textureSize(screen_texture, 0) - ivec2(1);
-	ivec2 texel = clamp(uv * resolution_scale, ivec2(0), last_texel);
+	// One texel in, one texel out. The viewport is already the size the look
+	// wants, so there is no block grid to snap to and no edge case of snapping
+	// past the last texel the way sampling in blocks had.
+	ivec2 texel = ivec2(FRAGCOORD.xy);
 	vec3 color = texelFetch(screen_texture, texel, 0).rgb;
 
 	// The screen buffer is HDR, so a bright pixel can arrive above 1.0 and NaN
@@ -70,7 +73,7 @@ void fragment() {
 	
 	// Apply the dithering pattern
 	if (dithering) {
-		c += ivec3(dithering_pattern(uv));
+		c += ivec3(dithering_pattern(texel));
 	}
 	
 	// Dithering pushes values past the byte range, and a negative one would

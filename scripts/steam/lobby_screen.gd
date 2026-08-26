@@ -1,5 +1,12 @@
 extends Control
-## The screen the game opens on: the one place a player picks who to hunt with.
+## The lobby browser: where a player finds somebody else's hunt, or opens his own
+## for strangers to find.
+##
+## It used to be the screen the game opened on, and it is now a window over the
+## top of `menu.tscn` — which is why the Play button has gone from it. Starting
+## the shift belongs to the menu, next to the crew it will be starting with; what
+## is left here is the one thing this screen has always done well: create, search,
+## list, and join.
 ##
 ## It holds no state of its own. Everything on it is drawn from
 ## `LobbyManager` — the lobby it is in, who is in it, what is open out there —
@@ -11,10 +18,13 @@ extends Control
 ## there is one per person in the lobby and that number changes while the screen
 ## is up — which is precisely the thing this is here to show.
 ##
-## With Steam closed the screen still comes up and says so, and `Play` still
-## works: a solo hunt is the game's normal state during development.
+## With Steam closed the window still comes up and says so.
 
-## The whole game is drawn at 640x360, where 8 px is the normal size of a letter.
+## The player closed the window. The menu behind it is what hides this — a window
+## that hides itself is one the menu cannot keep track of.
+signal close_requested()
+
+## The whole game is drawn at 960x540, where 8 px is the normal size of a letter.
 const FONT_SIZE := 8
 ## The star on the host's row, and the colour that goes with it.
 const HOST_MARK := "*"
@@ -23,18 +33,18 @@ const ERROR_COLOR := Color(0.95, 0.32, 0.28)
 const NOTICE_COLOR := Color(0.55, 0.85, 0.45)
 const IDLE_COLOR := Color(1, 1, 1, 0.6)
 
-@onready var _create: Button = $Margin/Rows/Body/Left/Create
-@onready var _code: LineEdit = $Margin/Rows/Body/Left/JoinRow/Code
-@onready var _join: Button = $Margin/Rows/Body/Left/JoinRow/Join
-@onready var _refresh: Button = $Margin/Rows/Body/Left/Refresh
-@onready var _lobbies: ItemList = $Margin/Rows/Body/Left/Lobbies
-@onready var _header: Label = $Margin/Rows/Body/Right/Margin/Column/Header
-@onready var _players: VBoxContainer = $Margin/Rows/Body/Right/Margin/Column/Players
-@onready var _copy: Button = $Margin/Rows/Body/Right/Margin/Column/Copy
-@onready var _leave: Button = $Margin/Rows/Footer/Leave
-@onready var _invite: Button = $Margin/Rows/Footer/Invite
-@onready var _play: Button = $Margin/Rows/Footer/Play
-@onready var _status: Label = $Margin/Rows/Status
+@onready var _rows: VBoxContainer = $Center/Panel/Margin/Rows
+@onready var _close: Button = _rows.get_node("TitleRow/Close")
+@onready var _create: Button = _rows.get_node("Body/Left/Create")
+@onready var _code: LineEdit = _rows.get_node("Body/Left/JoinRow/Code")
+@onready var _join: Button = _rows.get_node("Body/Left/JoinRow/Join")
+@onready var _refresh: Button = _rows.get_node("Body/Left/Refresh")
+@onready var _lobbies: ItemList = _rows.get_node("Body/Left/Lobbies")
+@onready var _header: Label = _rows.get_node("Body/Right/Header")
+@onready var _players: VBoxContainer = _rows.get_node("Body/Right/Players")
+@onready var _copy: Button = _rows.get_node("Body/Right/Copy")
+@onready var _leave: Button = _rows.get_node("Body/Right/Leave")
+@onready var _status: Label = _rows.get_node("Status")
 
 ## The lobbies the last search turned up, in the order the list shows them, so a
 ## clicked row can be turned back into an ID.
@@ -42,11 +52,7 @@ var _found: Array[Dictionary] = []
 
 
 func _ready() -> void:
-	# The map takes the mouse away; the lobby needs it back, and the player may
-	# well be arriving here from a hunt.
-	Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
-
-	for button in [_create, _join, _refresh, _copy, _leave, _invite, _play]:
+	for button in [_close, _create, _join, _refresh, _copy, _leave]:
 		button.add_theme_font_size_override("font_size", FONT_SIZE)
 	_code.add_theme_font_size_override("font_size", FONT_SIZE)
 	_lobbies.add_theme_font_size_override("font_size", FONT_SIZE)
@@ -59,8 +65,7 @@ func _ready() -> void:
 	_lobbies.item_activated.connect(_on_lobby_activated)
 	_copy.pressed.connect(_on_copy_pressed)
 	_leave.pressed.connect(LobbyManager.leave_lobby)
-	_invite.pressed.connect(LobbyManager.invite_friends)
-	_play.pressed.connect(LobbyManager.start_game)
+	_close.pressed.connect(func() -> void: close_requested.emit())
 
 	LobbyManager.lobby_entered.connect(_on_lobby_entered)
 	LobbyManager.lobby_left.connect(_on_lobby_left)
@@ -69,20 +74,11 @@ func _ready() -> void:
 	LobbyManager.lobby_failed.connect(_on_lobby_failed)
 
 	if SteamManager.is_online:
-		_say("Signed in as %s." % SteamManager.get_persona_name(), NOTICE_COLOR)
 		# The player should land on a list, not on an empty box asking to be
 		# told what to do.
 		LobbyManager.refresh_lobbies()
 	else:
-		_say("Steam is not running — solo only.", ERROR_COLOR)
-
-	# A redirect from `NetworkGuard` — the host dropped while we were in a
-	# shift, and we have been sent home. The reason is what the player reads
-	# instead of the welcome line, and it is cleared so that a second lobby does
-	# not show yesterday's complaint.
-	if not NetworkGuard.pending_reason.is_empty():
-		_say(NetworkGuard.pending_reason, ERROR_COLOR)
-		NetworkGuard.pending_reason = ""
+		_say("Steam is not running.", ERROR_COLOR)
 
 	_refresh_controls()
 	_show_players(LobbyManager.list_players())
@@ -189,15 +185,9 @@ func _refresh_controls() -> void:
 
 	_create.disabled = not online or in_lobby
 	_join.disabled = not online or in_lobby
-	_refresh.disabled = not online or in_lobby
-	_lobbies.visible = not in_lobby
-	_copy.visible = in_lobby
+	_refresh.disabled = not online
+	_copy.disabled = not in_lobby
 	_leave.disabled = not in_lobby
-	_invite.disabled = not in_lobby
-	# A guest waits for the host. Alone, or with Steam closed, `Play` is the
-	# solo hunt and stays available.
-	_play.disabled = in_lobby and not LobbyManager.is_host
-	_play.text = "PLAY" if in_lobby else "PLAY SOLO"
 
 
 func _say(message: String, color: Color) -> void:
