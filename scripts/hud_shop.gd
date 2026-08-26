@@ -19,7 +19,7 @@ extends Control
 ## is one per item on the shelf, and the shelf is a resource: a line added to the
 ## catalogue has to show up without anybody opening the editor.
 
-## The whole HUD is drawn at 640x360, where 8 px is the normal size of a letter.
+## The whole HUD is drawn at 960x540, where 8 px is the normal size of a letter.
 const FONT_SIZE := 8
 ## Green while the money is there, red while it is not — the two colours the
 ## health bar already uses.

@@ -83,11 +83,6 @@ const MAX_RESULTS := 20
 ## collide with one — which is what lets everything downstream treat it as an
 ## ordinary account without a special case.
 const SOLO_STEAM_ID := 1
-## Where a shift starts, once the host says go: the parked van, which is the
-## lobby phase (card 05). The hunt is three phases further on and is reached
-## through `PhaseManager`, not from here — this node's job ends at putting
-## everybody in the same van at the same moment.
-const GAME_SCENE := "res://scenes/lobby_van.tscn"
 ## What a peer is called before he has got round to saying. The same three dots
 ## an unsent Steam persona shows as, and for the same reason: it is a name that
 ## is on its way, not a name that is missing.
@@ -138,6 +133,18 @@ var _pending := false
 ## Who each peer on the wire is: `steam_id` and `name`, by peer id. Filled in by
 ## the peers themselves (see `_introduce`) and emptied when the wire goes down.
 var _identities: Dictionary[int, Dictionary] = {}
+## A wire is on its way up but is not up yet — `--host` or `--join` was given and
+## the peer is opened a frame later, or a Steam invite named a lobby to join.
+##
+## It exists for the menu, which seats a solo player when there is nobody else
+## and would otherwise seat one in the frame before the wire arrives. That man
+## takes an account number of his own and the first colour off the palette, and
+## the real player then arrives behind him and is handed the second — which is
+## how a host ends up wearing a colour he never picked.
+##
+## Cleared when a lobby is entered, and by `leave_lobby` for an attempt that
+## never got there.
+var wire_is_coming := false
 
 
 func _ready() -> void:
@@ -157,6 +164,9 @@ func _ready() -> void:
 	# not going down that road at all, and a Steam client that happens to be
 	# running should not put it there.
 	if _open_from_command_line():
+		# The peer opens a frame from now; until it does, the menu must not
+		# decide this window is a solo game and seat somebody.
+		wire_is_coming = true
 		return
 
 	if not SteamManager.is_online:
@@ -267,6 +277,7 @@ func _enter_local(peer: ENetMultiplayerPeer, hosting: bool) -> void:
 	lobby_id = LOCAL_LOBBY_ID
 	owner_id = LOCAL_STEAM_BASE + 1 if hosting else 0
 	print("Local lobby — %s on port %d" % ["hosting" if hosting else "joined", LOCAL_PORT])
+	wire_is_coming = false
 	lobby_entered.emit(lobby_id, is_host)
 	members_changed.emit(list_players())
 
@@ -339,6 +350,7 @@ func leave_lobby() -> void:
 	is_host = false
 	is_local = false
 	_pending = false
+	wire_is_coming = false
 	lobby_left.emit()
 	members_changed.emit(list_players())
 
@@ -391,6 +403,33 @@ func _local_players() -> Array[Dictionary]:
 # the transport, so nothing above this line has to care what the wire is made
 # of — and a name from the horse's mouth is one name that can never come back
 # as "[unknown]".
+
+## Which crew entry is ours. Almost always `our_steam_id()`, and different from
+## it whenever Steam is shut: that answers zero, and the man is on the crew under
+## `SOLO_STEAM_ID`, filed there by `_fill_the_crew` because a zero is what
+## `SessionManager` refuses as "not a player".
+##
+## **Anything that looks a player up in the crew should ask this**, and anything
+## that talks about him on the wire should ask `our_steam_id`. The two were the
+## same question while the crew was only ever built on the way into the van;
+## they came apart when the menu started letting a solo player pick a colour
+## before there was a wire at all.
+##
+## The fallback of last resort is the one the stations in the van already used
+## (`ColorStation._our_steam_id`, `ReadyStation._our_steam_id`) and is worth
+## keeping in one place now rather than three: **a crew of one is us**, whatever
+## number he is filed under. It is what makes a bench work, where the crew is
+## seeded by hand under invented accounts, and it can never be wrong — a lone man
+## in the van has nobody else to be.
+func our_crew_id() -> int:
+	var steam_id := our_steam_id()
+	if steam_id != 0 and SessionManager.has_player(steam_id):
+		return steam_id
+	var crew := SessionManager.players.keys()
+	if crew.size() == 1:
+		return crew[0]
+	return steam_id
+
 
 ## Who we are, as the crew counts people. **This, and not
 ## `SteamManager.get_steam_id()`, is what the rest of the game should ask**: the
@@ -775,12 +814,43 @@ func _enter_game() -> void:
 		JoinGate.knock()
 		return
 
+	seat_the_crew()
+	# The shift moves on by *phase* and not by scene path. It used to be a path,
+	# and could be, while the menu and the first phase were two different things:
+	# the lobby phase was a parked van, and pressing Play in a screen that was
+	# outside the phase machine altogether had to name the scene it wanted.
+	#
+	# The menu *is* the lobby phase now, so naming a scene would load the van
+	# with the shift still reading LOBBY behind it — a van that does not move,
+	# with no clock on it and no engine running, because everything in it asks
+	# `PhaseManager` what is going on rather than looking at which file it is.
+	# Advancing is what puts those two back in step, and `_apply` loads the scene
+	# on every machine at once on the way through.
+	PhaseManager.advance()
+
+
+## The guest list, turned into the shift's crew. **Host and solo only.**
+##
+## It is called twice over, and both times matter. Once on the way into the game
+## (`_enter_game`), which is what it has always been for. And once for every
+## change to the guest list while the crew is still in the menu — because the
+## menu is where a man now picks his colour and says he is ready, and both of
+## those are written against a `SessionManager` entry that would not exist yet.
+##
+## Calling it repeatedly is safe by construction: `register_player` leaves a man
+## who is already on the list exactly as he was, colour and ready flag included
+## (`SessionManager._new_player` is only reached for somebody new), and
+## `seat_everybody` re-states colours that have not changed rather than shuffling
+## them.
+func seat_the_crew() -> void:
+	if not is_host and lobby_id != 0:
+		return
 	_fill_the_crew()
+	_drop_the_departed()
 	# The rule that no two men wear one colour is the host's to keep, so he says
 	# out loud who is wearing what. It costs a handful of packets once and
 	# corrects any machine whose list came out differently.
 	ColorManager.seat_everybody()
-	get_tree().change_scene_to_file(GAME_SCENE)
 
 
 ## The Steam lobby's guest list, copied into the shift's own crew. **Host and
@@ -813,6 +883,28 @@ func _fill_the_crew() -> void:
 	for player in crew:
 		SessionManager.register_player(
 			int(player["steam_id"]), String(player["name"]), bool(player["is_host"]))
+
+## Takes off the crew anybody who is no longer on the guest list. **Host and solo
+## only**, and the other half of `_fill_the_crew`: filling only ever adds, which
+## was enough when the crew was built once on the way into the van and a man who
+## left afterwards was somebody else's problem. In the menu the guest list is
+## live, and a body left standing for a player who walked out is a body nobody
+## can get rid of — and a colour nobody can wear.
+##
+## A lobby that has gone (`list_players` empty because we are not in one) clears
+## nobody: that is `leave_lobby`'s business, and a crew wiped here would take the
+## solo player with it.
+func _drop_the_departed() -> void:
+	var crew := list_players()
+	if crew.is_empty():
+		return
+	var present: Dictionary[int, bool] = {}
+	for player in crew:
+		present[int(player["steam_id"])] = true
+	for steam_id in SessionManager.players.keys():
+		if not present.has(steam_id):
+			SessionManager.remove_player(steam_id)
+
 
 # --- What Steam says back ---------------------------------------------------
 
@@ -928,6 +1020,9 @@ func _join_from_command_line() -> void:
 		id = _lobby_from_arguments(OS.get_cmdline_args())
 	if id == 0:
 		return
+	# The join is a frame away, and the menu must not seat a solo player in the
+	# meantime — the crew this window is about to be handed is somebody else's.
+	wire_is_coming = true
 	await get_tree().process_frame
 	join_lobby(id)
 
@@ -955,10 +1050,13 @@ func _open_from_command_line() -> bool:
 
 func _open_local_deferred(hosting: bool, address: String) -> void:
 	await get_tree().process_frame
-	if hosting:
-		host_local()
-	else:
-		join_local(address)
+	var opened := host_local() if hosting else join_local(address)
+	# A wire that could not be brought up is a wire nobody should keep waiting
+	# for: the window is a solo game after all, and the menu is entitled to seat
+	# somebody on the floor. `_enter_local` clears this on the way through when
+	# it does come up.
+	if not opened:
+		wire_is_coming = false
 
 
 ## The address after `--join`, or the loopback when there is none. Anything

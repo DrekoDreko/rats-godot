@@ -22,7 +22,7 @@ extends Interactable
 ##
 ## **Replacing one is meant to be easy.** When card 06 lands, the colour panel's
 ## script changes from this to the real one and the geometry stays where it is;
-## nothing else in `lobby_van.tscn` has to move. That is why the panel is
+## nothing else in the scene has to move. That is why the panel is
 ## dressed here rather than in the van scene — the swap is one line, not a
 ## re-lay-out.
 

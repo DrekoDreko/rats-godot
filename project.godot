@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="RATS"
-run/main_scene="res://scenes/lobby.tscn"
+run/main_scene="res://scenes/menu.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
 
@@ -31,14 +31,15 @@ JoinGate="*res://scripts/session/join_gate.gd"
 MapManager="*res://scripts/session/map_manager.gd"
 NetworkGuard="*res://scripts/session/network_guard.gd"
 TrapManager="*res://scripts/session/trap_manager.gd"
+SteamAvatars="*res://scripts/steam/steam_avatars.gd"
 
 [display]
 
-window/size/viewport_width=960
-window/size/viewport_height=540
+window/size/viewport_width=640
+window/size/viewport_height=360
 window/size/window_width_override=1280
 window/size/window_height_override=720
-window/stretch/mode="canvas_items"
+window/stretch/mode="viewport"
 window/stretch/aspect="expand"
 
 [editor_plugins]

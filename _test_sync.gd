@@ -479,11 +479,12 @@ func _check_a_late_wire() -> bool:
 	return _advance()
 
 
-## A lobby van, for the late-wire step. The real scene and not a stand-in: what
-## is being checked is the crowd node waking up inside the map the game actually
-## loads.
+## A van, for the late-wire step. The real scene and not a stand-in: what is
+## being checked is the crowd node waking up inside the map the game actually
+## loads. It was the parked van until the menu took that phase over; the moving
+## one carries the same `Players` node and is now the first scene a shift is in.
 func _late_van() -> Node3D:
-	return load("res://scenes/lobby_van.tscn").instantiate() as Node3D
+	return load("res://scenes/van_travel.tscn").instantiate() as Node3D
 
 
 # --- Plumbing --------------------------------------------------------------

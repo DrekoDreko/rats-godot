@@ -20,12 +20,12 @@ extends CanvasLayer
 ## on `timer_updated`, which the phase machine already fires every frame on the
 ## host and on the client alike.
 ##
-## **PSX.** The whole HUD is drawn at 640x360, so a letter is 8 px, the colours
+## **PSX.** The whole HUD is drawn at 960x540, so a letter is 8 px, the colours
 ## are flat and there is a hard black outline behind every line instead of a
 ## shadow or a gradient — the same dress the money, the belt and the prompt in
 ## `world.tscn` already wear.
 
-## The size of a letter on a 640x360 screen, matching the rest of the HUD.
+## The size of a letter on a 960x540 screen, matching the rest of the HUD.
 const FONT_SIZE := 8
 ## The black every line is outlined against, and how thick it is drawn.
 const OUTLINE_COLOR := Color(0, 0, 0, 1)

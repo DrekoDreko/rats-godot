@@ -28,9 +28,11 @@ const CARLA := 333
 const VAN := "res://scenes/lobby.tscn"
 const HOUSE := "res://scenes/ps1.tscn"
 
-## The van the panel is actually dressed into, so that the card's own node is
-## exercised where it lives rather than in a scene written for the bench.
-const VAN_SCENE := "res://scenes/lobby_van.tscn"
+## The menu the palette is actually dressed into, so that the control a player
+## presses is exercised where it lives rather than in a scene written for the
+## bench. It used to be a panel on the wall of a parked van; the van is gone and
+## picking a colour is a popup on the menu now.
+const MENU_SCENE := "res://scenes/menu.tscn"
 
 ## The autoloads. In a bench run with `--script` the global names do not exist
 ## yet — the MainLoop script is compiled before the autoloads enter the tree —
@@ -42,8 +44,8 @@ var _colors: Node
 var _painted: Array[Array] = []
 var _refusals: Array[String] = []
 
-var _van: Node3D
-var _panel: Node3D
+var _menu: Node
+var _popup: Node
 
 var _frames := 0
 var _step := 0
@@ -81,7 +83,7 @@ func _physics_process(_delta: float) -> bool:
 		6: return _check_a_man_who_leaves_frees_his_colour()
 		7: return _check_the_host_seats_everybody()
 		8: return _check_the_colour_survives_the_house()
-		9: return _check_the_panel()
+		9: return _check_the_palette()
 	return _finish()
 
 # --- Steps -----------------------------------------------------------------
@@ -261,54 +263,42 @@ func _check_the_colour_survives_the_house() -> bool:
 	_expect(_session.color(ANA) == _colors.color_at(0), "and so is she")
 	return _advance()
 
-## The card's own node, and not only the autoload under it: that the wall is
-## eight squares, that pressing one asks for the colour that square is painted
-## in, and that a square somebody else has is crossed out rather than taken.
+## The control a player presses, and not only the autoload under it: that the
+## palette is eight squares, that pressing one asks for the colour that square is
+## painted in, and that a square somebody else has is dead rather than takeable.
 ##
-## The panel is dressed into the van rather than being a scene of its own, so
-## the van is what is loaded and the panel is found in it by its group — which
-## is also a check that the pending fitting really was replaced by the real one.
+## The popup is dressed into the menu rather than being a scene of its own, so
+## the menu is what is loaded and the popup is found in it by path.
 ##
-## Nobody is looking at the wall on a bench, so `_aimed` is written by hand:
-## there is no character in the tree to cast the ray the panel reads, and what
-## is under test here is what a press does, not where a ray lands. The panel's
-## own `_process` is switched off first, or it would find no ray and clear the
-## square out from under the bench between two of its checks — which is the
-## panel being right and the bench being in its way.
-func _check_the_panel() -> bool:
+## The eighth swatch is pressed by hand rather than clicked: what is under test
+## is what a press does, not that Godot delivers mouse events.
+func _check_the_palette() -> bool:
 	if _clock == 1:
 		_phase.go_to(Phase.Type.LOBBY)
 		return false
 	if _clock == 2:
-		_van = (load(VAN_SCENE) as PackedScene).instantiate()
-		root.add_child(_van)
+		_menu = (load(MENU_SCENE) as PackedScene).instantiate()
+		root.add_child(_menu)
 		return false
 	if _clock == 3:
-		var found := root.get_tree().get_nodes_in_group("color_station")
-		if found.is_empty():
-			_expect(false, "the van has a colour panel in it")
+		_popup = _menu.get_node_or_null("UI/ColorPopup")
+		if _popup == null:
+			_expect(false, "the menu has a colour palette on it")
 			return _advance()
-		_panel = found[0]
-		_expect(not _panel.is_in_group("pending_station"),
-			"and it is the real one, not the fitting it replaced")
-		_expect(_panel.get_node("Swatches").get_child_count() == _colors.count(),
-			"one square on the wall per colour in the palette")
-		_panel.set_process(false)
-		return false
-	if _clock == 4:
-		# Ana has swatch 0 and Bruno swatch 7 by now. The bench's own man is
-		# whoever the panel would speak for, which off Steam is the only one in
-		# the crew — so the crew is emptied down to him first.
+		var grid := _popup.get_child(0)
+		_expect(grid.get_child_count() == _colors.count(),
+			"one square in the palette per colour in the palette")
+
+		# The bench's own man is whoever the popup would speak for, which off
+		# Steam is the only one in the crew — so the crew is emptied down to him.
 		for steam_id in _session.players.keys():
 			_session.remove_player(steam_id)
 		_session.register_player(ANA, "Ana", true)
-
-		_panel._aimed = 3
-		_panel._update_prompt()
-		_expect(_panel.prompt.contains("yellow"), "the prompt names the square under the ray")
-
+		return false
+	if _clock == 4:
+		_popup.refresh()
 		_painted.clear()
-		_panel.use(null)
+		(_popup.get_child(0).get_child(3) as Button).emit_signal("pressed")
 		return false
 	if _clock < WAIT + 4:
 		return false
@@ -316,21 +306,19 @@ func _check_the_panel() -> bool:
 	_expect(_painted == [[ANA, _colors.color_at(3)]],
 		"pressing a square asks the host, once, for the colour it is painted in")
 	_expect(_session.color(ANA) == _colors.color_at(3), "and the host is who wrote it")
-	_expect(_panel.prompt.contains("yours"), "a square that is ours says so")
 
-	# A second man takes another, and the square he took reads as taken.
+	# A second man takes another, and the square he took reads as dead.
 	_session.register_player(BRUNO, "Bruno")
 	_colors.request_color(BRUNO, 5)
-	_panel._aimed = 5
-	_panel._update_prompt()
-	_expect(_panel.prompt.contains("taken"), "and a square somebody else has says that")
+	_popup.refresh()
+	var taken := _popup.get_child(0).get_child(5) as Button
+	_expect(taken.disabled, "and a square somebody else has cannot be pressed")
 
 	_painted.clear()
-	_panel.use(null)
-	_expect(_painted.is_empty(), "pressing a taken square writes nothing")
-	_expect(_session.color(ANA) == _colors.color_at(3), "and leaves us in our own colour")
+	taken.emit_signal("pressed")
+	_expect(_session.color(ANA) == _colors.color_at(3), "and we are left in our own colour")
 
-	_van.queue_free()
+	_menu.queue_free()
 	return _advance()
 
 # --- Plumbing --------------------------------------------------------------

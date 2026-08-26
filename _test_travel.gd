@@ -50,7 +50,7 @@ const SHOP_SHELF_SCRIPT := "res://scripts/shop/shop_shelf.gd"
 const MAP_TABLE_SCRIPT := "res://scripts/map/map_table.gd"
 
 ## The inside of the box body, straight off `models/box_van.py` — the same
-## numbers `_test_lobby_van.gd` measures against, because it is the same truck.
+## numbers the menu bench measures against, because it is the same truck.
 const INNER_HALF_WIDTH := 1.6
 const INNER_FLOOR := 0.622
 const INNER_ROOF := 3.02

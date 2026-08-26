@@ -40,7 +40,7 @@ var pending_reason := ""
 ## The scene the game starts on, and the one a stranded client is sent back to.
 ## The same path `LobbyManager` already uses for the van; this one is the lobby
 ## *screen*, which is one step before it.
-const LOBBY_SCENE := "res://scenes/lobby.tscn"
+const LOBBY_SCENE := "res://scenes/menu.tscn"
 
 ## Whether a return is already in flight. Guards against the two signals both
 ## firing in the same frame and loading the lobby screen twice.
@@ -89,13 +89,19 @@ func _return_to_lobby(reason: String) -> void:
 	if _returning:
 		return
 
-	# Already on the lobby screen — nothing to do. The scene path is checked
-	# rather than a flag, because a flag would have to be set and cleared by the
-	# lobby screen itself, and a screen that has to know about this file is a
-	# screen with a dependency it does not need.
+	# Whether we have to load anything, as against merely having to clean up.
+	# The scene path is checked rather than a flag, because a flag would have to
+	# be set and cleared by the menu itself, and a screen that has to know about
+	# this file is a screen with a dependency it does not need.
+	#
+	# Being already on the menu used to mean there was nothing to do at all. It
+	# does not any more: the menu *is* the lobby phase now, so this is where a
+	# client is standing when the host drops, and the crew he was standing with
+	# still has to be wiped. Returning early here left him looking at bodies for
+	# players who were no longer on any wire.
 	var current_scene := get_tree().current_scene
-	if current_scene != null and current_scene.scene_file_path == LOBBY_SCENE:
-		return
+	var already_there := current_scene != null \
+		and current_scene.scene_file_path == LOBBY_SCENE
 
 	_returning = true
 
@@ -114,7 +120,11 @@ func _return_to_lobby(reason: String) -> void:
 
 	host_disconnected.emit(reason)
 
-	get_tree().change_scene_to_file(LOBBY_SCENE)
+	# Reloading the menu we are already on would throw away a screen that is
+	# perfectly good and make the crew flicker; it listens to the same autoloads
+	# this just cleared and has already redrawn itself off them.
+	if not already_there:
+		get_tree().change_scene_to_file(LOBBY_SCENE)
 
 	# One frame of patience, so that the scene is standing before the guard is
 	# lowered — a signal that fires in the same frame as the change would find

@@ -48,7 +48,7 @@ extends CanvasLayer
 
 ## The lobby *screen*, one step before the van. It is where "Sair da partida"
 ## goes, and it is the same path `NetworkGuard` sends a stranded client to.
-const LOBBY_SCENE := "res://scenes/lobby.tscn"
+const LOBBY_SCENE := "res://scenes/menu.tscn"
 
 ## How often the crew list is rebuilt while the menu is up, in seconds. A ping
 ## is a number that wanders by a few milliseconds between one reading and the

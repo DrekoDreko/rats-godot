@@ -29,10 +29,10 @@ extends SceneTree
 const VAN := "res://scenes/lobby.tscn"
 const HOUSE := "res://scenes/ps1.tscn"
 
-## The radio, so that the card's own fitting is exercised and not only the
-## autoload under it. It is loaded out of the van rather than from a scene of its
-## own, the way the colour panel is.
-const LOBBY_VAN := "res://scenes/lobby_van.tscn"
+## The menu, so that the button a player actually presses is exercised and not
+## only the autoload under it. It used to be the radio on the wall of the parked
+## van; the van is gone and inviting is a button on the menu now.
+const MENU := "res://scenes/menu.tscn"
 
 ## Stand-in Steam IDs, as in the other benches. Real ones are nineteen digits;
 ## any distinct non-zero numbers do the same job.
@@ -62,7 +62,6 @@ var _refusals: Array[String] = []
 var _left: Array[int] = []
 
 var _van: Node3D
-var _radio: Node3D
 
 var _frames := 0
 var _step := 0
@@ -99,7 +98,7 @@ func _physics_process(_delta: float) -> bool:
 		6: return _check_a_nameless_knock_is_refused()
 		7: return _check_a_welcome_is_written_down()
 		8: return _check_a_man_who_leaves_is_cleared_up()
-		9: return _check_the_radio()
+		9: return _check_inviting()
 	return _finish()
 
 # --- Steps -----------------------------------------------------------------
@@ -356,35 +355,32 @@ func _check_a_man_who_leaves_is_cleared_up() -> bool:
 	return _advance()
 
 
-## The radio on the wall of the van: the card's own fitting. What can be checked
-## without a second Steam account is that it knows when there is nobody to call
-## and says so instead of opening an overlay that leads nowhere.
-func _check_the_radio() -> bool:
+## Inviting a friend, which is a button on the menu now rather than a radio on
+## the wall of a van that no longer exists. What can be checked without a second
+## Steam account is that pressing it with nobody to call says so rather than
+## opening an overlay that leads nowhere.
+func _check_inviting() -> bool:
 	if _clock == 1:
-		_van = (load(LOBBY_VAN) as PackedScene).instantiate()
+		_van = (load(MENU) as PackedScene).instantiate()
 		root.add_child(_van)
 		return false
 	if _clock < WAIT:
 		return false
-	if _radio == null:
-		_radio = _van.get_node_or_null("Stations/Radio") as Node3D
-		if _radio == null:
-			print("FAIL: there is no radio on the wall of the van")
-			return _advance()
 
-	_expect(_radio.is_in_group("radio_station"), "the radio can be found by its group")
+	var invite := _van.get_node_or_null("UI/Center/Invite") as Button
+	if invite == null:
+		print("FAIL: there is no invite button on the menu")
+		_van.queue_free()
+		return _advance()
 
-	# No lobby is open on a bench, whether or not Steam itself is running, so the
-	# line is dead and the radio should say which of the two reasons it is.
-	var reason: String = _radio._closed_reason()
-	_expect(not reason.is_empty(), "with no lobby open there is nobody to call")
-	_expect(reason == _radio.NO_STEAM or reason == _radio.NO_LOBBY,
-		"and the radio says which of the two it is")
-	_expect(_radio.prompt == _radio.PROMPT_CLOSED, "a dead line offers the prompt that says so")
+	var status := _van.get_node_or_null("UI/Status") as Label
+	_expect(status != null, "and a line to say why it did not work")
 
-	# Pressing it is not a crash and not an overlay: it says why and stops.
-	_radio.use(null)
-	_expect(_radio.prompt == _radio.PROMPT_CLOSED, "and pressing it changes nothing")
+	# Steam is not running on a bench, so the overlay cannot open and the button
+	# has to say which of the two reasons it is rather than doing nothing.
+	invite.emit_signal("pressed")
+	_expect(status != null and not status.text.is_empty(),
+		"pressing it with no Steam says so instead of opening an overlay")
 
 	_van.queue_free()
 	return _advance()

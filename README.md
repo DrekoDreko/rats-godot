@@ -8,11 +8,13 @@
 2. Open Godot, click **Import** and pick this repository's `project.godot`.
 3. Run with `F5`.
 
-`F5` opens on the **lobby screen** (`scenes/lobby.tscn`), not on the map. With no
-Steam client running it says so and **PLAY SOLO** starts a shift on your own,
-which is the normal development run. Either way `PLAY` lands in the back of the
-parked van — the first phase of a shift — and the crew leaves it by slapping the
-ready board. See [The lobby](#the-lobby), [The shift](#the-shift) and
+`F5` opens on the **menu** (`scenes/menu.tscn`), not on the map. The crew stands
+in front of the camera as hazmat suits, with each man's Steam name and picture
+over his head; the colour, the contract and who is ready are all controls on the
+screen. With no Steam client running it says so and `PLAY` starts a shift on your
+own, which is the normal development run. Either way `PLAY` carries the shift
+onto the road — `van_travel.tscn`, the moving van — where the crew shops and
+reads the floor plan. See [The lobby](#the-lobby), [The shift](#the-shift) and
 [The van](#the-van).
 
 To open the old hunting map on its own, without the shift around it, pass it as
@@ -613,7 +615,7 @@ two phases later with everything he bought. The lock is read off the phase and
 re-read on every change, so the road gives the belt back.
 
 ```
-godot --headless --script _test_lobby_van.gd
+godot --headless --script _test_menu.gd
 ```
 
 ## The shelf on the road
@@ -746,9 +748,10 @@ accounts and is done by hand:
 
 ## Structure
 
-- `scenes/` — the game's scenes (`lobby.tscn` is the main scene, the waiting room
-  the game opens on, `lobby_van.tscn` is the parked van the shift is configured
-  in, `world.tscn` is the map, `player.tscn` is the character,
+- `scenes/` — the game's scenes (`menu.tscn` is the main scene, where the crew
+  assembles and the shift is configured, `lobby.tscn` is the lobby browser that
+  opens over it, `van_travel.tscn` is the van on the road,
+  `world.tscn` is the map, `player.tscn` is the character,
   `player_avatar.tscn` is the capsule a player stands as on the other players'
   screens, `ready_station.tscn` is the board the crew slaps to say it is ready,
   `hud_phase.tscn` is the strip showing the phase, the clock and who is ready,
@@ -757,8 +760,9 @@ accounts and is done by hand:
 - `scripts/session/` — the shift: `phase.gd` is the table of phases and how long
   each lasts, `session_manager.gd` is the autoload holding the crew and the state
   that outlives a scene change, `join_gate.gd` is the door a newcomer knocks at
-  and what he is handed on the way through, `radio_station.gd` is the handset on
-  the van wall that opens Steam's invite window, `phase_manager.gd` the one that
+  and what he is handed on the way through, `radio_station.gd` is a handset that opens
+  Steam's invite window, kept for a van that wants one now that inviting is a
+  button on the menu, `phase_manager.gd` the one that
   drives the clock
   and the scene, `ready_manager.gd` the show of hands that ends a phase,
   `ready_station.gd` the board a player slaps, `van_spawns.gd` the node that
@@ -790,11 +794,19 @@ accounts and is done by hand:
 - `scripts/steam/` — everything that talks to Steam: `steam_manager.gd` is the
   autoload that brings the API up and keeps its callbacks flowing, and
   `lobby_manager.gd` the autoload that holds the lobby, the multiplayer peer and
-  who each peer on it is; `lobby_screen.gd` is the waiting room drawn on
-  `scenes/lobby.tscn`, `player_avatars.gd` is the node in the map that puts up
+  who each peer on it is; `lobby_screen.gd` is the lobby browser drawn on
+  `scenes/lobby.tscn`, `steam_avatars.gd` is the cache that turns a Steam account
+  into a picture, `player_avatars.gd` is the node in the map that puts up
   one body per player on the wire and `player_avatar.gd` is one of those bodies,
   the piece that reads the character on the machine it belongs to and follows the
   wire on everybody else's
+- `scripts/ui/` — the screens: `menu_screen.gd` drives `scenes/menu.tscn` and is
+  the one place that listens to every autoload the menu draws from,
+  `menu_crew.gd` puts a hazmat on the floor per man in the crew,
+  `menu_player_card.gd` is the picture and name floating over one of them,
+  `color_popup.gd` is the palette a man picks his colour from, `contract_panel.gd`
+  the board of jobs the leader signs one off, and `pause_menu.gd` the menu the
+  Esc key opens in a shift
 - `scripts/economy/` — the money from the hunt: `death.gd` is the table of death
   types, `rat_species.gd` is the mould of a breed of rat, `store_item.gd` is a
   line on the computer's catalogue, `wallet.gd` is the autoload that holds what
