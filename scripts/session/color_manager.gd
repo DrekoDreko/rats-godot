@@ -148,7 +148,7 @@ func seat_everybody() -> void:
 			color = _first_color_outside(settled)
 			SessionManager.set_color(steam_id, color)
 		settled.append(color)
-		_apply.rpc(steam_id, color)
+		_announce(steam_id, color)
 
 # --- The wire ---------------------------------------------------------------
 
@@ -196,7 +196,7 @@ func _handle_request(steam_id: int, index: int, from_peer: int) -> void:
 	if taken_by != 0:
 		_refuse_to(from_peer, "%s is already wearing that one." % _name_of(taken_by))
 		return
-	_apply.rpc(steam_id, wanted)
+	_announce(steam_id, wanted)
 
 
 ## Whether a peer is allowed to dress a Steam ID: his own only. The host calling
@@ -211,6 +211,19 @@ func _may_speak_for(from_peer: int, steam_id: int) -> bool:
 	# second of a lobby, which is a worse bug than the one being guarded
 	# against — and the introduction is already on its way.
 	return owner_id == 0 or owner_id == steam_id
+
+
+## The host's decision, said out loud. On the wire it goes to every machine at
+## once, his own included (`call_local`); off it — a solo game, or a host whose
+## last client has just left, which is the state `leave_lobby` puts him in on the
+## way through `members_changed` — the same call is made straight into `_apply`,
+## because an `rpc` with no peer under it is an error in the log for a packet
+## that had nobody to reach.
+func _announce(steam_id: int, color: Color) -> void:
+	if _on_the_wire():
+		_apply.rpc(steam_id, color)
+		return
+	_apply(steam_id, color)
 
 
 ## The answer, run on every machine at once, the host included (`call_local`).
@@ -286,9 +299,14 @@ func _name_of(steam_id: int) -> String:
 ## Godot for an id then is an error in the log for an answer nobody needed. The
 ## same shape as `ReadyManager._our_peer_id`, and for the same reason.
 func _our_peer_id() -> int:
-	if not multiplayer.has_multiplayer_peer():
-		return 0
-	var peer := multiplayer.multiplayer_peer
-	if peer is OfflineMultiplayerPeer:
+	if not _on_the_wire():
 		return 0
 	return multiplayer.get_unique_id()
+
+
+## Whether there is anybody to say it to. The same question `PhaseManager` and
+## `TrapManager` ask, and for the same reason: a solo game never has a wire, and
+## a host whose last client just left has stopped having one.
+func _on_the_wire() -> bool:
+	return multiplayer.has_multiplayer_peer() \
+		and not multiplayer.multiplayer_peer is OfflineMultiplayerPeer

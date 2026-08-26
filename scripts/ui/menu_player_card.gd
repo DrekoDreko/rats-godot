@@ -28,9 +28,8 @@ var is_ours := false
 var _steam_id := 0
 
 @onready var _photo: TextureRect = $Photo
-@onready var _name: Label = $Name
+@onready var _name: BigFontOutlinedLabel = $Name
 @onready var _swatch: Button = $Swatch
-@onready var _ready_mark: Label = $ReadyMark
 
 
 func _ready() -> void:
@@ -54,7 +53,10 @@ func setup(steam_id: int, player_name: String) -> void:
 func refresh() -> void:
 	if not is_node_ready():
 		return
-	_ready_mark.visible = ReadyManager.is_ready(_steam_id)
+
+	if ReadyManager.is_ready(_steam_id):
+		_name.modulate = Color.GREEN
+
 	# Only our own card offers the palette. Somebody else's colour is his to
 	# change and nobody else's, which `ColorManager` refuses on the wire anyway —
 	# this is the half of it the player can see.

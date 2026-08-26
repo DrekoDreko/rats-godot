@@ -37,8 +37,9 @@ const BLEND_TIME := 0.15
 const JUMP_BLEND_TIME := 0.05
 
 ## How far towards white a player's colour is pulled before it is multiplied
-## into the suit. Half keeps the palette telling four men apart while leaving
-## enough of the texture to still read as a hazmat suit.
+## into the suit. Only the fallback path uses it — see `set_tint` — where
+## multiplying is the only tool there is and half keeps the palette telling four
+## men apart while leaving enough of the texture to still read as a hazmat suit.
 const TINT_WHITENING := 0.5
 
 ## What each state looks like. Two of them are borrowed, and it is worth saying
@@ -105,25 +106,35 @@ func current_animation() -> StringName:
 ## two fails silently and looks like a bug in `ColorManager`, so both are
 ## handled here, in the one place that can see which is in play.
 ##
-## The colour is mixed with white on the way in. `albedo_color` multiplies the
-## texture, and the suit's own yellow is already dark enough that a full-strength
-## swatch from the palette comes out nearly black — which would tell the players
-## apart by making three of them invisible.
+## **On the shader the hue is replaced, not multiplied.** The suit is painted a
+## fixed yellow in the texture, and multiplying can only darken: the yellow's
+## blue channel sits at 77/255, so a blue swatch lands at a third of that and
+## reads as black. The shader instead swaps the hue of anything close enough to
+## that yellow and keeps the pixel's own brightness, which is where the fabric's
+## folds and shading are — so the gloves, the boots and the face come through
+## untouched and only the overalls change colour.
+##
+## **On the imported material it is still a multiply**, because a
+## `StandardMaterial3D` has no such trick, so the colour is washed halfway to
+## white first to keep three of the four men from turning black. That path is
+## the fallback for the PS1 look being off, and it looks worse — which is the
+## honest state of it rather than something to hide.
 func set_tint(color: Color) -> void:
 	if _mesh == null:
 		return
-	var tint := color.lerp(Color.WHITE, TINT_WHITENING)
 	for surface in _mesh.get_surface_override_material_count():
 		var material := _mesh.get_active_material(surface)
 		if material is ShaderMaterial:
-			(material as ShaderMaterial).set_shader_parameter(&"albedo_color", tint)
+			var shader_material := material as ShaderMaterial
+			shader_material.set_shader_parameter(&"recolor_target", color)
+			shader_material.set_shader_parameter(&"recolor_strength", 1.0)
 		elif material is BaseMaterial3D:
 			# The imported material is baked into the mesh, which every instance
 			# of the model shares: painting it in place would dress the whole van
 			# in one man's colour. The applier already duplicates per surface, so
 			# this only bites when the PS1 look is off.
 			var own := (material as BaseMaterial3D).duplicate() as BaseMaterial3D
-			own.albedo_color = tint
+			own.albedo_color = color.lerp(Color.WHITE, TINT_WHITENING)
 			_mesh.set_surface_override_material(surface, own)
 
 

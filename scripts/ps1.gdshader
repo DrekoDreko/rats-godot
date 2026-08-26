@@ -39,6 +39,86 @@ uniform bool jitter_depth_independent = true;
 uniform bool affine_texture_mapping = true;
 uniform float alpha_scissor: hint_range(0.0, 1.0) = 1.0;
 
+// --- Recolouring the suit ---------------------------------------------------
+//
+// The overalls come out of Blender painted a fixed yellow, and `albedo_color`
+// alone cannot repaint them: it multiplies, and multiplication can only ever
+// darken. The suit's blue channel is already down at 77/255, so a full-strength
+// blue from the palette lands at thirty percent of that and reads as black —
+// which is why the tint had to be washed halfway to white to stay visible, and
+// why every man came out pastel and hard to tell from the next.
+//
+// So the hue is *replaced* rather than multiplied. A pixel whose hue is close
+// enough to the suit's yellow takes the requested hue and saturation and keeps
+// its own value, which is where the fabric's shading and its folds live. A pixel
+// outside that window — the cyan gloves, the dark boots, the face — is left
+// alone, so recolouring the overalls never touches the parts that are the same
+// on every man.
+//
+// `recolor_strength` at zero switches the whole thing off, which is what every
+// other object in the scene runs at.
+uniform vec3 recolor_target: source_color = vec3(1.0, 1.0, 1.0);
+uniform float recolor_strength: hint_range(0.0, 1.0) = 0.0;
+// The hue being replaced, as a 0-1 turn. The suit's yellow sits at 50.6 degrees.
+uniform float recolor_hue: hint_range(0.0, 1.0) = 0.1406;
+// How far from that hue a pixel may sit and still be treated as suit. Wide
+// enough to hold the whole of the fabric including its shaded folds, narrow
+// enough to leave the cyan gloves at 190 degrees untouched.
+uniform float recolor_hue_range: hint_range(0.0, 0.5) = 0.09;
+// Pixels this desaturated are grey rather than yellow — seams, scuffs, the dark
+// of a deep fold — and grey has no hue worth matching on. Leaving them out
+// keeps the recolour from tinting the dirt.
+uniform float recolor_min_saturation: hint_range(0.0, 1.0) = 0.25;
+
+vec3 rgb_to_hsv(vec3 c) {
+	vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+	vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+	vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+	float d = q.x - min(q.w, q.y);
+	float e = 1.0e-10;
+	return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+}
+
+vec3 hsv_to_rgb(vec3 c) {
+	vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+	vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+	return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
+// How much of a pixel is suit, from zero (leave it exactly as it is) to one
+// (repaint it fully). It falls off towards the edge of the hue window rather
+// than cutting at it, so the border between repainted fabric and untouched glove
+// is a gradient and not a jagged line of stray yellow.
+float suit_weight(vec3 hsv) {
+	// Hue is a wheel: the distance from 0.98 to 0.02 is 0.04, not 0.96.
+	float hue_distance = abs(hsv.x - recolor_hue);
+	hue_distance = min(hue_distance, 1.0 - hue_distance);
+	float in_hue = 1.0 - smoothstep(recolor_hue_range * 0.6, recolor_hue_range, hue_distance);
+	float in_saturation = smoothstep(recolor_min_saturation * 0.5, recolor_min_saturation, hsv.y);
+	return in_hue * in_saturation;
+}
+
+// The suit repainted in a requested colour. The pixel keeps its own value, which
+// carries the shading, and takes the target's hue and saturation — so a fold
+// that was dark yellow becomes dark blue rather than flat blue.
+vec3 recolor(vec3 rgb) {
+	vec3 hsv = rgb_to_hsv(rgb);
+	float weight = suit_weight(hsv) * recolor_strength;
+	if (weight <= 0.0) {
+		return rgb;
+	}
+	vec3 target_hsv = rgb_to_hsv(recolor_target);
+	// The pixel keeps its own saturation where that is the weaker of the two.
+	// Taking the target's outright flattens the suit: a full-strength red from
+	// the palette is saturation 1.0 everywhere, and a fold that was a paler
+	// yellow than the fabric around it comes out exactly as red as the fabric,
+	// so the creases stop reading. Scaling the pixel's own saturation towards
+	// the target keeps the fabric's variation under the new colour.
+	float painted_saturation = mix(hsv.y, target_hsv.y, 0.5) * target_hsv.y;
+	vec3 painted = hsv_to_rgb(vec3(target_hsv.x, painted_saturation, hsv.z * target_hsv.z));
+	return mix(rgb, painted, weight);
+}
+
 void vertex() {
 	VERTEX = (MODELVIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	
@@ -69,7 +149,7 @@ void fragment() {
 	}
 	
 	vec4 color = texture(albedo, uv) * albedo_color;
-	ALBEDO = color.rgb;
+	ALBEDO = recolor(color.rgb);
 	ALPHA = color.a;
 	// In 3.x this built-in was called just `ALPHA_SCISSOR`.
 	ALPHA_SCISSOR_THRESHOLD = alpha_scissor;
