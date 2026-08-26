@@ -1,0 +1,9 @@
+[gd_scene format=3 uid="uid://ck8y2v1rw4mqn"]
+
+[ext_resource type="Script" path="res://scripts/player_view_model.gd" id="1_view_model"]
+[ext_resource type="PackedScene" uid="uid://cspc7qlhbpj7i" path="res://scenes/player_model.tscn" id="2_model"]
+
+[node name="ViewModel" type="Node3D"]
+script = ExtResource("1_view_model")
+
+[node name="Model" parent="." instance=ExtResource("2_model")]

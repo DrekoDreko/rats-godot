@@ -8,8 +8,9 @@
 [ext_resource type="Shader" uid="uid://bwmdy542q66bt" path="res://scripts/ps1.gdshader" id="4_70i5f"]
 [ext_resource type="Script" uid="uid://c0najh3gpg2du" path="res://scripts/ui/contract_panel.gd" id="4_contract"]
 [ext_resource type="PackedScene" path="res://scenes/lobby.tscn" id="5_modal"]
+[ext_resource type="PackedScene" uid="uid://r6380qbonva8" path="res://scenes/black_button.tscn" id="7_i6lef"]
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_13sgg"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_i6lef"]
 render_priority = 0
 shader = ExtResource("4_70i5f")
 shader_parameter/albedo_color = Color(1, 1, 1, 1)
@@ -26,19 +27,32 @@ albedo_color = Color(0.6294602, 0.62969375, 0.67210025, 1)
 material = SubResource("Mat_floor")
 size = Vector2(40, 40)
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_70i5f"]
+render_priority = 0
+shader = ExtResource("4_70i5f")
+shader_parameter/albedo_color = Color(0.6294602, 0.62969375, 0.67210025, 1)
+shader_parameter/jitter = 0.450000021375
+shader_parameter/jitter_z_coordinate = false
+shader_parameter/jitter_depth_independent = true
+shader_parameter/affine_texture_mapping = true
+shader_parameter/alpha_scissor = 0.5
+
 [node name="Menu" type="Node3D" unique_id=2125750364]
 script = ExtResource("1_menu")
 
 [node name="PS1" parent="." unique_id=1777166207 instance=ExtResource("2_13sgg")]
 
 [node name="PS1PostProcess" parent="." unique_id=667602802 instance=ExtResource("3_i6lef")]
-surface_material_override/0 = SubResource("ShaderMaterial_13sgg")
+transform = Transform3D(0.99994415, 0, -0.0105678635, 0, 1, 0, 0.0105678635, 0, 0.99994415, 0, 0, 0)
+surface_material_override/0 = SubResource("ShaderMaterial_i6lef")
 
 [node name="Floor" type="MeshInstance3D" parent="." unique_id=564645654]
+transform = Transform3D(0.99996746, 0, 0.00806902, 0, 1, 0, -0.00806902, 0, 0.99996746, -0.0012350082, -2.3841858e-07, 0.009379387)
 mesh = SubResource("Mesh_floor")
+surface_material_override/0 = SubResource("ShaderMaterial_70i5f")
 
 [node name="Camera" type="Camera3D" parent="." unique_id=1721597996]
-transform = Transform3D(1, 0, 0, 0, 0.9848, 0.1736, 0, -0.1736, 0.9848, 0, 1.15, 4.1)
+transform = Transform3D(0.9999905, 0.0005873988, -0.004317632, 0, 0.9908722, 0.13480473, 0.0043574055, -0.13480344, 0.9908628, -0.96524316, 1.6588356, 5.4678407)
 fov = 45.0
 
 [node name="Crew" type="Node3D" parent="." unique_id=1560646598]
@@ -120,25 +134,19 @@ grow_horizontal = 2
 grow_vertical = 0
 theme_override_constants/separation = 4
 
-[node name="Play" type="Button" parent="UI/Center" unique_id=337119944]
-custom_minimum_size = Vector2(140, 26)
+[node name="Play" parent="UI/Center" unique_id=1313306122 instance=ExtResource("7_i6lef")]
 layout_mode = 2
+size_flags_horizontal = 1
 text = "PLAY"
 
-[node name="Invite" type="Button" parent="UI/Center" unique_id=2022267828]
-custom_minimum_size = Vector2(140, 0)
+[node name="PublicLobbies" parent="UI/Center" unique_id=1053931162 instance=ExtResource("7_i6lef")]
 layout_mode = 2
-text = "INVITE FRIENDS"
+size_flags_horizontal = 1
+text = "FIND LOBBY"
 
-[node name="PublicLobbies" type="Button" parent="UI/Center" unique_id=987048932]
-custom_minimum_size = Vector2(140, 0)
+[node name="Settings" parent="UI/Center" unique_id=1414672112 instance=ExtResource("7_i6lef")]
 layout_mode = 2
-text = "PUBLIC LOBBIES"
-
-[node name="Settings" type="Button" parent="UI/Center" unique_id=518547715]
-custom_minimum_size = Vector2(140, 0)
-layout_mode = 2
-disabled = true
+size_flags_horizontal = 1
 text = "SETTINGS"
 
 [node name="Status" type="Label" parent="UI" unique_id=523677910]

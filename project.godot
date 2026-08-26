@@ -31,8 +31,8 @@ JoinGate="*res://scripts/session/join_gate.gd"
 MapManager="*res://scripts/session/map_manager.gd"
 NetworkGuard="*res://scripts/session/network_guard.gd"
 TrapManager="*res://scripts/session/trap_manager.gd"
-ShiftReport="*res://scripts/session/shift_report.gd"
 SteamAvatars="*res://scripts/steam/steam_avatars.gd"
+ShiftReport="*res://scripts/session/shift_report.gd"
 
 [display]
 
@@ -47,9 +47,65 @@ window/stretch/aspect="expand"
 
 enabled=PackedStringArray("res://addons/godotsteam/plugin.cfg")
 
-[filesystem]
+[importer_defaults]
 
-import/blender/enabled=false
+texture={
+"compress/channel_pack": 0,
+"compress/hdr_compression": 1,
+"compress/high_quality": false,
+"compress/lossy_quality": 0.7,
+"compress/mode": 0,
+"compress/normal_map": 0,
+"compress/rdo_quality_loss": 0.0,
+"compress/uastc_level": 0,
+"detect_3d/compress_to": 0,
+"mipmaps/generate": false,
+"mipmaps/limit": -1,
+"process/channel_remap/alpha": 3,
+"process/channel_remap/blue": 2,
+"process/channel_remap/green": 1,
+"process/channel_remap/red": 0,
+"process/fix_alpha_border": true,
+"process/hdr_as_srgb": false,
+"process/hdr_clamp_exposure": false,
+"process/normal_map_invert_y": false,
+"process/premult_alpha": false,
+"process/size_limit": 0,
+"roughness/mode": 1,
+"roughness/src_normal": ""
+}
+scene={
+"_subresources": {},
+"animation/fps": 30,
+"animation/import": true,
+"animation/import_rest_as_RESET": false,
+"animation/remove_immutable_tracks": true,
+"animation/trimming": false,
+"array_mesh/deduplicate_surfaces": true,
+"gltf/embedded_image_handling": 1,
+"gltf/naming_version": 2,
+"gltf/texture_map_mode": 1,
+"import_script/path": "",
+"materials/extract": 0,
+"materials/extract_format": 0,
+"materials/extract_path": "",
+"mesh_library/use_node_names_as_mesh_names": false,
+"meshes/create_shadow_meshes": true,
+"meshes/ensure_tangents": true,
+"meshes/force_disable_compression": false,
+"meshes/generate_lods": true,
+"meshes/light_baking": 1,
+"meshes/lightmap_texel_size": 0.2,
+"nodes/apply_root_scale": true,
+"nodes/import_as_skeleton_bones": false,
+"nodes/root_name": "",
+"nodes/root_scale": 1.0,
+"nodes/root_script": null,
+"nodes/root_type": "",
+"nodes/use_name_suffixes": true,
+"nodes/use_node_type_suffixes": true,
+"skins/use_named_skins": true
+}
 
 [input]
 
@@ -214,4 +270,7 @@ textures/canvas_textures/default_texture_filter=0
 rendering_device/driver.windows="d3d12"
 lights_and_shadows/directional_shadow/soft_shadow_filter_quality=0
 lights_and_shadows/positional_shadow/soft_shadow_filter_quality=0
+textures/default_filters/anisotropic_filtering_level=0
+textures/decals/filter=0
+textures/light_projectors/filter=0
 2d/snap/snap_2d_vertices_to_pixel=true

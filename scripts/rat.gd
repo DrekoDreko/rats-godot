@@ -443,7 +443,7 @@ func _ready() -> void:
 	#
 	# Solo this is never taken: with no wire at all every node is its own
 	# authority, so a lone player's rats think exactly as they always did.
-	if not is_multiplayer_authority():
+	if not _is_authority():
 		_become_puppet()
 		return
 
@@ -473,7 +473,7 @@ func _physics_process(delta: float) -> void:
 	# never runs there. The guard is kept anyway because authority can change
 	# under a node that is already up, and a rat that started thinking for itself
 	# on two machines at once is a bug that shows as a rat in two places.
-	if not is_multiplayer_authority():
+	if not _is_authority():
 		return
 
 	_immune_time = maxf(0.0, _immune_time - delta)
@@ -543,7 +543,7 @@ func _physics_process(delta: float) -> void:
 ## On a guest it is the only thing running at all, and what it does is draw the
 ## animal the host is thinking for.
 func _process(delta: float) -> void:
-	if not is_multiplayer_authority():
+	if not _is_authority():
 		_draw_remote(delta)
 		return
 
@@ -587,7 +587,7 @@ func take_damage(amount: int = 1, origin: Vector3 = INVALID_POINT,
 	# knockback, the flight, the death and the money all follow from that one
 	# decision made in one place, and the guest sees the result come back like
 	# any other thing the rat does.
-	if not is_multiplayer_authority():
+	if not _is_authority():
 		_request_damage.rpc_id(get_multiplayer_authority(), amount, origin, type, leap)
 		return
 	_health -= amount
@@ -629,7 +629,7 @@ func _request_damage(amount: int, origin: Vector3, type: Death.Type, leap: float
 ## True as soon as its health runs out, even in the moments when the body is
 ## still in the player's hand — going limp or dropping to the waist.
 func is_dead() -> bool:
-	if not is_multiplayer_authority():
+	if not _is_authority():
 		return sync_state == State.DEAD
 	if _state == State.CAPTURED:
 		return _capture_phase == Capture.GOING_LIMP or _capture_phase == Capture.STOWING
@@ -648,7 +648,7 @@ func is_paid() -> bool:
 ## everybody else's sights (`weapon.gd: _rat_in_sights`), and on a machine that
 ## is only watching, the wire is the only thing that knows.
 func is_captured() -> bool:
-	if not is_multiplayer_authority():
+	if not _is_authority():
 		return sync_state == State.CAPTURED
 	return _state == State.CAPTURED
 
@@ -660,7 +660,7 @@ func is_captured() -> bool:
 ## makes there is a hair of extra grace on a grab whose rise the holder never
 ## sees anyway.
 func is_in_hand() -> bool:
-	if not is_multiplayer_authority():
+	if not _is_authority():
 		return sync_state == State.CAPTURED
 	return _state == State.CAPTURED and _capture_phase == Capture.IN_HAND
 
@@ -674,12 +674,12 @@ func is_in_hand() -> bool:
 ## On the host and in a solo hunt it is answered from `_holder_peer` directly,
 ## which is the same number a frame earlier.
 func is_held_by_me() -> bool:
-	var holder := _holder_peer if is_multiplayer_authority() else sync_holder
+	var holder := _holder_peer if _is_authority() else sync_holder
 	return holder != 0 and holder == _local_peer()
 
 ## Who is holding it, as the wire counts people, or zero for a rat nobody has.
 func holder_peer() -> int:
-	return _holder_peer if is_multiplayer_authority() else sync_holder
+	return _holder_peer if _is_authority() else sync_holder
 
 ## Where the middle of its body is in the world: the point the hand holds and
 ## the one the capture carries to the middle of the screen.
@@ -830,7 +830,7 @@ func capture(point: Node3D) -> bool:
 	# says so — so the worst an optimistic answer costs is a weapon that thinks
 	# it is holding something for one round trip and then finds it is not
 	# (`hands.gd: _forget_lost_rat`).
-	if not is_multiplayer_authority():
+	if not _is_authority():
 		_request_capture.rpc_id(get_multiplayer_authority())
 		return true
 
@@ -847,7 +847,7 @@ func _grabbable() -> bool:
 	# `WANDERING`, and stuck there for good — so a rat the host killed a minute
 	# ago would still call itself grabbable and every guest in the house would be
 	# able to reach for a corpse.
-	if not is_multiplayer_authority():
+	if not _is_authority():
 		return sync_state != State.DEAD and sync_state != State.CAPTURED
 	return _state != State.DEAD and _state != State.CAPTURED and _immune_time <= 0.0
 
@@ -934,6 +934,20 @@ func _capture_point_of(peer_id: int) -> Node3D:
 			return avatar.capture_point
 	return null
 
+## Whether this machine is the one that thinks for this rat.
+##
+## `is_multiplayer_authority` cannot answer with no wire under it: it asks the
+## scene multiplayer for our own id, and a peer that was never dialled — or one
+## that closed when the last client left — logs an error for the question. A
+## solo hunt has one machine and it decides everything, so the answer there is
+## yes without asking anybody.
+func _is_authority() -> bool:
+	var api := multiplayer
+	if api == null or not api.has_multiplayer_peer() \
+			or api.multiplayer_peer is OfflineMultiplayerPeer:
+		return true
+	return is_multiplayer_authority()
+
 ## Who we are, as the wire counts people. One with no wire at all: a solo hunt
 ## has a single pair of hands and they may as well be numbered like the host's,
 ## so that nothing below has to ask whether there is a wire before reading a
@@ -964,7 +978,7 @@ func squeeze() -> void:
 	if not is_captured():
 		return
 	_flinch()
-	if not is_multiplayer_authority():
+	if not _is_authority():
 		_request_squeeze.rpc_id(get_multiplayer_authority())
 
 ## The flinch itself: what a squeeze looks like, with nothing said about who
@@ -1006,7 +1020,7 @@ func die_in_hands(type := Death.Type.STRANGULATION) -> void:
 	# and is paid for on the host, and comes back over the wire as a rat that is
 	# dead. Doing it here as well would kill the animal twice — once really, once
 	# on a puppet — and pay for it twice with it.
-	if not is_multiplayer_authority():
+	if not _is_authority():
 		_request_kill.rpc_id(get_multiplayer_authority(), type)
 		return
 	# Whoever hammered too fast can kill it before it has finished rising. In
@@ -1035,7 +1049,7 @@ func escape() -> void:
 	# Same rule as the kill: the animal gets loose on the machine that thinks for
 	# it, and everybody watches it happen. A guest whose grip failed says so and
 	# lets go of it locally through the wire, not by hand.
-	if not is_multiplayer_authority():
+	if not _is_authority():
 		_request_escape.rpc_id(get_multiplayer_authority())
 		return
 	# It leaps out in front of the player. The direction comes from his body, not
