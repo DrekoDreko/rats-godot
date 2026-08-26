@@ -315,9 +315,10 @@ func _local_seat(peer_id: int) -> int:
 	return seat + 1
 
 
-## Walks into somebody else's lobby. The answer — including "it is full" and "it
-## does not exist" — comes back on `lobby_joined` and ends up as a sentence on
-## `lobby_failed`.
+## Walks into somebody else's lobby — somebody else's being the whole of it: our
+## own is refused here rather than sent to Steam. The answer — including "it is
+## full" and "it does not exist" — comes back on `lobby_joined` and ends up as a
+## sentence on `lobby_failed`.
 func join_lobby(id: int) -> bool:
 	if not _needs_steam("join a lobby"):
 		return false
@@ -326,8 +327,13 @@ func join_lobby(id: int) -> bool:
 	if id == 0 or not Steam.isLobby(id):
 		lobby_failed.emit("That is not a lobby ID.")
 		return false
+	# Joining the lobby we are already in is a no-op Steam would happily accept,
+	# and the caller would then wait forever for a `lobby_entered` that has
+	# already been and gone. It is said out loud instead: the menu opens a lobby
+	# for every player, so his own row is the one he is likeliest to click.
 	if id == lobby_id:
-		return true
+		lobby_failed.emit("You are already in that lobby.")
+		return false
 	if _pending:
 		return false
 	if lobby_id != 0:

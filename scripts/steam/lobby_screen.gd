@@ -1,22 +1,23 @@
 extends Control
-## The lobby browser: where a player finds somebody else's hunt, or opens his own
-## for strangers to find.
+## The lobby browser: where a player finds somebody else's hunt and joins it.
 ##
 ## It used to be the screen the game opened on, and it is now a window over the
-## top of `menu.tscn` — which is why the Play button has gone from it. Starting
-## the shift belongs to the menu, next to the crew it will be starting with; what
-## is left here is the one thing this screen has always done well: create, search,
-## list, and join.
+## top of `menu.tscn`. What lived here has been leaving one piece at a time as
+## the menu grew a place for it: the Play button went first, then Create — the
+## menu opens a lobby for you the moment it comes up, so a button asking for one
+## you already have is a button that can only take it away — and then the guest
+## list, because the crew is standing on the floor behind this window with their
+## names over their heads. Reading them off a panel on top of that is asking the
+## player to look at the worse copy.
 ##
-## It holds no state of its own. Everything on it is drawn from
-## `LobbyManager` — the lobby it is in, who is in it, what is open out there —
-## and every button on it is one call into the manager. That is the whole point
-## of the split: the manager is testable without a screen, and this file has
-## nothing to get wrong except what it puts where.
+## What is left is the one thing the menu has no room for: searching. Type an ID
+## or pick a row, and join.
 ##
-## The player rows are built at runtime rather than dressed in the scene because
-## there is one per person in the lobby and that number changes while the screen
-## is up — which is precisely the thing this is here to show.
+## It holds no state of its own. Everything on it is drawn from `LobbyManager` —
+## the lobby it is in, what is open out there — and every button on it is one
+## call into the manager. That is the whole point of the split: the manager is
+## testable without a screen, and this file has nothing to get wrong except what
+## it puts where.
 ##
 ## With Steam closed the window still comes up and says so.
 
@@ -24,52 +25,43 @@ extends Control
 ## that hides itself is one the menu cannot keep track of.
 signal close_requested()
 
-## The whole game is drawn at 960x540, where 8 px is the normal size of a letter.
-const FONT_SIZE := 8
-## The star on the host's row, and the colour that goes with it.
-const HOST_MARK := "*"
-const HOST_COLOR := Color(0.94, 0.86, 0.36)
 const ERROR_COLOR := Color(0.95, 0.32, 0.28)
 const NOTICE_COLOR := Color(0.55, 0.85, 0.45)
 const IDLE_COLOR := Color(1, 1, 1, 0.6)
 
 @onready var _rows: VBoxContainer = $Center/Panel/Margin/Rows
 @onready var _close: Button = _rows.get_node("TitleRow/Close")
-@onready var _create: Button = _rows.get_node("Body/Left/Create")
-@onready var _code: LineEdit = _rows.get_node("Body/Left/JoinRow/Code")
-@onready var _join: Button = _rows.get_node("Body/Left/JoinRow/Join")
-@onready var _refresh: Button = _rows.get_node("Body/Left/Refresh")
-@onready var _lobbies: ItemList = _rows.get_node("Body/Left/Lobbies")
-@onready var _header: Label = _rows.get_node("Body/Right/Header")
-@onready var _players: VBoxContainer = _rows.get_node("Body/Right/Players")
-@onready var _copy: Button = _rows.get_node("Body/Right/Copy")
-@onready var _leave: Button = _rows.get_node("Body/Right/Leave")
+@onready var _code: LineEdit = _rows.get_node("JoinRow/Code")
+@onready var _join: Button = _rows.get_node("JoinRow/Join")
+@onready var _refresh: Button = _rows.get_node("Refresh")
+@onready var _lobbies: ItemList = _rows.get_node("Lobbies")
+@onready var _leave: Button = _rows.get_node("Leave")
 @onready var _status: Label = _rows.get_node("Status")
 
 ## The lobbies the last search turned up, in the order the list shows them, so a
 ## clicked row can be turned back into an ID.
 var _found: Array[Dictionary] = []
 
+## Whether the lobby we are waiting on is one this window asked for.
+##
+## The window closes itself on a successful join, and this is what stops it
+## closing on somebody else's: the menu opens a lobby of its own the moment it
+## comes up, and that `lobby_entered` can land while the player is reading this
+## list — which without the flag would shut the browser under his hands.
+var _we_asked := false
+
 
 func _ready() -> void:
-	for button in [_close, _create, _join, _refresh, _copy, _leave]:
-		button.add_theme_font_size_override("font_size", FONT_SIZE)
-	_code.add_theme_font_size_override("font_size", FONT_SIZE)
-	_lobbies.add_theme_font_size_override("font_size", FONT_SIZE)
-
-	_create.pressed.connect(_on_create_pressed)
 	_join.pressed.connect(_on_join_pressed)
 	_code.text_submitted.connect(func(_text: String) -> void: _on_join_pressed())
 	_refresh.pressed.connect(_on_refresh_pressed)
 	_lobbies.item_selected.connect(_on_lobby_selected)
 	_lobbies.item_activated.connect(_on_lobby_activated)
-	_copy.pressed.connect(_on_copy_pressed)
-	_leave.pressed.connect(LobbyManager.leave_lobby)
+	_leave.pressed.connect(_on_leave_pressed)
 	_close.pressed.connect(func() -> void: close_requested.emit())
 
 	LobbyManager.lobby_entered.connect(_on_lobby_entered)
 	LobbyManager.lobby_left.connect(_on_lobby_left)
-	LobbyManager.members_changed.connect(_show_players)
 	LobbyManager.lobby_list_updated.connect(_on_lobby_list_updated)
 	LobbyManager.lobby_failed.connect(_on_lobby_failed)
 
@@ -81,21 +73,19 @@ func _ready() -> void:
 		_say("Steam is not running.", ERROR_COLOR)
 
 	_refresh_controls()
-	_show_players(LobbyManager.list_players())
 
 # --- The buttons ------------------------------------------------------------
-
-func _on_create_pressed() -> void:
-	if LobbyManager.create_lobby(LobbyManager.MAX_PLAYERS):
-		_say("Opening a lobby...", IDLE_COLOR)
-
 
 func _on_join_pressed() -> void:
 	var typed := _code.text.strip_edges()
 	if typed.is_empty():
 		_say("Paste a lobby ID, or pick one from the list.", ERROR_COLOR)
 		return
+	if typed.to_int() == LobbyManager.lobby_id:
+		_say("That one is yours — you are already in it.", ERROR_COLOR)
+		return
 	if LobbyManager.join_lobby(typed.to_int()):
+		_we_asked = true
 		_say("Joining...", IDLE_COLOR)
 
 
@@ -104,6 +94,17 @@ func _on_refresh_pressed() -> void:
 		_say("Looking for lobbies...", IDLE_COLOR)
 
 
+## Leaving is the one thing done here that the player watches happen behind the
+## window, so the window gets out of the way. The menu seats him back on the
+## floor alone on `lobby_left`, and that is what he should be looking at.
+func _on_leave_pressed() -> void:
+	LobbyManager.leave_lobby()
+	close_requested.emit()
+
+
+## Picking a row fills the ID field, which is what JOIN reads. Our own row is
+## shown but not selectable, so there is nothing to guard against here beyond the
+## bounds check.
 func _on_lobby_selected(index: int) -> void:
 	if index < _found.size():
 		_code.text = str(_found[index]["lobby_id"])
@@ -113,36 +114,31 @@ func _on_lobby_activated(index: int) -> void:
 	_on_lobby_selected(index)
 	_on_join_pressed()
 
-
-## The lobby ID is the whole of what a player has to send a friend who is not on
-## their friends list, so it is one click away rather than something to read off
-## the screen and type back in.
-func _on_copy_pressed() -> void:
-	DisplayServer.clipboard_set(str(LobbyManager.lobby_id))
-	_say("Lobby ID copied — send it to whoever is joining.", NOTICE_COLOR)
-
 # --- What the manager says --------------------------------------------------
 
-func _on_lobby_entered(lobby_id: int, is_host: bool) -> void:
+## Joining is the whole point of the window, so a join closes it: the crew the
+## player has just landed among is drawn on the floor behind here.
+func _on_lobby_entered(lobby_id: int, _is_host: bool) -> void:
 	_code.text = str(lobby_id)
-	_say("In lobby %d — %s." % [lobby_id, "hosting" if is_host else "guest"], NOTICE_COLOR)
+	# Which row is ours has just changed, and the list on screen was drawn
+	# before it did.
+	_draw_lobbies()
 	_refresh_controls()
+	if _we_asked:
+		_we_asked = false
+		close_requested.emit()
 
 
 func _on_lobby_left() -> void:
+	_draw_lobbies()
 	_refresh_controls()
-	_show_players([])
 
 
 func _on_lobby_list_updated(lobbies: Array[Dictionary]) -> void:
 	_found = lobbies
-	_lobbies.clear()
-	for lobby in lobbies:
-		_lobbies.add_item("%s  (%d/%d)" % [
-			lobby["host_name"], lobby["players"], lobby["max_players"],
-		])
+	_draw_lobbies()
 	if lobbies.is_empty():
-		_say("No lobbies open. Create one.", IDLE_COLOR)
+		_say("No lobbies open.", IDLE_COLOR)
 	else:
 		_say("%d lobby(s) open." % lobbies.size(), NOTICE_COLOR)
 
@@ -150,56 +146,54 @@ func _on_lobby_list_updated(lobbies: Array[Dictionary]) -> void:
 ## Every failure the player is allowed to see comes through here, and it is the
 ## only thing that paints the status line red.
 func _on_lobby_failed(reason: String) -> void:
+	_we_asked = false
 	_say(reason, ERROR_COLOR)
 	_refresh_controls()
 
 # --- Drawing ----------------------------------------------------------------
 
-## The list of everyone in the lobby, rebuilt whole. There are at most four of
-## them, so keeping rows around to reuse would cost more thought than it saves.
-func _show_players(players: Array[Dictionary]) -> void:
-	for row in _players.get_children():
-		row.queue_free()
-
-	_header.text = "PLAYERS  %d/%d" % [players.size(), LobbyManager.MAX_PLAYERS]
-	if players.is_empty():
-		var empty := _label("nobody yet")
-		empty.modulate.a = 0.55
-		_players.add_child(empty)
-		return
-
-	for player in players:
-		var mark := HOST_MARK if player["is_host"] else " "
-		var row := _label("%s %s" % [mark, player["name"]])
-		if player["is_host"]:
-			row.add_theme_color_override("font_color", HOST_COLOR)
-		_players.add_child(row)
-
+## The list, from `_found`, with our own lobby drawn differently.
+##
+## Our own comes back in the search like any other — it is a real open lobby, and
+## hiding it would only make the player wonder where the one the menu opened for
+## him went. It is greyed and marked instead, and the row is turned off so that
+## neither a click nor a double-click can put its ID in the field. That is the
+## first of three doors on the same mistake: `_on_join_pressed` refuses a typed
+## ID that is ours, and `LobbyManager.join_lobby` refuses it again for callers
+## that never came through this window.
+##
+## Redrawn whenever the answer could change — a new list, or us walking into or
+## out of a lobby — because "ours" is a fact about two things and only one of
+## them is the list.
+func _draw_lobbies() -> void:
+	_lobbies.clear()
+	for lobby in _found:
+		var ours: bool = int(lobby["lobby_id"]) == LobbyManager.lobby_id
+		var index := _lobbies.add_item("%s  (%d/%d)%s" % [
+			lobby["host_name"], lobby["players"], lobby["max_players"],
+			"  - YOURS" if ours else "",
+		])
+		if ours:
+			_lobbies.set_item_disabled(index, true)
+			_lobbies.set_item_custom_fg_color(index, IDLE_COLOR)
 
 ## Which buttons make sense depends only on whether we are in a lobby and
-## whether we opened it, so it is worked out in one place and never guessed at
+## whether Steam is up, so it is worked out in one place and never guessed at
 ## from the button that was just pressed.
+##
+## Joining while already in a lobby is allowed and is the ordinary way in: the
+## menu opens one for every player the moment he arrives, so a browser that
+## refused to join until he left it would be a browser nobody could use. It is
+## `LobbyManager` that walks him out of the old one on the way into the new.
 func _refresh_controls() -> void:
 	var online := SteamManager.is_online
 	var in_lobby := LobbyManager.lobby_id != 0
 
-	_create.disabled = not online or in_lobby
-	_join.disabled = not online or in_lobby
+	_join.disabled = not online
 	_refresh.disabled = not online
-	_copy.disabled = not in_lobby
 	_leave.disabled = not in_lobby
 
 
 func _say(message: String, color: Color) -> void:
 	_status.text = message
 	_status.add_theme_color_override("font_color", color)
-
-
-func _label(text: String) -> Label:
-	var label := Label.new()
-	label.text = text
-	label.add_theme_font_size_override("font_size", FONT_SIZE)
-	label.add_theme_color_override("font_color", Color(1, 1, 1, 1))
-	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 1))
-	label.add_theme_constant_override("outline_size", 5)
-	return label
