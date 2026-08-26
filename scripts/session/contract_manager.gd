@@ -60,8 +60,8 @@ const FOLDER := "res://resources/contracts/"
 ## only thing done with it is putting it on a screen.
 const REFUSAL_NOT_HOST := "Only the crew leader signs the contract."
 ## And what anybody is told when the job is already under way — the board is
-## read-only from the moment the van pulls off.
-const REFUSAL_UNDER_WAY := "The job is already signed for."
+## read-only from the moment the van reaches the house.
+const REFUSAL_UNDER_WAY := "The job is under way."
 ## An id that is on nobody's board. It should not be reachable from the
 ## clipboard, which only ever offers what it was handed; it is here for a packet
 ## that arrived from a machine with a different folder on disk.
@@ -158,11 +158,50 @@ func may_sign() -> bool:
 	return PhaseManager.is_host()
 
 
-## Whether the board can still be changed at all. It is settled once the van
-## pulls off: the house is loading by then and a second signature would send
-## half the crew to a different one.
+## The phases in which a job can still be signed. The menu is where one is
+## normally taken; the road is open too, because the sheet on the wall of the van
+## is a station the crew can walk up to and the two minutes of the drive are
+## exactly when somebody reads the small print and argues about it.
+##
+## It stops at the doorstep. From the survey on, the house named by the contract
+## is what is being loaded and walked around, and a second signature landing then
+## would point half the crew at a different one.
+const OPEN_PHASES: Array[Phase.Type] = [Phase.Type.LOBBY, Phase.Type.TRAVEL]
+
+## And the phases in which the wager can. **It is the shorter list, on purpose.**
+## The signature says which house; the clock says what the crew is betting on it,
+## and by the time the van has pulled off that bet has already been spent — the
+## shopping was done against it and the traps were bought against it. Moving it
+## on the road would be moving the stake after the cards are down, which is what
+## `REFUSAL_TIME_UNDER_WAY` is there to say.
+##
+## The road is on the list all the same, and `is_time_open` is what makes the
+## difference: a paid crew comes back to the van rather than to the menu
+## (`PhaseManager.next_phase`), so the road is where the *next* job is taken —
+## and until it is signed, nothing has been shopped or trapped against, and there
+## is no stake on the table to move.
+const OPEN_TIME_PHASES: Array[Phase.Type] = [Phase.Type.LOBBY, Phase.Type.TRAVEL]
+
+
+## Whether the board can still be signed at all. It closes when the van reaches
+## the house: the scene is loading by then and a second signature would send half
+## the crew somewhere else.
 func is_open() -> bool:
-	return PhaseManager.current() == Phase.Type.LOBBY
+	return PhaseManager.current() in OPEN_PHASES
+
+
+## Whether the hunt can still be booked at a different length. Asked instead of
+## `is_open` by everything that touches the clock — see `OPEN_TIME_PHASES` for
+## why the two answers are allowed to differ.
+##
+## On the road it closes with the signature rather than with the phase: an
+## unsigned van is a crew still choosing its next job, and the length is half of
+## that choice. The moment a job is signed the bet is down and stays down.
+func is_time_open() -> bool:
+	var phase := PhaseManager.current()
+	if phase == Phase.Type.TRAVEL:
+		return not is_signed()
+	return phase in OPEN_TIME_PHASES
 
 
 ## How long the hunt is booked for. Read off `SessionManager`, which holds the
@@ -277,9 +316,9 @@ func _request(contract_id: String) -> void:
 ## - **Who asked.** Anybody but the host is refused out loud. This is the rule
 ##   the card is about, and it is enforced here rather than on the clipboard —
 ##   a client with a tampered clipboard still cannot sign anything.
-## - **When.** The board closes when the van pulls off; a signature landing
-##   during the survey would point the phase machine at a second house while the
-##   crew is standing in the first.
+## - **When.** The board closes when the van reaches the house; a signature
+##   landing during the survey would point the phase machine at a second house
+##   while the crew is standing in the first.
 ## - **What.** An id nobody has is refused rather than written, so that
 ##   `current()` can never answer null for a contract everybody believes is
 ##   signed.
@@ -319,7 +358,7 @@ func _handle_hunt_time(value: HuntTime.Type, from_peer: int) -> void:
 	if not _may_sign_from(from_peer):
 		_refuse_to(from_peer, REFUSAL_NOT_HOST_TIME)
 		return
-	if not is_open():
+	if not is_time_open():
 		_refuse_to(from_peer, REFUSAL_TIME_UNDER_WAY)
 		return
 	if not HuntTime.is_valid(value):

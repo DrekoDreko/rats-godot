@@ -1,7 +1,8 @@
 extends CanvasLayer
 ## The pay slip: what the shift caught, what it left in the walls, and what the
 ## whole of it came to. Shown when the phase turns to `RESULT`, dismissed with
-## one button, and the button is the way back to the menu.
+## one button, and the button is the road back to the van, where the crew keeps
+## what it made and signs for the next house.
 ##
 ## **Drawn over the house, not instead of it.** `RESULT` has no scene of its own
 ## (`PhaseManager.scenes`), so the room the crew has just cleared is still
@@ -16,11 +17,11 @@ extends CanvasLayer
 ##
 ## **One button, and only the host's moves the shift.** Everybody can put his own
 ## slip down — a man who has read it should not have to keep looking at it — but
-## the shift walks home when the host says so, because every other phase change
-## in the game is the host's and a slip that let four machines each decide when
-## the menu loads would be four menus loading at four different moments. What a
-## guest sees after he puts it down is the house, and then the menu when the
-## host has pressed his.
+## the shift walks on when the host says so, because every other phase change in
+## the game is the host's and a slip that let four machines each decide when the
+## van loads would be four vans loading at four different moments. What a guest
+## sees after he puts it down is the house, and then the van when the host has
+## pressed his.
 
 const FONT_SIZE := 8
 const OUTLINE_COLOR := Color(0, 0, 0, 1)
@@ -127,9 +128,9 @@ func _put_down() -> void:
 
 func _on_ok_pressed() -> void:
 	if PhaseManager.is_host():
-		# Home. The slip is not taken down here: the phase change is what takes
-		# it down (`_on_phase_changed`), and it is about to arrive. Hiding it
-		# first would only mean a frame of empty house before the menu.
+		# Back to the van. The slip is not taken down here: the phase change is
+		# what takes it down (`_on_phase_changed`), and it is about to arrive.
+		# Hiding it first would only mean a frame of empty house before the road.
 		PhaseManager.advance()
 		return
 
@@ -205,7 +206,7 @@ func _draw() -> void:
 
 ## The HUD out of the way while the slip is up, and back as it was afterwards.
 ## A guest who has put his slip down is standing in the house again and wants
-## his screen back; on the host there is nothing after this but the menu.
+## his screen back; on the host there is nothing after this but the road.
 func _show_hud(on: bool) -> void:
 	var hud := get_node_or_null(hud_path) as CanvasLayer
 	if hud == null:

@@ -315,7 +315,10 @@ func _book(direction: int) -> void:
 	if not ContractManager.may_sign():
 		_on_refused(ContractManager.REFUSAL_NOT_HOST_TIME)
 		return
-	if not ContractManager.is_open():
+	# The wager closes a phase earlier than the signature does — the clock is
+	# what the crew shopped against, so it is settled the moment the van pulls
+	# off. `ContractManager.OPEN_TIME_PHASES` carries the reasoning.
+	if not ContractManager.is_time_open():
 		_on_refused(ContractManager.REFUSAL_TIME_UNDER_WAY)
 		return
 	_play(_page_sound)

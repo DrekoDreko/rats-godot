@@ -16,9 +16,10 @@ extends SceneTree
 ## 3. A house emptied reads as cleared and pays the contract on top; one left
 ##    with rats in the walls reads as time up and pays nothing extra.
 ## 4. Money paid outside a hunt is the player's but is not on the shift's slip.
-## 5. The pay phase walks home to the lobby, and takes the shift's numbers with
-##    it: the money, the crates and the signature are all cleared, and the crew
-##    is not.
+## 5. The pay slip's button puts the crew back in the van: the job is cleared —
+##    the slip, the signature — and the money and the crates they earned are not.
+## 6. The road home to the lobby still takes the whole shift with it: the money,
+##    the crates and the signature are all cleared, and the crew is not.
 ##
 ## The autoloads are picked up by node name rather than by their global names,
 ## which do not exist in a bench run with `--script`. For the same reason the
@@ -83,7 +84,8 @@ func _physics_process(_delta: float) -> bool:
 		3: return _check_a_cleared_house_pays_the_bonus()
 		4: return _check_rats_left_in_the_walls()
 		5: return _check_money_outside_a_hunt()
-		6: return _check_the_way_home()
+		6: return _check_the_road_back_to_the_van()
+		7: return _check_the_way_home()
 	return _finish()
 
 # --- Steps ------------------------------------------------------------------
@@ -208,6 +210,36 @@ func _check_money_outside_a_hunt() -> bool:
 	_expect(_wallet.money > before_money, "the wallet still takes the money")
 	_expect(_report.caught == before_caught, "but the slip does not count the rat")
 	_expect(_report.earned == before_earned, "nor the money")
+	return _advance()
+
+## OK, and back on the road. The pay slip's button is what the crew presses, and
+## what it does is `advance()` — so the shift comes round to the van rather than
+## to the menu: the job goes in the bin, and the money and the crates the crew
+## worked for stay on the books for the next one.
+func _check_the_road_back_to_the_van() -> bool:
+	if _clock == 1:
+		_report.begin(2)
+		_wallet.collect(_species, CRUSHING)
+		_stock.add("mousetrap", 2)
+		_session.set_contract("bench-contract")
+		_phase.go_to(RESULT)
+		return false
+	if _clock == 2:
+		_expect(_phase.next_phase() == TRAVEL, "the road out of the pay slip is the van")
+		_phase.advance()
+		return false
+	if _clock < WAIT:
+		return false
+
+	_expect(_phase.current() == TRAVEL, "the shift is back on the road")
+	_expect(current_scene != null and current_scene.scene_file_path == "res://scenes/van_travel.tscn",
+		"and the van is what is on screen")
+
+	_expect(_wallet.money > 0, "the money the crew made is still theirs")
+	_expect(_stock.count("mousetrap") == 2, "and so is what is left in the crates")
+	_expect(_report.caught == 0, "the slip is wiped for the next job")
+	_expect(_report.infestation == 0, "house and all")
+	_expect(_session.current_contract == "", "and the signature with it — nothing is signed yet")
 	return _advance()
 
 ## OK, and home. The pay phase walks back round to the lobby, the menu is what

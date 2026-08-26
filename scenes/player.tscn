@@ -72,5 +72,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.05, -0.6)
 
 [node name="Inventory" type="Node" parent="Head" unique_id=1147383766]
 script = ExtResource("3_inventory")
-slots = Array[NodePath]([NodePath("../Mousetrap"), NodePath("../RatGlue")])
+slot_capacity = 3
+weapons_root = NodePath("..")
 hands_path = NodePath("../Hands")

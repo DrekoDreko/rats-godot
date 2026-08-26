@@ -66,6 +66,10 @@ var scenes := {
 	Phase.Type.HUNT: "res://scenes/world.tscn",
 }
 
+## How many frames a scene change will wait for the outgoing scene to actually
+## be freed before it announces the new phase. See `_change_scene`.
+const SCENE_FREE_FRAMES := 4
+
 ## How often the host tells everybody what the clock says. Half a second is
 ## enough that a client's own counting never drifts far enough to see, and
 ## little enough traffic that it is not worth thinking about.
@@ -187,13 +191,19 @@ func duration_of(phase: Phase.Type) -> float:
 	return Phase.duration(phase)
 
 
-## The phase after this one. The list is walked in order and `RESULT` comes back
-## round to `LOBBY`, which is what makes a shift a loop rather than a line: a
-## crew that has been paid is a crew standing in the menu again, ready to sign
-## for the next house. A phase that is not on the list at all is treated as the
-## end of one — there is nowhere sensible to walk on to from a phase the order
-## does not know about, and the menu is the one place that is always safe.
+## The phase after this one. The list is walked in order, and `RESULT` comes back
+## round to `TRAVEL` — the van, not the menu. That is what makes a shift a loop
+## rather than a line: a crew that has been paid is a crew back in its van with
+## the money it made, the gear it did not use, and a board of jobs to sign the
+## next one off. Going to the menu instead would end the evening at the end of
+## every house.
+##
+## A phase that is not on the list at all is treated as the end of one — there is
+## nowhere sensible to walk on to from a phase the order does not know about, and
+## the menu is the one place that is always safe.
 func next_phase() -> Phase.Type:
+	if current() == Phase.Type.RESULT:
+		return Phase.Type.TRAVEL
 	var at := ORDER.find(current())
 	if at == -1:
 		return Phase.Type.LOBBY
@@ -257,6 +267,15 @@ func _on_timeout() -> void:
 	seconds_left = 0.0
 	timer_updated.emit(0.0)
 	timer_expired.emit(ended)
+	# The clock does not drive the van somewhere the crew has not signed for.
+	# It matters now that a paid shift comes back to the road rather than to the
+	# menu: the board is cleared on the way in, and two minutes later this would
+	# otherwise pull up at last job's house with nobody's name on the sheet. The
+	# van waits instead, and leaves when the job is signed and the crew is ready
+	# — which is `ReadyManager`'s business and happens the moment `blocked` goes
+	# down.
+	if ended == Phase.Type.TRAVEL and ReadyManager.blocked:
+		return
 	advance()
 
 # --- The wire ---------------------------------------------------------------
@@ -301,6 +320,11 @@ func _apply(phase: Phase.Type) -> void:
 	# What is cleared here is the shift, not the lobby.
 	if phase == Phase.Type.LOBBY and previous != Phase.Type.LOBBY:
 		_clear_shift()
+	# Paid, and back in the van for the next one. Only the job goes in the bin
+	# here — the money and the crates are what the crew worked for and are the
+	# whole point of driving out again.
+	elif previous == Phase.Type.RESULT:
+		_clear_job()
 
 	_start_clock(phase)
 
@@ -326,8 +350,24 @@ func _apply(phase: Phase.Type) -> void:
 func _clear_shift() -> void:
 	Wallet.reset()
 	Stock.reset()
+	_clear_job()
+
+
+## The job itself, wiped: last house's pay slip, last house's pins, and the
+## signature that named it. What a crew rolling out of one house and into the
+## van needs gone before it signs for the next one — and the part of
+## `_clear_shift` that is *only* about the job, so that going home to the menu
+## and going back to the van do not each keep their own list of what to clear.
+##
+## The money and the crates are deliberately not in here. They belong to the
+## crew rather than to the house, and they are what the shop in the van is for.
+func _clear_job() -> void:
 	ShiftReport.reset()
 	MapManager.clear_all_pins()
+	# Trap numbering starts over with the floor: `TrapManager` watches the lobby
+	# for the same reason, and a crew that never passes through it on its way to
+	# the next house would otherwise keep last job's count running.
+	TrapManager.reset()
 	# The van is held shut again by this, and not by a line here putting
 	# `ReadyManager.blocked` up: that flag has one owner (`ContractManager`),
 	# which watches the signature and raises it the moment there is not one. Two
@@ -336,9 +376,28 @@ func _clear_shift() -> void:
 
 
 func _change_scene(path: String, previous: Phase.Type, phase: Phase.Type) -> void:
+	# The scene being left, held on to so that the announcement can wait for it
+	# to actually be gone. `change_scene_to_file` takes it out of the tree and
+	# queues it for freeing, and until that free lands its nodes are still
+	# connected to `phase_changed` — so the house the crew has just walked out of
+	# hears the phase that replaced it, tries to look a player up in a tree it is
+	# no longer in, and takes the game down with it. Every node in a scene would
+	# otherwise have to guard for that itself; waiting here is the one place it
+	# can be done once.
+	var outgoing := get_tree().current_scene
+
 	_changing_scene = true
 	get_tree().change_scene_to_file(path)
 	await get_tree().process_frame
+
+	# Capped rather than open-ended: a scene that somehow outlives its own free
+	# must not hold the shift here for ever. Whatever is still standing after
+	# these frames gets the signal and is welcome to it.
+	var waited := 0
+	while is_instance_valid(outgoing) and waited < SCENE_FREE_FRAMES:
+		waited += 1
+		await get_tree().process_frame
+
 	_changing_scene = false
 	phase_changed.emit(previous, phase)
 

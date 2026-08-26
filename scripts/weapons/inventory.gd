@@ -3,10 +3,27 @@ extends Node
 ## The player's belt: the weapons he carries and which one is in his hands.
 ##
 ## Three slots, swapped with `1`, `2` and `3`, and the hands, which are not one
-## of them. A slot is bought: it stands for a weapon off the computer's
-## catalogue, and until the first box of it arrives the loop on the belt hangs
-## there empty — an empty slot is a player with nothing in his hands, who still
-## walks and looks around, but whose click finds nothing to do.
+## of them. A slot is bought: it stands for a weapon off the shelf's catalogue,
+## and until the first box of it arrives the loop on the belt hangs there empty
+## — an empty slot is a player with nothing in his hands, who still walks and
+## looks around, but whose click finds nothing to do.
+##
+## **No loop belongs to any one thing.** The belt is set up with a number of
+## loops (`slot_capacity`) and nothing else: what hangs from each is worked out
+## from the bag (`scripts/economy/stock.gd`), in the order the things were
+## bought. The first purchase of the shift takes loop one whatever it was, the
+## second takes loop two, and a shelf that grows a ninth item needs nothing
+## changed here — only a weapon node under the head with the name its catalogue
+## entry asks for (`StoreItem.weapon_node`).
+##
+## A loop is given up again when the last unit of what hangs from it is spent,
+## so that the next thing bought has somewhere to go. Picking a bent trap back
+## off the floor puts it on the belt again, on whichever loop is free by then —
+## not necessarily the one it had.
+##
+## Buying past the last free loop credits the bag like any other purchase and
+## hangs nothing: the goods are in the van, and they reach the belt as soon as
+## something else runs out.
 ##
 ## The hands take no slot because they were never bought. They are always there,
 ## and `Q` is what puts them back (`hands_path`): whatever the belt is showing,
@@ -53,9 +70,27 @@ signal refused(slot: int)
 ## skips it.
 const HANDS_INDEX := -1
 
-## One weapon per slot, in order. An empty path is an empty slot. The hands do
+## How many loops the belt has. It is the number of keys that swap to it (`1`,
+## `2` and `3`) and the number of squares the hotbar draws, and it is the whole
+## of what the belt is set up with: which weapon hangs from which loop is not
+## dressed in the scene, it is whatever the player bought.
+@export var slot_capacity := 3
+
+## Where the weapons hang. Every `Weapon` under this node is one the belt can
+## put on a loop, found by the name the catalogue asks for
+## (`StoreItem.weapon_node`). The default is the player's head, which is where
+## every weapon in the game already lives — camera, reach and capture point are
+## all measured from there (`scripts/weapons/weapon.gd`).
+@export var weapons_root: NodePath = ^".."
+
+## One weapon per loop, in order. An empty path is an empty loop. The hands do
 ## not belong here — they are not on the belt.
-@export var slots: Array[NodePath] = []
+##
+## It is filled at runtime off the bag (`_take_stock`) and not in the editor: a
+## loop belongs to whatever was bought for it. It is left public because a bench
+## sometimes hangs a weapon on the belt by hand, without any shop to buy it from
+## (`_test_survey_house.gd`).
+var slots: Array[NodePath] = []
 ## The hands: the weapon `Q` always brings back, and the one the shift starts
 ## with. An empty path is a player who has none, and `Q` then does nothing.
 @export var hands_path: NodePath
@@ -79,11 +114,18 @@ var _current: Weapon
 var _refusal_audio: AudioStreamPlayer
 
 func _ready() -> void:
+	# The loops come first: empty ones, as many as the belt was built with. What
+	# hangs from them is read off the bag below — a shift starting with goods
+	# already in the van is a belt that starts with them on it.
+	slots.resize(maxi(0, slot_capacity))
+	slots.fill(NodePath())
+
 	# Everything goes away first, so the belt does not start with three weapons
 	# processing at once, and then the hands come out — nothing has been bought
 	# yet, and they are all the player has.
 	for weapon in weapons():
 		weapon.unequip()
+	_take_stock()
 	_index = HANDS_INDEX
 	_current = hands()
 	if _current != null:
@@ -220,6 +262,10 @@ func _swap_to(slot: int, weapon: Weapon) -> void:
 ## hand nothing changes either: the belt is locked, and it is read again on the
 ## way out.
 func _on_stock_changed(_id: String, _count: int) -> void:
+	# The loops are worked out before anything is put in a hand: a purchase can
+	# be the first of its kind, and the weapon it belongs to has nowhere to be
+	# picked from until it hangs somewhere.
+	_take_stock()
 	if hands_out() or is_busy():
 		return
 	var weapon := _pick(_index)
@@ -227,17 +273,84 @@ func _on_stock_changed(_id: String, _count: int) -> void:
 		return
 	_swap_to(_index, weapon)
 
-## Every weapon the player carries: the hands and whatever hangs off the belt,
-## skipping the empty slots. It is what the player uses to wire up their signals,
-## once, at the start — a weapon that has run out is still on the belt, and still
-## has to be listened to for when it comes back.
+
+## Hangs on the belt whatever the van has goods for, and takes off whatever it
+## has run out of. It is the whole of how a loop is filled: read off the bag and
+## the shelf's catalogue, never dressed in the scene.
+##
+## Order is the catalogue's on the way up — a shift that starts with three
+## things already bought hangs them the way the shelf lists them — and the
+## purchase's after that, since a new id is the only one with nowhere to be.
+func _take_stock() -> void:
+	for item in ShopManager.catalogue():
+		_hang(item, Stock.count(item.id) > 0)
+
+
+## Puts one item on a free loop, or takes it off the one it had. Anything the
+## player scene has no weapon dressed for is skipped: a shelf may sell a thing
+## before there is anything to hold.
+func _hang(item: StoreItem, owned: bool) -> void:
+	var weapon := _weapon_named(item.weapon_node)
+	if weapon == null:
+		return
+	var path := get_path_to(weapon)
+	var at := slots.find(path)
+	if owned:
+		if at != -1:
+			return
+		var free := _free_slot()
+		# Every loop is taken. The goods stay in the van and reach the belt when
+		# something else runs out — see the note at the top.
+		if free != -1:
+			slots[free] = path
+	elif at != -1:
+		slots[at] = NodePath()
+
+
+## The first loop with nothing on it, or -1 on a full belt.
+func _free_slot() -> int:
+	for i in slots.size():
+		if slots[i].is_empty():
+			return i
+	return -1
+
+
+## The weapon dressed under the head with a given name, or null when the scene
+## has none — which is what an item nobody can hold yet reads as.
+func _weapon_named(node_name: String) -> Weapon:
+	if node_name.is_empty():
+		return null
+	for weapon in _hanging():
+		if weapon.name == node_name:
+			return weapon
+	return null
+
+## Every weapon the player could carry: the hands and everything hanging under
+## `weapons_root`, whether or not it is on a loop right now. It is what the
+## player uses to wire up their signals, once, at the start — and it is read off
+## the head rather than off the belt because the belt is filled as things are
+## bought, and a weapon wired only when it reached a loop would be one nobody
+## was listening to on the shift it was bought.
 func weapons() -> Array[Weapon]:
 	var found: Array[Weapon] = []
 	var own_hands := hands()
 	if own_hands != null:
 		found.append(own_hands)
-	for i in slots.size():
-		var weapon := weapon_in(i)
+	for weapon in _hanging():
+		if weapon != own_hands:
+			found.append(weapon)
+	return found
+
+
+## The weapons dressed under the head, in scene order. The belt owns none of
+## them — it only points at them (see the note at the top).
+func _hanging() -> Array[Weapon]:
+	var root := get_node_or_null(weapons_root)
+	if root == null:
+		return []
+	var found: Array[Weapon] = []
+	for child in root.get_children():
+		var weapon := child as Weapon
 		if weapon != null:
 			found.append(weapon)
 	return found

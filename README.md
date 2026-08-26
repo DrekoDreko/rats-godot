@@ -95,10 +95,19 @@ to right, and that is the whole of it.
 
 Every square is **bought**. The three of them are blank when the van is handed
 over — no name, no icon and no number, not even a zero — and a square only says
-what is in it once the player has bought the weapon whose place it is. Until
-then it is a loop on the belt with nothing hanging from it: swapping to it is a
-player with nothing in his hands, who walks and looks around the same way, and
-whose click finds nothing to do.
+what is in it once the player has bought something to put there. Until then it
+is a loop on the belt with nothing hanging from it: swapping to it is a player
+with nothing in his hands, who walks and looks around the same way, and whose
+click finds nothing to do.
+
+**No square belongs to any one thing.** The belt is three loops and nothing
+else: what hangs from each is read off the bag, in the order the crew bought it.
+The first purchase of the shift takes the first loop whatever it was — a tray of
+glue bought before any traps hangs on `1` — the second takes the second, and a
+fourth thing bought with every loop full stays in the van until one of them
+comes free. Spending the last unit of something is what frees its loop, and a
+bent trap picked back off the floor takes whichever loop is free by then, not
+necessarily the one it had.
 
 **The hands are on no square.** They were never bought, they cannot run out, and
 `Q` is what puts them back, whatever the belt was showing. That is what the
@@ -125,8 +134,10 @@ every one of them goes on hanging off the player's head, where it can reach the
 camera and the capture point. What the belt takes care of is the *swap* — putting
 the last weapon away, with the swing halfway through and the shake it left in the
 camera, before the next one comes out. Hanging a new weapon on it means adding
-the node under `Head` and pointing a slot at it in `player.tscn`; no code. The
-hands hang off the same file, on `hands_path` instead of on a slot.
+the node under `Head` with the name its catalogue entry asks for
+(`StoreItem.weapon_node`); no code, and nothing to point at it — the belt finds
+it when the thing is bought. How many loops there are is `slot_capacity` on the
+same node, and the hands hang off `hands_path` instead of on a loop.
 
 ### What the player has to lose
 
@@ -668,6 +679,40 @@ buying.
 ```
 godot --headless --script _test_van_shop.gd
 godot --headless --script _test_travel.gd
+```
+
+## The contract on the wall
+
+A sheet is pinned to the right-hand wall of the van, and it is read at two
+ranges. From across the box it is the summary the whole crew can see without
+picking anything up: who is paying, where the house is, how bad it is, what it
+pays and what clock the crew booked itself. Walk up to it and press `E` and the
+mouse comes loose over the paperwork behind it — the whole board of jobs, one
+page at a time, with the client's notes and a **box to sign in** at the bottom.
+
+**The job is taken by a signature, not a keypress.** The pen is a pad
+(`scripts/ui/signature_pad.gd`): the leader drags the cursor across the paper
+and what he scrawls is what goes on the sheet. Nothing reads the shape of it —
+the pad adds up how far the pen travelled and calls anything past a threshold a
+signature — so a scribble counts and a stray click does not. That is the whole
+of the rule, and the point of it is that a house the crew is about to walk into
+costs a deliberate movement.
+
+**The leader signs and nobody else.** The box is locked and the line under it
+says why on a machine that is not the host, the same way the menu's board draws
+a client's rows dim: the rule is something the crew reads rather than something
+they find out by being refused. Pressing through it anyway still gets an honest
+answer, because the refusal is `ContractManager`'s and not the furniture's.
+
+**The board closes at the doorstep, the clock closes at the kerb.** A job can
+still be signed on the road — the drive is exactly when somebody reads the small
+print and argues about it — but the hunt time cannot be moved once the van has
+pulled off, because that is the wager the crew shopped and bought traps against
+(`ContractManager.OPEN_PHASES` against `OPEN_TIME_PHASES`).
+
+```
+godot --headless --script _test_contract.gd
+godot --headless --script _test_contract_sign.gd
 ```
 
 ## Joining a shift

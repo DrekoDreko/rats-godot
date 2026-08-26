@@ -1,34 +1,46 @@
 class_name ContractBoard
-extends Node3D
+extends Interactable
 ## The signed job, pinned to the wall of the van where the whole crew can read it
-## without picking anything up.
+## without picking anything up — and the paperwork behind it, for the man who
+## walks up and puts his hands on it.
 ##
-## The clipboard is where a job is *chosen*; this is where the chosen one lives
-## afterwards. The card asks for exactly that split, and it is worth the second
-## node: a crew that has to open a menu to remember which house they are driving
-## to will not open it, and a sheet on the wall is read in passing by four people
-## at once.
-##
-## **It reads and it draws, and it decides nothing.** The signed job comes off
-## `ContractManager`, which reads it off `SessionManager`; nothing here is stored
-## and nothing here is asked of the host. That is also why it needs no network
-## code of its own — the signature is already replicated by the time this hears
-## about it.
+## **Two ranges, one sheet.** From across the van it is a summary read in
+## passing: who is paying, where the house is, how bad it is and what the clock
+## is. It is worth being a fixture rather than a menu for exactly that reason —
+## a crew that has to open a window to remember which house they are driving to
+## will not open it. Up close, `E` lets the mouse loose and puts the full
+## contract on screen with a box at the bottom of it
+## (`scripts/ui/contract_sheet.gd`), because a job is taken by drawing a
+## signature and a scrawl needs a cursor.
 ##
 ## **A blank wall says it is blank.** Before anything is signed the sheet reads
 ## that the crew has not picked a job yet, rather than hanging empty. A player
 ## looking at an empty pin cannot tell "nothing signed" from "the sheet failed to
 ## draw", and the first of those is a thing he can do something about.
 ##
+## **It reads and it draws, and the wall itself decides nothing.** The signature
+## is the sheet's business and the host's; everything on this node comes off
+## `ContractManager`, which reads it off `SessionManager`. That is why it needs
+## no network code of its own — a job is already replicated by the time the wall
+## hears about it.
+##
 ## It is dropped in every scene that wants it. In the van it is on the bulkhead;
 ## on the road (card 09) the same node goes up beside the map table, and it will
 ## work there without a line changing, because it asks the autoloads and not the
 ## van.
 
+## What the on-screen prompt reads at the wall, and what it reads once the
+## paperwork is up. The board says what pressing the key would do rather than
+## what it is, the way every other station in the van does.
+const PROMPT_READ := "read the contract"
+const PROMPT_LEAVE := "put the contract down"
+
 ## What the sheet reads before the leader has signed anything.
 const UNSIGNED := "NO JOB SIGNED"
-## And the line under it, telling the crew where the job comes from.
-const UNSIGNED_HINT := "READ THE CLIPBOARD"
+## And the line under it, telling the crew what to do about it. It names the key
+## rather than another piece of furniture: this wall is where a job is taken now,
+## so a man reading a blank sheet is already standing at the answer.
+const UNSIGNED_HINT := "PRESS E TO SIGN ONE"
 
 ## The green a signed sheet is stamped in, matching the clipboard's own stamp.
 const COLOR_SIGNED := Color("29c443")
@@ -49,13 +61,29 @@ const COLOR_UNSIGNED := Color("ffb229")
 ## The floor plan printed on the lower half of the sheet, when the contract
 ## carries one. Hidden rather than left blank when it does not.
 @export var plan_path: NodePath = ^"Sheet/Viewport/Margin/Rows/Plan"
+## The paper itself: the quad the writing above is printed onto.
+@export var sheet_path: NodePath = ^"Sheet"
+## And the viewport the writing is drawn in, behind it.
+@export var viewport_path: NodePath = ^"Sheet/Viewport"
 
 @onready var _rows: VBoxContainer = get_node_or_null(rows_path) as VBoxContainer
 @onready var _plan: TextureRect = get_node_or_null(plan_path) as TextureRect
+@onready var _sheet: MeshInstance3D = get_node_or_null(sheet_path) as MeshInstance3D
+@onready var _viewport: SubViewport = get_node_or_null(viewport_path) as SubViewport
+
+## The player holding the paperwork up, or null when nobody is. It is what the
+## mouse and the legs are handed back to on the way out, and what stops a second
+## man opening a contract somebody else is already reading.
+var _reader: Node3D
+## The paperwork itself, built the first time anybody asks for it.
+var _sheet_ui: ContractSheet
 
 
 func _ready() -> void:
 	add_to_group("contract_board")
+	prompt = PROMPT_READ
+
+	_paint_sheet()
 
 	# The signature is the only thing that changes what is on this wall, and the
 	# phase is what closes the board. Nothing is polled: a sheet redrawing itself
@@ -66,6 +94,100 @@ func _ready() -> void:
 	PhaseManager.phase_changed.connect(_on_phase_changed)
 
 	_redraw()
+
+# --- Picking the paperwork up and putting it down ---------------------------
+
+## Hands on the wall. Unlike most stations, `by` is kept: the paperwork has to
+## give the man his mouse and his legs back afterwards, and has to stop him
+## walking across the van while he is reading it.
+func use(by: Node3D) -> void:
+	super.use(by)
+	if _reader != null:
+		return
+	_open(by)
+
+
+## Puts the contract on screen and lets the mouse loose. `set_ui_open` is what
+## does both — the player stops answering to the keys and the cursor comes back —
+## and it is the same thing the shop screen does to him, for the same reason: a
+## click has to be able to reach a button instead of being spent grabbing the
+## camera back.
+func _open(by: Node3D) -> void:
+	if by == null or not by.has_method("set_ui_open"):
+		return
+	_reader = by
+	_reader.set_ui_open(true)
+
+	if _sheet_ui == null:
+		_sheet_ui = ContractSheet.new()
+		_hud_layer().add_child(_sheet_ui)
+		_sheet_ui.closed.connect(_on_sheet_closed)
+	_sheet_ui.open()
+
+	prompt = PROMPT_LEAVE
+
+
+## Puts it down and hands the man back his eyes, his legs and his cursor.
+func _close() -> void:
+	if _reader == null:
+		return
+	if _sheet_ui != null and _sheet_ui.is_open():
+		_sheet_ui.close()
+
+	if is_instance_valid(_reader) and _reader.has_method("set_ui_open"):
+		_reader.set_ui_open(false)
+	_reader = null
+	prompt = PROMPT_READ
+
+
+## Whether somebody on this machine is reading the paperwork. The van asks before
+## it does anything that would pull the screen out from under him.
+func is_open() -> bool:
+	return _reader != null
+
+
+func _on_sheet_closed() -> void:
+	_close()
+
+
+## The `CanvasLayer` the paperwork is drawn on.
+##
+## The board is a fixture of more than one scene, and each brings its own HUD.
+## Hunting for the layer by name is what lets the same wall hang the same sheet
+## in all of them without either scene having to point at it. The layer of last
+## resort is a new one: a `Control` parented to this `Area3D` would be in the 3D
+## world, where it draws nothing at all. The map table pays this same toll for
+## the same reason.
+func _hud_layer() -> Node:
+	var hud := get_tree().root.find_child("HUD", true, false)
+	if hud != null:
+		return hud
+
+	var layer := CanvasLayer.new()
+	layer.name = "ContractLayer"
+	get_tree().root.add_child(layer)
+	return layer
+
+
+## Puts the viewport onto the paper, in code rather than in the scene file.
+##
+## A `ViewportTexture` saved into a `.tscn` has to find its viewport by a path
+## resolved against the scene it is local to, and a material reached through a
+## `QuadMesh` that is not itself local to the scene never gets that resolution
+## run — which is why the wall was showing the missing-texture checkerboard
+## rather than a contract. Asking the viewport for its own texture at run time
+## cannot be wrong about which viewport it means.
+func _paint_sheet() -> void:
+	if _sheet == null or _viewport == null:
+		return
+	var material := StandardMaterial3D.new()
+	# Unshaded and nearest-filtered, like every other printed surface in the van:
+	# a lit, smoothed sheet of paper is the one thing that reads as modern in a
+	# scene built to look like 1998.
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	material.albedo_texture = _viewport.get_texture()
+	_sheet.set_surface_override_material(0, material)
 
 # --- What is drawn ----------------------------------------------------------
 
@@ -150,8 +272,10 @@ func _on_hunt_time_set(_hunt_time: HuntTime.Type) -> void:
 	_redraw()
 
 
-## The shift moved on. The sheet does not change with the phase, but a board that
-## survived into the next scene should redraw against whatever is signed there
-## rather than trusting what it drew in the van.
+## The shift moved on. Anybody still holding the paperwork is handed his eyes
+## back — the scene is about to go out from under him — and the wall redraws
+## against whatever is signed in the new phase rather than trusting what it drew
+## in the last one.
 func _on_phase_changed(_previous: Phase.Type, _current: Phase.Type) -> void:
+	_close()
 	_redraw()

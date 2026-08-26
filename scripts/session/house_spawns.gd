@@ -90,6 +90,11 @@ func _apply_belt_lock() -> void:
 
 
 func _on_phase_changed(_previous: Phase.Type, _current: Phase.Type) -> void:
+	# The phase is announced after the scene change has landed, so a house on its
+	# way out still hears the phase that replaced it — already out of the tree,
+	# with no tree left to look a player up in.
+	if not is_inside_tree():
+		return
 	_apply_belt_lock()
 
 

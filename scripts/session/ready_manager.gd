@@ -44,9 +44,21 @@ signal ready_changed(steam_id: int, value: bool)
 ## what a station plays its buzzer off. `reason` is a sentence.
 signal request_refused(reason: String)
 
+## The shift stopped being allowed to walk on, or started being allowed again.
+## The boards listen: a plate that is green while the van is held is a plate
+## telling the man he has done everything he can, which is a lie he can only find
+## out about by standing there watching nothing happen.
+signal hold_changed(held: bool)
+
 ## The peer that decides. The same 1 the phase machine uses, and for the same
 ## reason: Godot hands it to the host the moment the wire comes up.
 const HOST_PEER := 1
+
+## What the last man ready is told when the crew is all green and the shift still
+## does not move. There is only one thing that holds it — `blocked`, which
+## `ContractManager` raises while nothing is signed — so the sentence names it
+## rather than saying "something".
+const REASON_HELD := "No job is signed — the van has nowhere to go."
 
 ## The phases in which saying ready means anything. The hunt ends when the house
 ## is clear and the pay slip ends when it is read; neither is waiting on a show
@@ -67,6 +79,7 @@ var blocked := false:
 		if blocked == value:
 			return
 		blocked = value
+		hold_changed.emit(blocked)
 		# Unblocking with the crew already all green has to move the shift, or
 		# it sits in a lobby everybody has finished with, waiting on a board
 		# that has already been pressed.
@@ -170,6 +183,12 @@ func _handle_request(steam_id: int, value: bool, from_peer: int) -> void:
 	else:
 		_apply(steam_id, value)
 	_check_everybody()
+	# Everybody has said it and the shift is still standing. The only way that
+	# happens is `blocked`, and the man who just pressed the last board has to be
+	# told: without this he is looking at a row of green lights and a van that
+	# will not arrive, with nothing on screen to say why.
+	if blocked and is_active() and SessionManager.all_ready():
+		_refuse_to(from_peer, REASON_HELD)
 
 
 ## Whether a peer is allowed to move a Steam ID's flag: his own only. The host

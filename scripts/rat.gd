@@ -635,6 +635,15 @@ func is_dead() -> bool:
 		return _capture_phase == Capture.GOING_LIMP or _capture_phase == Capture.STOWING
 	return _state == State.DEAD
 
+## Whether this rat's account is closed: the money has been paid and the shift
+## is finished with it. A rat killed at a distance pays where it falls, so it is
+## true the instant it dies; one strangled in the hand pays at the end of the
+## gesture, so it is false for as long as the body is still travelling to the
+## waist. The house reads it to know whether the hunt is really over
+## (`house.gd::pending_rat_count`).
+func is_paid() -> bool:
+	return _paid
+
 ## In somebody's hand — anybody's. It is what keeps a rat already caught out of
 ## everybody else's sights (`weapon.gd: _rat_in_sights`), and on a machine that
 ## is only watching, the wire is the only thing that knows.

@@ -32,10 +32,17 @@ extends Interactable
 ## in `ReadyManager`, and a board that tried to work it out locally would be a
 ## fourth machine with an opinion about when the van leaves.
 
-## The two colours the board reads in. Saturated and only two, the way a panel
-## with two states on it was in 1998.
+## The two colours the board reads in ordinarily. Saturated and few, the way a
+## panel with a couple of states on it was in 1998.
 const COLOR_WAITING := Color("ff2222")
 const COLOR_READY := Color("22ff44")
+
+## And a third, for the one state that is neither: everybody has said it and the
+## shift is still standing, because nothing is signed yet
+## (`ReadyManager.blocked`). Green there would be a board telling the crew the van
+## is about to leave when it is not — the amber is the same one the wall sheet
+## prints an unsigned job in, so the two read as the same piece of news.
+const COLOR_HELD := Color("ffb229")
 
 ## What a crew bulb looks like when its player has not said it yet — near black
 ## rather than off, so that the row still reads as a row of four and a man can
@@ -89,6 +96,10 @@ func _ready() -> void:
 	SessionManager.player_left.connect(_on_crew_changed)
 	PhaseManager.phase_changed.connect(_on_phase_changed)
 	ReadyManager.request_refused.connect(_on_refused)
+	# The van being held has nothing to do with the crew, so nothing above says
+	# it changed: without this the board would keep drawing green through a
+	# signature landing and being torn up again.
+	ReadyManager.hold_changed.connect(_on_hold_changed)
 
 	_redraw()
 
@@ -121,7 +132,13 @@ func _redraw() -> void:
 	# the key is broken. What goes is the colour, not the prompt.
 	prompt = PROMPT_STAND_DOWN if is_ready else PROMPT_READY_UP
 
-	var color := COLOR_READY if is_ready else COLOR_WAITING
+	# Green only when saying it is actually worth something. With the shift held
+	# the plate goes amber instead: the flag is up, and the van is not going
+	# anywhere until somebody signs a job.
+	var held := is_ready and ReadyManager.blocked
+	var color := COLOR_WAITING
+	if is_ready:
+		color = COLOR_HELD if held else COLOR_READY
 	if _plate_material != null:
 		_plate_material.albedo_color = color if active else CREW_DARK
 		# Unshaded and emissive together are what make a PSX panel read as lit
@@ -153,6 +170,12 @@ func _on_crew_changed(_steam_id: int) -> void:
 
 
 func _on_phase_changed(_previous: Phase.Type, _current: Phase.Type) -> void:
+	_redraw()
+
+
+## The van was held, or let go. Only the plate's own colour moves with it — the
+## crew bulbs are flags and not permission.
+func _on_hold_changed(_held: bool) -> void:
 	_redraw()
 
 

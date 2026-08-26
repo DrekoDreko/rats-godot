@@ -3,9 +3,11 @@ extends HBoxContainer
 ## everybody already knows from Minecraft — a dark cell each, and a bright frame
 ## around whichever one is in hand.
 ##
-## It only mirrors the player's `Inventory`. A square is empty until the weapon
-## whose place it is has been *bought*: no name, no icon and no number, because
-## a weapon the player does not own is not his to be told about. What he has
+## It only mirrors the player's `Inventory`. A square is empty until something
+## has been *bought* to hang on it: no name, no icon and no number, because a
+## weapon the player does not own is not his to be told about. Which square a
+## thing lands on is the belt's business and not this screen's — no square is
+## any one item's (`scripts/weapons/inventory.gd`). What he has
 ## bought shows its icon, or its name while no art has arrived for it yet, with
 ## how many are left in the corner (`scripts/weapons/trap_weapon.gd`) — and
 ## spending the last one empties the square again, which is the same square it

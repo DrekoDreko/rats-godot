@@ -164,18 +164,18 @@ texture_filter = 0
 material = SubResource("Mat_table_sheet")
 size = Vector2(0.8, 0.55)
 
-[sub_resource type="ViewportTexture" id="Tex_wall"]
-viewport_path = NodePath("Stations/WallContract/Sheet/Viewport")
-
 [sub_resource type="StandardMaterial3D" id="Mat_wall_sheet"]
 resource_local_to_scene = true
 shading_mode = 0
-albedo_texture = SubResource("Tex_wall")
+albedo_color = Color(0.83, 0.82, 0.75, 1)
 texture_filter = 0
 
 [sub_resource type="QuadMesh" id="Mesh_wall_sheet"]
 material = SubResource("Mat_wall_sheet")
 size = Vector2(0.62, 0.86)
+
+[sub_resource type="BoxShape3D" id="Shape_reach_contract"]
+size = Vector3(0.72, 0.96, 0.7)
 
 [node name="VanTravel" type="Node3D"]
 script = ExtResource("11_travel")
@@ -460,9 +460,16 @@ shape = SubResource("Shape_table_body")
 [node name="ReadyStation" parent="Stations" instance=ExtResource("4_ready")]
 transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -1.55, 1.62, 2.35)
 
-[node name="WallContract" type="Node3D" parent="Stations"]
+[node name="WallContract" type="Area3D" parent="Stations" groups=["contract_board"]]
 transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 1.55, 1.86, 1.4)
+collision_layer = 8
+collision_mask = 0
+monitoring = false
 script = ExtResource("7_board")
+prompt = "read the contract"
+
+[node name="Reach" type="CollisionShape3D" parent="Stations/WallContract"]
+shape = SubResource("Shape_reach_contract")
 
 [node name="Sheet" type="MeshInstance3D" parent="Stations/WallContract"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.03)

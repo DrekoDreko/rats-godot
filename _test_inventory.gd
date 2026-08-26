@@ -1,5 +1,5 @@
 extends SceneTree
-## Inventory test bench: the belt of two slots, the swap with `1` and `2`, the
+## Inventory test bench: the belt of three slots, the swap with `1`, `2` and `3`, the
 ## hands that `Q` always brings back, and the one rule that holds the whole
 ## thing — with a rat kicking in the hand nothing gets swapped.
 ##
@@ -11,9 +11,11 @@ extends SceneTree
 ## that does not exist is a swap that is turned down without taking the belt
 ## with it.
 ##
-## The slots carry weapons bought at the computer, and nothing has been bought
+## The slots carry weapons bought at the shelf, and nothing has been bought
 ## here: every square is as empty as the day the van was handed over — no name,
 ## no number — and the shift starts on the hands, which are on no square at all.
+## Three empty loops is what an unbought belt looks like now that no loop
+## belongs to any one thing (`scripts/weapons/inventory.gd`).
 ## The blueprint is not among them: it is a fixture of the van's map table, not
 ## an item on the belt.
 
@@ -79,7 +81,7 @@ func _check_start() -> bool:
 	if _player.weapon_changed.get_connections().is_empty():
 		return false
 	print("--- the belt has %d slots ---" % _inventory.slot_count())
-	_expect(_inventory.slot_count() == 2, "the belt should have two slots")
+	_expect(_inventory.slot_count() == 3, "the belt should have three slots")
 	_expect(_inventory.hands_out(), "the shift should start on the hands")
 	_expect(_inventory.index() == HANDS_INDEX, "the hands are on no slot")
 	_expect(_inventory.current() == _hands, "the hands should be the ones in hand")
@@ -159,7 +161,7 @@ func _check_free_after_kill() -> bool:
 func _check_out_of_range() -> bool:
 	if _clock < WAIT:
 		return false
-	_expect(not _inventory.equip(2), "a slot past the end should be refused")
+	_expect(not _inventory.equip(3), "a slot past the end should be refused")
 	_expect(not _inventory.equip(7), "a slot far past the end should be refused")
 	_expect(not _inventory.equip(HANDS_INDEX), "a slot before the start should be refused")
 	_expect(not _inventory.equip(-2), "the hands are on no index to be reached by")

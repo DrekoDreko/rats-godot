@@ -111,7 +111,7 @@ func _check_order() -> bool:
 	_session.phase = Phase.Type.HUNT
 	_expect(_phase.next_phase() == Phase.Type.RESULT, "after the hunt, the pay slip")
 	_session.phase = Phase.Type.RESULT
-	_expect(_phase.next_phase() == Phase.Type.LOBBY, "and the pay slip goes home to the menu")
+	_expect(_phase.next_phase() == Phase.Type.TRAVEL, "and the pay slip goes back to the van")
 
 	_session.phase = Phase.Type.LOBBY
 	_expect(Phase.duration(Phase.Type.TRAVEL) == 120.0, "the road is two minutes")

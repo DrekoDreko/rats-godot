@@ -120,6 +120,33 @@ func active_rat_count() -> int:
 	return count
 
 
+## Rats the shift has not finished with: the ones still running, and the dead
+## ones nobody has been paid for yet.
+##
+## **The second half is what keeps the pay slip honest.** A rat strangled in the
+## hand dies at the last squeeze and only turns into money at the end of the
+## gesture, when the body reaches the waist (`rat.gd::_pay_reward`). A hunt that
+## ended the moment the animal stopped moving would end while its own catch was
+## still in mid-air — and `ShiftReport` files nothing outside the hunt, so the
+## last rat of the shift would be caught, paid for, and missing off the slip.
+## So the house waits for the money, not only for the death.
+func pending_rat_count() -> int:
+	if _rats_root == null:
+		return 0
+	var count := 0
+	for child in _rats_root.get_children():
+		var rat := child as CharacterBody3D
+		if rat == null or not is_instance_valid(rat):
+			continue
+		var dead: bool = rat.has_method("is_dead") and rat.is_dead()
+		if not dead:
+			count += 1
+			continue
+		if rat.has_method("is_paid") and not rat.is_paid():
+			count += 1
+	return count
+
+
 ## Dynamically loads custom house geometry from the signed contract if specified.
 func _setup_contract_geometry() -> void:
 	if _geometry_root == null:
@@ -289,9 +316,12 @@ func _spawn_rats_if_needed() -> void:
 					rat.died.connect(_on_rat_died)
 
 
+## Deferred, and that is the whole of it: `died` is emitted *before* the rat
+## pays out (`rat.gd::_die`), so a check run on the spot would end the hunt one
+## line before the last catch was recorded. A frame later the money has landed.
 func _on_rat_died(_rat: Node3D, _type: int) -> void:
 	if PhaseManager.current() == Phase.Type.HUNT and PhaseManager.is_host():
-		_check_hunt_completion()
+		_check_hunt_completion.call_deferred()
 
 
 ## Whether the house is clear, and if it is, on to the pay slip. This is one of
@@ -304,12 +334,19 @@ func _check_hunt_completion() -> void:
 	if PhaseManager.current() != Phase.Type.HUNT or not PhaseManager.is_host():
 		return
 
-	if active_rat_count() == 0:
+	if pending_rat_count() == 0:
 		_hunt_completed = true
 		PhaseManager.advance()
 
 
 func _on_phase_changed(previous: Phase.Type, current: Phase.Type) -> void:
+	# The house is announced to after the scene change has already happened
+	# (`PhaseManager._change_scene`), so a house on its way out still hears the
+	# phase that replaced it — out of the tree, one frame from being freed, and
+	# every `get_tree()` below it null. There is nothing left here worth doing
+	# for a scene nobody is standing in.
+	if not is_inside_tree():
+		return
 	# The hunt is over however it ended. Latched here as well as in the check
 	# above, because a hunt the clock ended leaves rats alive and would otherwise
 	# never set this — and a `_process` still asking after the house is clear is
@@ -323,4 +360,3 @@ func _on_phase_changed(previous: Phase.Type, current: Phase.Type) -> void:
 		ShiftReport.finish()
 	var is_survey_to_hunt := previous == Phase.Type.SURVEY and current == Phase.Type.HUNT
 	_update_phase_state(is_survey_to_hunt)
-
