@@ -31,6 +31,7 @@ JoinGate="*res://scripts/session/join_gate.gd"
 MapManager="*res://scripts/session/map_manager.gd"
 NetworkGuard="*res://scripts/session/network_guard.gd"
 TrapManager="*res://scripts/session/trap_manager.gd"
+ShiftReport="*res://scripts/session/shift_report.gd"
 SteamAvatars="*res://scripts/steam/steam_avatars.gd"
 
 [display]

@@ -96,6 +96,13 @@ func _ready() -> void:
 	# nowhere.
 	_update_block()
 
+	# And raised again whenever the signature changes under us. Signing goes
+	# through `_settle`, which does its own, but a shift coming home tears the
+	# contract up on `SessionManager` directly (`PhaseManager._clear_shift`) —
+	# and without this the next van would leave for nowhere on the strength of a
+	# block that was lowered for last night's job.
+	SessionManager.contract_changed.connect(_on_contract_changed)
+
 
 ## How many jobs are on the board.
 func count() -> int:
@@ -429,6 +436,10 @@ func _settle_hunt_time(value: HuntTime.Type) -> void:
 ## and that is its own business.
 func _update_block() -> void:
 	ReadyManager.blocked = not is_signed()
+
+
+func _on_contract_changed(_contract_id: String) -> void:
+	_update_block()
 
 # --- Odds and ends ----------------------------------------------------------
 

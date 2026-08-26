@@ -224,6 +224,12 @@ func _update_phase_state(is_transition: bool = false) -> void:
 	if is_hunt:
 		if is_transition and _screech_audio != null:
 			_screech_audio.play()
+		# Opened before the rats are put in, and on every machine rather than
+		# only on the host: the guest spawns nothing — the `MultiplayerSpawner`
+		# brings him his animals — but he still has a pay slip to fill in, and
+		# it needs to know how many rats the house was let with.
+		if is_transition:
+			ShiftReport.begin(_contract_infestation())
 		_spawn_rats_if_needed()
 
 
@@ -242,6 +248,15 @@ func _apply_house_lighting() -> void:
 		_living_light.light_energy = LIVING_ENERGY
 
 
+## How many rats this contract puts in the walls. Asked in two places — by the
+## host that spawns them and by every machine's pay slip — so the fallback for a
+## contract that names none is written once and both get the same answer.
+func _contract_infestation() -> int:
+	var contract := ContractManager.current()
+	var infestation: int = contract.infestation if contract != null else DEFAULT_INFESTATION
+	return infestation if infestation > 0 else DEFAULT_INFESTATION
+
+
 ## Spawns the rats authoritative on the host using SessionManager.random_seed and Contract.infestation.
 func _spawn_rats_if_needed() -> void:
 	if _rats_spawned:
@@ -250,10 +265,7 @@ func _spawn_rats_if_needed() -> void:
 		return
 
 	_rats_spawned = true
-	var contract := ContractManager.current()
-	var infestation: int = contract.infestation if contract != null else DEFAULT_INFESTATION
-	if infestation <= 0:
-		infestation = DEFAULT_INFESTATION
+	var infestation := _contract_infestation()
 
 	var seed_val: int = SessionManager.random_seed
 	if seed_val == 0:
@@ -349,6 +361,11 @@ func _on_phase_changed(previous: Phase.Type, current: Phase.Type) -> void:
 	# a question with no phase left to answer it.
 	if previous == Phase.Type.HUNT:
 		_hunt_completed = true
+		# The clock on the slip is stopped here rather than when the screen is
+		# drawn: the pay slip can sit unread for as long as the crew likes, and
+		# a shift that goes on counting while nobody is playing it is not the
+		# length of the hunt.
+		ShiftReport.finish()
 	var is_survey_to_hunt := previous == Phase.Type.SURVEY and current == Phase.Type.HUNT
 	_update_phase_state(is_survey_to_hunt)
 

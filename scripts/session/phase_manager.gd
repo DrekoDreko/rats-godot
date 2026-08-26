@@ -49,8 +49,10 @@ signal timer_expired(phase: Phase.Type)
 
 ## The scene each phase is played in. Survey and hunt share one deliberately —
 ## see the note above about not throwing the traps away. A phase absent from
-## here (`RESULT`, until it has a scene) stays wherever it is and only changes
-## the phase.
+## here stays wherever it is and only changes the phase, which is how `RESULT`
+## works: the pay slip is a panel drawn over the house the crew has just
+## cleared, not a room they are moved to, and the house standing behind it is
+## most of what makes it read as the end of that shift rather than a menu.
 ##
 ## A `var` and not a `const`, because the house is not one scene: the contract
 ## the host signs is what says which one, and `set_scene` is how the clipboard
@@ -185,12 +187,18 @@ func duration_of(phase: Phase.Type) -> float:
 	return Phase.duration(phase)
 
 
-## The phase after this one, or `RESULT` at the end of the list — a shift that
-## has been paid for does not walk on to a sixth phase.
+## The phase after this one. The list is walked in order and `RESULT` comes back
+## round to `LOBBY`, which is what makes a shift a loop rather than a line: a
+## crew that has been paid is a crew standing in the menu again, ready to sign
+## for the next house. A phase that is not on the list at all is treated as the
+## end of one — there is nowhere sensible to walk on to from a phase the order
+## does not know about, and the menu is the one place that is always safe.
 func next_phase() -> Phase.Type:
 	var at := ORDER.find(current())
-	if at == -1 or at + 1 >= ORDER.size():
-		return Phase.Type.RESULT
+	if at == -1:
+		return Phase.Type.LOBBY
+	if at + 1 >= ORDER.size():
+		return Phase.Type.LOBBY
 	return ORDER[at + 1]
 
 
@@ -282,6 +290,18 @@ func _apply(phase: Phase.Type) -> void:
 	SessionManager.reset_ready()
 
 	SessionManager.phase = phase
+
+	# Home from a shift. Everything the shift accumulated goes out with it —
+	# the money made in the house, what is left in the crates, the pins on the
+	# map, the contract that was signed for — so the crew arrives in the menu
+	# with a clean board rather than with last job's numbers still on it.
+	#
+	# Not `SessionManager.reset()`, which is `NetworkGuard`'s wipe and takes the
+	# crew with it: these men have not gone anywhere, they have finished a job.
+	# What is cleared here is the shift, not the lobby.
+	if phase == Phase.Type.LOBBY and previous != Phase.Type.LOBBY:
+		_clear_shift()
+
 	_start_clock(phase)
 
 	# The same house for survey and for hunt: the traps stay where they were put
@@ -298,6 +318,23 @@ func _apply(phase: Phase.Type) -> void:
 ## wait of a frame is not politeness: `change_scene_to_file` is deferred by
 ## Godot, and announcing before it lands would announce to the scene on its way
 ## out.
+## What one shift leaves behind, wiped on the way back to the menu. Done on
+## every machine and not only on the host, because every one of these is a local
+## tally: this player's money, this player's crates, this player's pay slip.
+## The crew and their colours are untouched — they are the lobby's, and the
+## lobby is where we are going.
+func _clear_shift() -> void:
+	Wallet.reset()
+	Stock.reset()
+	ShiftReport.reset()
+	MapManager.clear_all_pins()
+	# The van is held shut again by this, and not by a line here putting
+	# `ReadyManager.blocked` up: that flag has one owner (`ContractManager`),
+	# which watches the signature and raises it the moment there is not one. Two
+	# places writing it is how it ends up stuck in a state neither of them meant.
+	SessionManager.set_contract("")
+
+
 func _change_scene(path: String, previous: Phase.Type, phase: Phase.Type) -> void:
 	_changing_scene = true
 	get_tree().change_scene_to_file(path)
