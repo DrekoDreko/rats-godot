@@ -48,10 +48,49 @@ var _original_materials: Dictionary[MeshInstance3D, Array] = {}
 func _ready() -> void:
 	_apply()
 
-## Re-applies the material to the whole subtree. Call it after adding meshes at
-## runtime or after changing a surface's texture.
+	# Meshes that arrive after this point — a rat spawned into the level, a crew
+	# member seated on the menu — would otherwise keep the material the importer
+	# gave them, since `_apply` has already walked the tree by the time they get
+	# here. Watching the whole tree and filtering is cheaper than it looks, and it
+	# is the only hook that sees a node buried inside an instanced scene: the
+	# per-child signals only fire for direct children.
+	if not Engine.is_editor_hint():
+		get_tree().node_added.connect(_on_node_added)
+
+## Re-applies the material to the whole subtree. Call it after changing a
+## surface's texture. Meshes added at runtime are picked up on their own.
 func refresh() -> void:
 	_apply()
+
+## A node appeared somewhere in the tree. Ours to dress only if it is a mesh
+## sitting under our parent with no nearer applier laying claim to it.
+##
+## An instanced scene arrives whole — its children are already in place when this
+## fires — so an applier packed inside it is visible to `_answers_for` and wins
+## the subtree, even though its own `_ready` has not run yet.
+func _on_node_added(node: Node) -> void:
+	if not enabled or material == null:
+		return
+	var mesh_instance := node as MeshInstance3D
+	if mesh_instance == null or not _answers_for(mesh_instance):
+		return
+	_remember(mesh_instance)
+	_apply_to(mesh_instance)
+
+## Whether this applier is the one responsible for `mesh_instance`: it lies under
+## our parent, and nothing between the two owns it first.
+func _answers_for(mesh_instance: MeshInstance3D) -> bool:
+	var root := get_parent()
+	if root == null:
+		return false
+
+	var node: Node = mesh_instance
+	while node != null and node != root:
+		if _owned_by_another_applier(node):
+			return false
+		node = node.get_parent()
+
+	return node == root
 
 func _apply() -> void:
 	if not is_inside_tree():

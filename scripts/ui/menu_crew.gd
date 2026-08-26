@@ -26,8 +26,8 @@ extends Node3D
 ## that moving somebody is dragging him in the editor, which matters because this
 ## screen is going to grow scenery around the crew.
 
-## The body. `player_model.tscn` carries its own PS1 applier, so a hazmat put
-## here already matches the ones in the van.
+## The body. The applier at the root of the menu dresses a hazmat as it is
+## seated, so one put here already matches the ones in the van.
 const MODEL_SCENE := preload("res://scenes/player_model.tscn")
 
 ## What the men are doing while they wait: crouched and still, which

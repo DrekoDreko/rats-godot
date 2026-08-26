@@ -1,13 +1,10 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene format=3 uid="uid://cspc7qlhbpj7i"]
 
-[ext_resource type="Script" path="res://scripts/player_model.gd" id="1_model"]
+[ext_resource type="Script" uid="uid://65f0nc8fcp3q" path="res://scripts/player_model.gd" id="1_model"]
 [ext_resource type="PackedScene" uid="uid://cl6xwpr0ykxwr" path="res://models/hazmat.glb" id="2_hazmat"]
-[ext_resource type="PackedScene" uid="uid://bgordf5uoxh7c" path="res://scenes/ps1.tscn" id="3_ps1"]
 
-[node name="PlayerModel" type="Node3D"]
+[node name="PlayerModel" type="Node3D" unique_id=1001578342]
 transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 0, 0, 0)
 script = ExtResource("1_model")
 
-[node name="Hazmat" parent="." instance=ExtResource("2_hazmat")]
-
-[node name="PS1" parent="Hazmat" instance=ExtResource("3_ps1")]
+[node name="Hazmat" parent="." unique_id=2009746817 instance=ExtResource("2_hazmat")]

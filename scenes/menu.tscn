@@ -1,14 +1,27 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene format=3 uid="uid://bslld2ban48a7"]
 
-[ext_resource type="Script" path="res://scripts/ui/menu_screen.gd" id="1_menu"]
-[ext_resource type="Script" path="res://scripts/ui/menu_crew.gd" id="2_crew"]
-[ext_resource type="Script" path="res://scripts/ui/color_popup.gd" id="3_color"]
-[ext_resource type="Script" path="res://scripts/ui/contract_panel.gd" id="4_contract"]
+[ext_resource type="Script" uid="uid://3iy7wjg0y4ry" path="res://scripts/ui/menu_screen.gd" id="1_menu"]
+[ext_resource type="PackedScene" uid="uid://bgordf5uoxh7c" path="res://scenes/ps1.tscn" id="2_13sgg"]
+[ext_resource type="Script" uid="uid://3wh3h00cllfg" path="res://scripts/ui/menu_crew.gd" id="2_crew"]
+[ext_resource type="Script" uid="uid://uwxm7mwqg5fm" path="res://scripts/ui/color_popup.gd" id="3_color"]
+[ext_resource type="PackedScene" uid="uid://dq3n7vk8rj5wc" path="res://scenes/ps1_postprocess.tscn" id="3_i6lef"]
+[ext_resource type="Shader" uid="uid://bwmdy542q66bt" path="res://scripts/ps1.gdshader" id="4_70i5f"]
+[ext_resource type="Script" uid="uid://c0najh3gpg2du" path="res://scripts/ui/contract_panel.gd" id="4_contract"]
 [ext_resource type="PackedScene" path="res://scenes/lobby.tscn" id="5_modal"]
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_13sgg"]
+render_priority = 0
+shader = ExtResource("4_70i5f")
+shader_parameter/albedo_color = Color(1, 1, 1, 1)
+shader_parameter/jitter = 0.800000038
+shader_parameter/jitter_z_coordinate = false
+shader_parameter/jitter_depth_independent = true
+shader_parameter/affine_texture_mapping = true
+shader_parameter/alpha_scissor = 0.5
+
 [sub_resource type="ProceduralSkyMaterial" id="Sky_material"]
-sky_top_color = Color(0.13, 0.13, 0.15, 1)
-sky_horizon_color = Color(0.18, 0.18, 0.2, 1)
+sky_top_color = Color(1, 1, 1, 1)
+sky_horizon_color = Color(1, 1, 1, 1)
 ground_bottom_color = Color(0.1, 0.1, 0.11, 1)
 ground_horizon_color = Color(0.16, 0.16, 0.18, 1)
 
@@ -18,57 +31,70 @@ sky_material = SubResource("Sky_material")
 [sub_resource type="Environment" id="Environment"]
 background_mode = 2
 sky = SubResource("Sky")
-ambient_light_source = 3
-ambient_light_color = Color(0.72, 0.74, 0.8, 1)
+ambient_light_color = Color(1, 1, 1, 1)
 ambient_light_energy = 0.55
 
 [sub_resource type="StandardMaterial3D" id="Mat_floor"]
 albedo_color = Color(0.14, 0.14, 0.16, 1)
-roughness = 1.0
 
 [sub_resource type="PlaneMesh" id="Mesh_floor"]
 material = SubResource("Mat_floor")
 size = Vector2(40, 40)
 
-[node name="Menu" type="Node3D"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_i6lef"]
+render_priority = 0
+shader = ExtResource("4_70i5f")
+shader_parameter/albedo_color = Color(0.14, 0.14, 0.16, 1)
+shader_parameter/jitter = 0.800000038
+shader_parameter/jitter_z_coordinate = false
+shader_parameter/jitter_depth_independent = true
+shader_parameter/affine_texture_mapping = true
+shader_parameter/alpha_scissor = 0.5
+
+[node name="Menu" type="Node3D" unique_id=2125750364]
 script = ExtResource("1_menu")
 
-[node name="Environment" type="WorldEnvironment" parent="."]
+[node name="PS1" parent="." unique_id=1777166207 instance=ExtResource("2_13sgg")]
+
+[node name="PS1PostProcess" parent="." unique_id=667602802 instance=ExtResource("3_i6lef")]
+surface_material_override/0 = SubResource("ShaderMaterial_13sgg")
+
+[node name="Environment" type="WorldEnvironment" parent="." unique_id=2033860006]
 environment = SubResource("Environment")
 
-[node name="Fill" type="DirectionalLight3D" parent="."]
+[node name="Fill" type="DirectionalLight3D" parent="." unique_id=1695235542]
 transform = Transform3D(0.866, 0.25, -0.433, 0, 0.866, 0.5, 0.5, -0.433, 0.75, 0, 6, 0)
 light_color = Color(1, 0.97, 0.92, 1)
 light_energy = 0.9
-shadow_enabled = false
 
-[node name="Floor" type="MeshInstance3D" parent="."]
+[node name="Floor" type="MeshInstance3D" parent="." unique_id=564645654]
 mesh = SubResource("Mesh_floor")
+surface_material_override/0 = SubResource("ShaderMaterial_i6lef")
 
-[node name="Camera" type="Camera3D" parent="."]
+[node name="Camera" type="Camera3D" parent="." unique_id=1721597996]
 transform = Transform3D(1, 0, 0, 0, 0.9848, 0.1736, 0, -0.1736, 0.9848, 0, 1.15, 4.1)
 fov = 45.0
 
-[node name="Crew" type="Node3D" parent="."]
+[node name="Crew" type="Node3D" parent="." unique_id=1560646598]
 script = ExtResource("2_crew")
 
-[node name="Seats" type="Node3D" parent="Crew"]
+[node name="Seats" type="Node3D" parent="Crew" unique_id=767470289]
 
-[node name="Seat1" type="Marker3D" parent="Crew/Seats"]
+[node name="Seat1" type="Marker3D" parent="Crew/Seats" unique_id=239706448]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.35, 0, 0)
 
-[node name="Seat2" type="Marker3D" parent="Crew/Seats"]
+[node name="Seat2" type="Marker3D" parent="Crew/Seats" unique_id=1153070524]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.45, 0, 0)
 
-[node name="Seat3" type="Marker3D" parent="Crew/Seats"]
+[node name="Seat3" type="Marker3D" parent="Crew/Seats" unique_id=218072320]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.45, 0, 0)
 
-[node name="Seat4" type="Marker3D" parent="Crew/Seats"]
+[node name="Seat4" type="Marker3D" parent="Crew/Seats" unique_id=1849550139]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.35, 0, 0)
 
-[node name="UI" type="CanvasLayer" parent="."]
+[node name="UI" type="CanvasLayer" parent="." unique_id=1279202548]
 
-[node name="LocalPlayer" type="HBoxContainer" parent="UI"]
+[node name="LocalPlayer" type="HBoxContainer" parent="UI" unique_id=735532409]
 offset_left = 8.0
 offset_top = 8.0
 offset_right = 148.0
@@ -76,14 +102,14 @@ offset_bottom = 40.0
 theme_override_constants/separation = 6
 alignment = 1
 
-[node name="Photo" type="TextureRect" parent="UI/LocalPlayer"]
+[node name="Photo" type="TextureRect" parent="UI/LocalPlayer" unique_id=773197327]
 texture_filter = 1
 custom_minimum_size = Vector2(32, 32)
 layout_mode = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Name" type="Label" parent="UI/LocalPlayer"]
+[node name="Name" type="Label" parent="UI/LocalPlayer" unique_id=1208256218]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
@@ -91,7 +117,8 @@ theme_override_constants/outline_size = 5
 theme_override_font_sizes/font_size = 8
 vertical_alignment = 1
 
-[node name="Cards" type="Control" parent="UI"]
+[node name="Cards" type="Control" parent="UI" unique_id=650969528]
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -99,7 +126,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="ContractPanel" type="PanelContainer" parent="UI"]
+[node name="ContractPanel" type="PanelContainer" parent="UI" unique_id=1619612698]
 anchors_preset = 6
 anchor_left = 1.0
 anchor_top = 0.5
@@ -113,7 +140,7 @@ grow_horizontal = 0
 grow_vertical = 2
 script = ExtResource("4_contract")
 
-[node name="Center" type="VBoxContainer" parent="UI"]
+[node name="Center" type="VBoxContainer" parent="UI" unique_id=1166613313]
 anchors_preset = 7
 anchor_left = 0.5
 anchor_top = 1.0
@@ -127,28 +154,28 @@ grow_horizontal = 2
 grow_vertical = 0
 theme_override_constants/separation = 4
 
-[node name="Play" type="Button" parent="UI/Center"]
+[node name="Play" type="Button" parent="UI/Center" unique_id=337119944]
 custom_minimum_size = Vector2(140, 26)
 layout_mode = 2
 text = "PLAY"
 
-[node name="Invite" type="Button" parent="UI/Center"]
+[node name="Invite" type="Button" parent="UI/Center" unique_id=2022267828]
 custom_minimum_size = Vector2(140, 0)
 layout_mode = 2
 text = "INVITE FRIENDS"
 
-[node name="PublicLobbies" type="Button" parent="UI/Center"]
+[node name="PublicLobbies" type="Button" parent="UI/Center" unique_id=987048932]
 custom_minimum_size = Vector2(140, 0)
 layout_mode = 2
 text = "PUBLIC LOBBIES"
 
-[node name="Settings" type="Button" parent="UI/Center"]
+[node name="Settings" type="Button" parent="UI/Center" unique_id=518547715]
 custom_minimum_size = Vector2(140, 0)
 layout_mode = 2
 disabled = true
 text = "SETTINGS"
 
-[node name="Status" type="Label" parent="UI"]
+[node name="Status" type="Label" parent="UI" unique_id=523677910]
 anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
@@ -166,8 +193,8 @@ theme_override_font_sizes/font_size = 8
 horizontal_alignment = 1
 autowrap_mode = 2
 
-[node name="LobbyModal" parent="UI" instance=ExtResource("5_modal")]
+[node name="LobbyModal" parent="UI" unique_id=954254003 instance=ExtResource("5_modal")]
 visible = false
 
-[node name="ColorPopup" type="PopupPanel" parent="UI"]
+[node name="ColorPopup" type="PopupPanel" parent="UI" unique_id=334250369]
 script = ExtResource("3_color")
