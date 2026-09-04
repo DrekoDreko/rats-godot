@@ -5,7 +5,7 @@ extends Resource
 ##
 ## Each item is a file in `resources/store/`. A new thing on the shelf means
 ## duplicating one of those and changing the numbers — no code. The shop reads
-## the catalogue off the shelf node (`scripts/shop/shop_shelf.gd`), and the
+## the catalogue off `ShopManager`, which scans that folder, and the
 ## weapon that spends the item finds it by the same `id`
 ## (`scripts/weapons/trap_weapon.gd`).
 ##

@@ -45,7 +45,7 @@ const ROAD_SCRIPT := "res://scripts/travel/road_scroll.gd"
 const SHAKE_SCRIPT := "res://scripts/travel/cabin_shake.gd"
 const READY_STATION_SCRIPT := "res://scripts/session/ready_station.gd"
 const PENDING_STATION_SCRIPT := "res://scripts/session/pending_station.gd"
-const SHOP_SHELF_SCRIPT := "res://scripts/shop/shop_shelf.gd"
+const STORE_SCREEN_SCRIPT := "res://scripts/ui/store_screen.gd"
 ## The map table card 11 fitted in the stand-in's place.
 const MAP_TABLE_SCRIPT := "res://scripts/map/map_table.gd"
 
@@ -199,40 +199,38 @@ func _check_the_box_is_shut() -> bool:
 		"and no parked-up yard fenced around it")
 	return _advance()
 
-## The stations the card asks for: the shop (card 10), the map table (card 11)
-## and the ready board (card 03) kept from the lobby. The shelf is fitted for
-## real now; the map table is still a stand-in.
+## The stations the card asks for: the map table (card 11) and the ready board
+## (card 03) kept from the lobby. The shop is no longer one of them — it is a
+## screen on `E` now (`scripts/ui/store_screen.gd`) rather than a cabinet bolted
+## to the wall, so what is checked is that the wall is clear and the screen is
+## fitted.
 func _check_the_stations() -> bool:
 	var stations := _van.get_node_or_null("Stations")
 	if stations == null:
 		print("FAIL: the van has no stations")
 		return _advance()
 
-	var shop := stations.get_node_or_null("Shop") as Area3D
 	var map := stations.get_node_or_null("MapTable") as Area3D
 	var ready_board := stations.get_node_or_null("ReadyStation") as Area3D
 
-	_expect(shop != null, "there is a shop shelf")
+	_expect(stations.get_node_or_null("Shop") == null,
+		"the shelf on the wall is gone")
 	_expect(map != null, "there is a map table")
 	_expect(ready_board != null, "and the ready station is kept")
+
+	# The store is a screen the whole van shares rather than a corner one man
+	# stands in, so it hangs off the root beside the HUD.
+	var store := _van.get_node_or_null("StoreScreen")
+	_expect(store != null, "the van carries the store screen")
+	if store != null:
+		_expect(_script_of(store) == STORE_SCREEN_SCRIPT,
+			"the store screen is card 10's own")
 
 	if ready_board != null:
 		_expect(_script_of(ready_board) == READY_STATION_SCRIPT,
 			"the ready station is card 03's own board")
 		_expect(ready_board.is_in_group("ready_station"),
 			"found by its group like everywhere else")
-
-	# The shelf is written (card 10): it carries its own script, it is out of the
-	# stand-in group, and it stands the goods it sells on its boards rather than
-	# being an empty cabinet. That swap is the one the stand-in was fitted to
-	# make cheap — the geometry did not move.
-	if shop != null:
-		_expect(_script_of(shop) == SHOP_SHELF_SCRIPT, "the shelf is card 10's own")
-		_expect(not shop.is_in_group("pending_station"),
-			"the shelf is no longer a stand-in")
-		var goods := shop.get_node_or_null("Goods")
-		_expect(goods != null and goods.get_child_count() > 0,
-			"the shelf has goods standing on it")
 
 	# The map table is written (card 11): it carries its own script, it is out of the
 	# stand-in group, and it holds the blueprint of the active contract.
@@ -244,7 +242,7 @@ func _check_the_stations() -> bool:
 		var surface := map.get_node_or_null("PlanSurface")
 		_expect(surface != null, "the table has a blueprint sheet on its surface")
 
-	var all_stations: Array[Area3D] = [shop, map, ready_board]
+	var all_stations: Array[Area3D] = [map, ready_board]
 	for station in all_stations:
 		if station == null:
 			continue
@@ -261,13 +259,10 @@ func _check_the_stations() -> bool:
 		_expect(at.z > INNER_FRONT and at.z < INNER_BACK,
 			"%s is inside the box" % station.name)
 
-	# Three men at three stations must not be standing on each other.
-	if shop != null and map != null:
-		_expect(shop.global_position.distance_to(map.global_position) > 1.5,
-			"the shelf and the table are not the same corner")
-	if shop != null and ready_board != null:
-		_expect(shop.global_position.distance_to(ready_board.global_position) > 1.0,
-			"the shelf and the ready board are not the same corner")
+	# Two men at two stations must not be standing on each other.
+	if map != null and ready_board != null:
+		_expect(map.global_position.distance_to(ready_board.global_position) > 1.0,
+			"the table and the ready board are not the same corner")
 	return _advance()
 
 ## The card says weapons are enabled on the road: the crew is meant to equip what

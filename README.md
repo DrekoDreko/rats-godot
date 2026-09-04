@@ -197,32 +197,19 @@ map starts over, what was earned on it does not. It announces by signal
 total in the top-right corner, and under it a passing notice with what the last
 animal paid and the death it died of.
 
-### The computer in the van
+### Where the money goes
 
-At the back of the van there is a desk with a CRT, and it is the only place where
-the money turns back into something. The rear doors are swung wide open and a
-ramp runs up to the floor of the cargo bay; inside, looking at the machine puts
-`E — use the computer` on screen, and `E` opens the shop. `Esc` or **CLOSE** puts
-it away.
+The money turns back into something in exactly one place: the **store**, the
+screen the crew shops at while the van is on the road. It is described in full
+under [The store on the road](#the-store-on-the-road) — what is on sale, who
+decides whether you can afford it, and why it is only open between the lobby and
+the house.
 
-While the shop is up the player is out of the map: the mouse comes loose to reach
-the buttons and the body stops answering to anything (`set_ui_open` in
-`player.gd`). That is not a nicety — the click that buys is the same left click
-that grabs a rat, and without the guard it would be spent snatching the camera
-back instead of pressing the button under the cursor. Esc is handled by the shop
-itself, so it never reaches the player's own mouse toggle.
-
-What is on the shelf is `resources/store/*.tres`, listed on the computer node in
-`scenes/shop_computer.tscn`: a name, a line of description, a price and how many
-units the money buys. Today it sells the **mousetrap** (three to a box, $25) and
-the **rat glue** (two trays, $40). A third thing on the shelf means duplicating a
-`.tres` and adding it to the list; no code, and the row shows up on screen on its
-own.
-
-The price leaves the `Wallet` (`spend()`) and the units land in the `Stock`, the
-project's second autoload, and for the same reason as the first: a box bought on
-one shift is still a box on the next. Money and stock are kept apart on purpose —
+The price leaves the buyer's own purse on `SessionManager` and the units land in
+the `Stock`, and both outlive the map for the same reason: a box bought on one
+shift is still a box on the next. Money and stock are kept apart on purpose —
 the wallet counts what was earned, and nothing else.
+
 
 ### The two traps
 
@@ -629,57 +616,66 @@ re-read on every change, so the road gives the belt back.
 godot --headless --script _test_menu.gd
 ```
 
-## The shelf on the road
+## The store on the road
 
-Once the van pulls off, the crew has two minutes to spend what it earned. The
-shop is a **shelf bolted to the left-hand wall**, not a menu: eight goods stand
-on three boards with a price card under each, and buying one is looking at it
-and pressing `E`. Nobody is taken out of the map to shop, which is the whole
-difference between this and the computer screen in the old map — the crew stands
-around the shelf arguing about the pistol while the van rattles.
+Once the van pulls off, the crew has two minutes to spend what it earned. `E`
+anywhere in the back of the box opens the **store**: the man himself on the left
+with his name and his money over him, and three racks of slots on the right with
+what each thing costs. `E` again, or `Esc`, puts it away, and a line in the
+corner (`E — STORE`) says the key is there whenever it would do something.
 
-The shelf is one `Area3D` and works out which box you are pointing at from where
-your reach ray lands on it, the same trick the colour panel plays with its eight
-swatches. The prompt names the thing and its price as you look along the boards
-— `buy Mousetrap — $25`, or `Pistol — $120, too dear`.
+It used to be a shelf bolted to the wall, aimed at box by box. That is gone. Two
+minutes of driving is the crew's shopping time, and making it a place in the room
+meant one man standing in the corner while the other three waited for the wall.
 
-| | | |
+| TRAPS | WEAPONS | SUPPLIES |
 | --- | --- | --- |
-| Broom $15 | Bait $20 | Mousetrap $25 |
-| Hole patch $30 | Baseball bat $35 | Rat glue $40 |
-| Shock stick $60 | Pistol $120 | |
+| Ratoeira $25 | Vassoura $15 | |
+| Cola-rato $40 | Taco de Baseball $35 | |
+| Queijo Explosivo $120 | | |
 
-What is on the shelf is `resources/store/*.tres`, one file each, and every
-machine reads the folder off disk and sorts it the same way — cheapest first,
-the id breaking ties — so an item travels on the wire as its id alone and a new
-`.tres` stocks every van at once. Each carries a `kind` (`ONE_HAND`,
-`TWO_HANDS`, `TRAP`, `BAIT`, `PATCH`), which is what the hand rules and the
-survey phase read: the two-handed things are what put the torch down, and the
-ones from `TRAP` down are what stay allowed once the killing weapons are barred.
+Every rack is padded out to five slots with empty frames, and that padding is the
+point: the weapons are being written one at a time, and a rack that shows where
+the next three are going is a rack nobody has to redraw when they arrive.
 
-**The host holds the till.** A man at the shelf does not buy anything, he *asks*
+What is on sale is `resources/store/*.tres`, one file each, and every machine
+reads the folder off disk and sorts it the same way — cheapest first, the id
+breaking ties — so an item travels on the wire as its id alone and a new `.tres`
+fills the next empty slot in every van at once. Each carries a `kind`
+(`ONE_HAND`, `TWO_HANDS`, `TRAP`, `BAIT`, `PATCH`), which is both what puts it in
+one of the three racks and what the hand rules and the survey phase read: the
+two-handed things are what put the torch down, and the ones from `TRAP` down are
+what stay allowed once the killing weapons are barred.
+
+**The host holds the till.** A man at the store does not buy anything, he *asks*
 (`ShopManager.request_buy`); the host checks his pocket and either the purchase
-is written on every machine at once or that one man hears a buzzer and his price
-card flashes red. No client ever writes its own balance, which is the point —
-money is the one thing in the van a tampered client would actually want to lie
-about.
+is written on every machine at once or that one man alone is told why not and the
+slot he pressed flashes red. No client ever writes its own balance, which is the
+point — money is the one thing in the van a tampered client would actually want
+to lie about.
 
 **Every purse is its own.** Money and bag are per player on `SessionManager`,
 keyed by the Steam ID that survives the scene change, so two men buying in the
 same second debit two different pockets. The box the weapons on *your* belt
-actually spend from is the `Stock` autoload, and it is credited only for your
-own purchases — his mousetraps go in his bag, not onto your belt.
+actually spend from is the `Stock` autoload, and it is credited only for your own
+purchases — his mousetraps go in his bag, not onto your belt.
 
-**The shelf is only open on the road.** In the lobby and in the house it goes
-dark, the price cards come off and `E` says `the shelf is shut` rather than
-doing nothing. It is not hidden: a shelf that vanished would be a van that
-changes shape, and the goods on the boards are what the crew spent the road
-buying.
+**The store is only open on the road.** In the lobby and in the house the key
+does nothing, the corner hint does not show, and a screen still up when the van
+parks is shut by the phase rather than left standing over goods the host would
+refuse.
+
+**While it is up the player is out of the map.** The mouse comes loose to reach
+the slots and the body stops answering to anything (`set_ui_open` in
+`player.gd`). That is not a nicety — the click that buys is the same left click
+that grabs a rat. And `E` only means the store when he is not already looking at
+a station: the map table and the ready board take the key back for themselves.
 
 ```
 godot --headless --script _test_van_shop.gd
 godot --headless --script _test_travel.gd
 ```
+
 
 ## The contract on the wall
 
@@ -813,14 +809,14 @@ accounts and is done by hand:
   `ready_station.gd` the board a player slaps, `van_spawns.gd` the node that
   seats the crew in the van and bars the belt while it is parked, and
   `pending_station.gd` the stand-in for a station whose card is not written yet;
-  `shop_manager.gd` is the till on the road, the autoload that reads the shelf
-  off disk and lets the host alone decide who can afford what
+  `shop_manager.gd` is the till on the road, the autoload that reads the store's
+  catalogue off disk and lets the host alone decide who can afford what
 - `scripts/` — GDScript scripts (`player.gd` handles first-person movement,
   `rat.gd` the rats' AI and the capture, `navigation.gd` bakes the mesh they walk
   on, `rat_counter.gd` the HUD scoreboard, `hud_money.gd` the wallet on screen,
   `hud_strangle.gd` the strangling prompt, `hud_hotbar.gd` the belt's three
   slots, `hud_health.gd` the health bar over them, `hud_prompt.gd` the line that
-  says what `E` would do and `hud_shop.gd` the computer's screen)
+  says what `E` would do)
 - `scripts/weapons/` — the player's weapons: `weapon.gd` is the base of them all,
   `hands.gd` is the first one, the one that grabs and strangles, `trap_weapon.gd`
   is the base of the ones that come out of a box, run out and leave something on
@@ -833,9 +829,6 @@ accounts and is done by hand:
   and `glue_trap.gd` only holds it
 - `scripts/interaction/` — `interactable.gd`, the reachable face of anything the
   player can put his hands on
-- `scripts/shop/` — the two shops: `shop_computer.gd` is the machine in the old
-  map that carries its own catalogue, and `shop_shelf.gd` the shelf on the road
-  whose goods are aimed at one by one and bought where they stand
 - `scripts/steam/` — everything that talks to Steam: `steam_manager.gd` is the
   autoload that brings the API up and keeps its callbacks flowing, and
   `lobby_manager.gd` the autoload that holds the lobby, the multiplayer peer and
@@ -850,16 +843,17 @@ accounts and is done by hand:
   `menu_crew.gd` puts a hazmat on the floor per man in the crew,
   `menu_player_card.gd` is the picture and name floating over one of them,
   `color_popup.gd` is the palette a man picks his colour from, `contract_panel.gd`
-  the board of jobs the leader signs one off, and `pause_menu.gd` the menu the
-  Esc key opens in a shift
+  the board of jobs the leader signs one off, `store_screen.gd` the store the
+  crew shops at on the road, and `pause_menu.gd` the menu the Esc key opens in a
+  shift
 - `scripts/economy/` — the money from the hunt: `death.gd` is the table of death
   types, `rat_species.gd` is the mould of a breed of rat, `store_item.gd` is a
-  line on the computer's catalogue, `wallet.gd` is the autoload that holds what
+  line on the store's catalogue, `wallet.gd` is the autoload that holds what
   was earned and `stock.gd` the one that holds what was bought
 - `resources/species/` — the breeds of rat, one per file (`common_rat.tres`)
-- `resources/store/` — what the shelf sells, one per file (`broom.tres`,
-  `bait.tres`, `mousetrap.tres`, `hole_patch.tres`, `baseball_bat.tres`,
-  `rat_glue.tres`, `shock_stick.tres`, `pistol.tres`)
+- `resources/store/` — what the store sells, one per file (`broom.tres`,
+  `mousetrap.tres`, `baseball_bat.tres`, `rat_glue.tres`,
+  `explosive_cheese.tres`)
 - `models/` — the vehicles: `van.glb` is the panel van parked in the old map, and
   `box_van.glb` is the walk-in truck the shift is run out of, written by the
   `box_van.py` beside it (run it in Blender to rebuild the model)

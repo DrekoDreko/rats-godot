@@ -11,7 +11,6 @@
 [ext_resource type="Script" uid="uid://m4hmg2xirspk" path="res://scripts/hud_hotbar.gd" id="9_hotbar"]
 [ext_resource type="Script" uid="uid://bss1ad1ogrub7" path="res://scripts/hud_health.gd" id="10_health"]
 [ext_resource type="Script" uid="uid://bgxxpnjqmrumj" path="res://scripts/hud_prompt.gd" id="12_prompt"]
-[ext_resource type="Script" uid="uid://cdgdmogklthnk" path="res://scripts/hud_shop.gd" id="13_shop"]
 [ext_resource type="Script" uid="uid://bv088710brpjr" path="res://scripts/steam/player_avatars.gd" id="14_players"]
 [ext_resource type="Script" uid="uid://po783g0faobf" path="res://scripts/hud_hold.gd" id="15_hold"]
 [ext_resource type="Script" uid="uid://p2qmhsntuqfu" path="res://scripts/house/house.gd" id="16_house"]
@@ -480,14 +479,6 @@ font_size = 8
 
 [sub_resource type="LabelSettings" id="LabelSettings_75jji"]
 font_size = 8
-
-[sub_resource type="StyleBoxFlat" id="Style_shop_panel"]
-bg_color = Color(0, 0, 0, 0.78)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.55, 0.55, 0.55, 0.75)
 
 [node name="World" type="Node3D" unique_id=896002135]
 script = ExtResource("16_house")
@@ -1280,77 +1271,6 @@ theme_override_constants/outline_size = 5
 label_settings = SubResource("LabelSettings_75jji")
 horizontal_alignment = 1
 script = ExtResource("12_prompt")
-
-[node name="Shop" type="Control" parent="HUD" unique_id=252002287]
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-script = ExtResource("13_shop")
-
-[node name="Dim" type="ColorRect" parent="HUD/Shop" unique_id=122432140]
-layout_mode = 0
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-color = Color(0, 0, 0, 0.55)
-
-[node name="Center" type="CenterContainer" parent="HUD/Shop" unique_id=1792631825]
-layout_mode = 0
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="Panel" type="PanelContainer" parent="HUD/Shop/Center" unique_id=966623870]
-custom_minimum_size = Vector2(260, 0)
-layout_mode = 2
-theme_override_styles/panel = SubResource("Style_shop_panel")
-
-[node name="Margin" type="MarginContainer" parent="HUD/Shop/Center/Panel" unique_id=230413989]
-layout_mode = 2
-theme_override_constants/margin_left = 8
-theme_override_constants/margin_top = 6
-theme_override_constants/margin_right = 8
-theme_override_constants/margin_bottom = 6
-
-[node name="Rows" type="VBoxContainer" parent="HUD/Shop/Center/Panel/Margin" unique_id=923722731]
-layout_mode = 2
-theme_override_constants/separation = 5
-
-[node name="Header" type="HBoxContainer" parent="HUD/Shop/Center/Panel/Margin/Rows" unique_id=808456980]
-layout_mode = 2
-
-[node name="Title" type="Label" parent="HUD/Shop/Center/Panel/Margin/Rows/Header" unique_id=1833655123]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 5
-text = "RATCO SUPPLY"
-label_settings = SubResource("LabelSettings_75jji")
-
-[node name="Money" type="Label" parent="HUD/Shop/Center/Panel/Margin/Rows/Header" unique_id=1416636657]
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 5
-text = "$ 0"
-label_settings = SubResource("LabelSettings_75jji")
-horizontal_alignment = 2
-
-[node name="Items" type="VBoxContainer" parent="HUD/Shop/Center/Panel/Margin/Rows" unique_id=272889835]
-layout_mode = 2
-theme_override_constants/separation = 4
-
-[node name="Close" type="Button" parent="HUD/Shop/Center/Panel/Margin/Rows" unique_id=347782850]
-layout_mode = 2
-text = "CLOSE"
 
 [node name="HUD_Phase" parent="." unique_id=1677183090 instance=ExtResource("20_hud_phase")]
 

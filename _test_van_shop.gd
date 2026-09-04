@@ -1,5 +1,5 @@
 extends SceneTree
-## Van shop test bench: the shelf in the back of the moving van, the money that
+## Van shop test bench: the store the crew shops at on the road, the money that
 ## leaves one man's pocket and nobody else's, and the phase that shuts the whole
 ## thing.
 ##
@@ -25,9 +25,9 @@ extends SceneTree
 ##   that would be invisible in play until two men bought different things and
 ##   both found the other's traps on their belt.
 ##
-## The shelf's own drawing is checked where it counts: that the price card reads
-## the item and the count, that it goes shut with the phase, and that the prompt
-## names what the shelf would do rather than what it is.
+## What the screen itself draws is not checked here — it is a `CanvasLayer` that
+## needs a viewport. What is checked is everything it reads: the catalogue, the
+## purses and the phase.
 
 ## Frames of slack between one step and the next.
 const WAIT := 8
@@ -49,7 +49,7 @@ const PHASE_SURVEY := 2
 ## The cheapest thing on the shelf and the dearest, by id. They are looked up
 ## rather than indexed so the bench does not go stale when a price moves.
 const CHEAP_ID := "broom"
-const DEAR_ID := "pistol"
+const DEAR_ID := "explosive_cheese"
 
 ## Our own Steam ID, read off `SteamManager` on the way in — see `THEM`.
 var _us := 0
@@ -120,7 +120,7 @@ func _check_shelf() -> bool:
 
 	var count: int = _shop.count()
 	print("--- the shelf has %d item(s) ---" % count)
-	_expect(count == 8, "the card asks for eight things on the shelf, and there are %d" % count)
+	_expect(count == 5, "the rack is stocked with five things, and there are %d" % count)
 	_expect(_shop.is_open(), "the shelf should be open on the road")
 
 	# Sorted by price and then by id, which is what makes an index mean the same

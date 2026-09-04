@@ -1,4 +1,4 @@
-[gd_scene load_steps=43 format=3]
+[gd_scene load_steps=46 format=3]
 
 [ext_resource type="PackedScene" uid="uid://cnc3cxoy5gjim" path="res://models/box_van.glb" id="1_van"]
 [ext_resource type="PackedScene" uid="uid://bgordf5uoxh7c" path="res://scenes/ps1.tscn" id="2_ps1"]
@@ -14,8 +14,8 @@
 [ext_resource type="Script" path="res://scripts/travel/van_travel.gd" id="11_travel"]
 [ext_resource type="Script" path="res://scripts/travel/road_scroll.gd" id="12_road"]
 [ext_resource type="Script" path="res://scripts/travel/cabin_shake.gd" id="13_shake"]
-[ext_resource type="Script" path="res://scripts/shop/shop_shelf.gd" id="14_shelf"]
 [ext_resource type="Script" path="res://scripts/map/map_table.gd" id="15_table"]
+[ext_resource type="PackedScene" path="res://scenes/store_screen.tscn" id="17_store"]
 [ext_resource type="PackedScene" path="res://scenes/pause_menu.tscn" id="99_pause"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_ground"]
@@ -86,61 +86,6 @@ size = Vector3(2.3, 2.1, 0.08)
 [sub_resource type="StandardMaterial3D" id="Mat_shutter"]
 albedo_color = Color(0.26, 0.25, 0.23, 1)
 roughness = 0.8
-
-[sub_resource type="BoxShape3D" id="Shape_reach_shelf"]
-size = Vector3(1.4, 1.1, 0.55)
-
-[sub_resource type="BoxShape3D" id="Shape_shelf_body"]
-size = Vector3(1.3, 1.0, 0.34)
-
-[sub_resource type="BoxMesh" id="Mesh_shelf"]
-size = Vector3(1.3, 1.0, 0.32)
-
-[sub_resource type="StandardMaterial3D" id="Mat_shelf"]
-albedo_color = Color(0.23, 0.22, 0.2, 1)
-roughness = 0.85
-
-[sub_resource type="BoxMesh" id="Mesh_shelf_board"]
-size = Vector3(1.24, 0.04, 0.3)
-
-[sub_resource type="StandardMaterial3D" id="Mat_shelf_board"]
-albedo_color = Color(0.34, 0.31, 0.26, 1)
-roughness = 0.9
-
-[sub_resource type="BoxMesh" id="Mesh_good"]
-size = Vector3(0.19, 0.15, 0.16)
-
-[sub_resource type="StandardMaterial3D" id="Mat_good_broom"]
-albedo_color = Color(0.62, 0.55, 0.35, 1)
-roughness = 0.9
-
-[sub_resource type="StandardMaterial3D" id="Mat_good_bait"]
-albedo_color = Color(0.55, 0.42, 0.24, 1)
-roughness = 0.9
-
-[sub_resource type="StandardMaterial3D" id="Mat_good_mousetrap"]
-albedo_color = Color(0.68, 0.58, 0.42, 1)
-roughness = 0.85
-
-[sub_resource type="StandardMaterial3D" id="Mat_good_patch"]
-albedo_color = Color(0.44, 0.45, 0.47, 1)
-roughness = 0.8
-
-[sub_resource type="StandardMaterial3D" id="Mat_good_bat"]
-albedo_color = Color(0.5, 0.36, 0.2, 1)
-roughness = 0.85
-
-[sub_resource type="StandardMaterial3D" id="Mat_good_glue"]
-albedo_color = Color(0.83, 0.78, 0.3, 1)
-roughness = 0.7
-
-[sub_resource type="StandardMaterial3D" id="Mat_good_shock"]
-albedo_color = Color(0.26, 0.3, 0.42, 1)
-roughness = 0.6
-
-[sub_resource type="StandardMaterial3D" id="Mat_good_pistol"]
-albedo_color = Color(0.2, 0.2, 0.22, 1)
-roughness = 0.5
 
 [sub_resource type="BoxShape3D" id="Shape_reach_table"]
 size = Vector3(1.3, 0.7, 1.0)
@@ -335,93 +280,6 @@ volume_db = -18.0
 
 [node name="Stations" type="Node3D" parent="."]
 
-[node name="Shop" type="Area3D" parent="Stations" groups=["shop_station"]]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -1.5, 1.55, 0.9)
-collision_layer = 8
-collision_mask = 0
-monitoring = false
-script = ExtResource("14_shelf")
-prompt = "browse the shelf"
-
-[node name="Reach" type="CollisionShape3D" parent="Stations/Shop"]
-shape = SubResource("Shape_reach_shelf")
-
-[node name="Cabinet" type="MeshInstance3D" parent="Stations/Shop"]
-mesh = SubResource("Mesh_shelf")
-surface_material_override/0 = SubResource("Mat_shelf")
-
-[node name="BoardTop" type="MeshInstance3D" parent="Stations/Shop"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.28, 0.02)
-mesh = SubResource("Mesh_shelf_board")
-surface_material_override/0 = SubResource("Mat_shelf_board")
-
-[node name="BoardMid" type="MeshInstance3D" parent="Stations/Shop"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.02, 0.02)
-mesh = SubResource("Mesh_shelf_board")
-surface_material_override/0 = SubResource("Mat_shelf_board")
-
-[node name="BoardLow" type="MeshInstance3D" parent="Stations/Shop"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.32, 0.02)
-mesh = SubResource("Mesh_shelf_board")
-surface_material_override/0 = SubResource("Mat_shelf_board")
-
-[node name="Goods" type="Node3D" parent="Stations/Shop"]
-
-[node name="Broom" type="MeshInstance3D" parent="Stations/Shop/Goods"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.42, 0.38, 0.02)
-mesh = SubResource("Mesh_good")
-surface_material_override/0 = SubResource("Mat_good_broom")
-
-[node name="Bait" type="MeshInstance3D" parent="Stations/Shop/Goods"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 0.38, 0.02)
-mesh = SubResource("Mesh_good")
-surface_material_override/0 = SubResource("Mat_good_bait")
-
-[node name="Mousetrap" type="MeshInstance3D" parent="Stations/Shop/Goods"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.42, 0.38, 0.02)
-mesh = SubResource("Mesh_good")
-surface_material_override/0 = SubResource("Mat_good_mousetrap")
-
-[node name="HolePatch" type="MeshInstance3D" parent="Stations/Shop/Goods"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.42, 0.08, 0.02)
-mesh = SubResource("Mesh_good")
-surface_material_override/0 = SubResource("Mat_good_patch")
-
-[node name="BaseballBat" type="MeshInstance3D" parent="Stations/Shop/Goods"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, 0.08, 0.02)
-mesh = SubResource("Mesh_good")
-surface_material_override/0 = SubResource("Mat_good_bat")
-
-[node name="RatGlue" type="MeshInstance3D" parent="Stations/Shop/Goods"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.42, 0.08, 0.02)
-mesh = SubResource("Mesh_good")
-surface_material_override/0 = SubResource("Mat_good_glue")
-
-[node name="ShockStick" type="MeshInstance3D" parent="Stations/Shop/Goods"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.42, -0.22, 0.02)
-mesh = SubResource("Mesh_good")
-surface_material_override/0 = SubResource("Mat_good_shock")
-
-[node name="Pistol" type="MeshInstance3D" parent="Stations/Shop/Goods"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0, -0.22, 0.02)
-mesh = SubResource("Mesh_good")
-surface_material_override/0 = SubResource("Mat_good_pistol")
-
-[node name="Refused" type="AudioStreamPlayer3D" parent="Stations/Shop"]
-unit_size = 3.0
-max_distance = 12.0
-
-[node name="Press" type="AudioStreamPlayer3D" parent="Stations/Shop"]
-unit_size = 3.0
-max_distance = 12.0
-
-[node name="Body" type="StaticBody3D" parent="Stations/Shop" groups=["scenery"]]
-collision_layer = 1
-collision_mask = 0
-
-[node name="Collision" type="CollisionShape3D" parent="Stations/Shop/Body"]
-shape = SubResource("Shape_shelf_body")
-
 [node name="MapTable" type="Area3D" parent="Stations" groups=["map_station"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, -2.75)
 collision_layer = 8
@@ -580,3 +438,4 @@ horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="PauseMenu" parent="." instance=ExtResource("99_pause")]
+[node name="StoreScreen" parent="." instance=ExtResource("17_store")]

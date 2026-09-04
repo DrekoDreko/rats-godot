@@ -5,8 +5,8 @@
 [resource]
 script = ExtResource("1_item")
 id = "broom"
-display_name = "Broom"
-description = "Long reach, no weight behind it."
+display_name = "Vassoura"
+description = "Alcance longo, pouco peso atrás."
 kind = 1
 weapon_node = "Broom"
 price = 15

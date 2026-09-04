@@ -5,8 +5,8 @@
 [resource]
 script = ExtResource("1_item")
 id = "rat_glue"
-display_name = "Rat glue"
-description = "It sticks. Two trays."
+display_name = "Cola-rato"
+description = "Gruda e não larga. Duas bandejas."
 kind = 2
 weapon_node = "RatGlue"
 price = 40

@@ -14,7 +14,7 @@ extends Area3D
 ## on the scenery layer, like every other solid thing in the map.
 ##
 ## What the thing does when used is nobody's business here: it announces `used`
-## and whoever cares listens (see `scripts/shop/shop_computer.gd`).
+## and whoever cares listens (see `scripts/session/ready_station.gd`).
 
 ## Somebody used it. `by` is the player who did.
 signal used(by: Node3D)

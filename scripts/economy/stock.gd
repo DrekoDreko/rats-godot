@@ -10,7 +10,7 @@ extends Node
 ## Everything here is keyed by the item's `id` (see
 ## `scripts/economy/store_item.gd`), the same string the weapon on the belt
 ## carries in its `stock_id`. Whoever credits is the shop
-## (`scripts/hud_shop.gd`); whoever spends is the weapon, one unit at a time.
+## (`scripts/ui/store_screen.gd`); whoever spends is the weapon, one unit at a time.
 ##
 ## Not everything in the bag was bought, though. A mousetrap scraped off the
 ## floor comes back through `salvage()` and is counted twice — once as a unit

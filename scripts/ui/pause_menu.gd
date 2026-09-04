@@ -31,7 +31,7 @@ extends CanvasLayer
 ## **Esc had three owners before this file.** The `cancel` action carries Esc
 ## *and* the right mouse button, which is why the menu is not on it: right-click
 ## is a mouse gesture and opening a pause menu with it would be absurd. The
-## `toggle_mouse` action carries Esc too, and both `player.gd` and `hud_shop.gd`
+## `toggle_mouse` action carries Esc too, and both `player.gd` and `store_screen.gd`
 ## already answer to it. So the menu is on a `pause` action of its own — Esc
 ## alone — and it takes the key before anybody else can by sitting on
 ## `_input` with a `PROCESS_MODE_ALWAYS` node, marking the event handled and
