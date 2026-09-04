@@ -85,12 +85,27 @@ func try_use() -> void:
 ## Puts the weapon on cooldown without using it. It keeps the click that ended
 ## one job from running straight into the next, now that grabbing and strangling
 ## share the same button.
-func start_cooldown() -> void:
-	_cooldown_left = get_cooldown()
+##
+## `seconds` is for the weapon that has some reason of its own to be held off
+## longer than its cadence — the hands, whose kill is followed by a gesture the
+## next grab would cut in half (`hands.gd: _release`). It never shortens one: the
+## cadence is the floor, and a weapon asking for less than its own cooldown is
+## asking for something it does not get.
+func start_cooldown(seconds := 0.0) -> void:
+	_cooldown_left = maxf(get_cooldown(), seconds)
 
 ## Current cooldown duration, which can vary by weapon type and phase.
 func get_cooldown() -> float:
 	return cooldown
+
+## Whether a click would reach the weapon right now, or be swallowed by the
+## cadence. It is what `try_use` asks itself, asked from outside: the hands hold
+## the belt for the whole of the gesture that puts a dead rat away
+## (`hands.gd: _release`), which is a good deal longer than the usual cooldown,
+## and anything that means to grab the next rat has to be able to tell "not yet"
+## from "nothing there".
+func is_ready() -> bool:
+	return _cooldown_left <= 0.0
 
 ## Taken out of the belt: from here on it is the one the click reaches.
 func equip() -> void:

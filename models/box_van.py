@@ -5,18 +5,21 @@ Run it inside Blender (or through the Blender MCP server) and it writes the
 than only edited: the shape is the numbers at the top of this file, and moving a
 wall is changing one of them and running it again.
 
-Why a second van at all, with `models/van.glb` already in the map: that one is a
-panel van, and its cargo bay is 2.38 m across and 2.23 m of headroom. Four
-players, a colour panel, a clipboard, a shelf of traps, a map table and a ready
-board do not fit in it — two people passing each other in there have to breathe
-in. This one is a box body on the same cab: 3.2 m across the inside, 7 m of it,
-and 2.4 m of standing room, which is a corridor down the middle with a station
-on either side and nobody stuck behind anybody.
+Why a box body and not a van: the panel van this replaced (`models/van.glb`,
+deleted once this one took over — recoverable from git history) had a cargo bay
+2.38 m across with 2.23 m of headroom. Four players, a colour panel, a
+clipboard, a shelf of traps, a map table and a ready board do not fit in it —
+two people passing each other in there have to breathe in. This is a box body on
+the same cab: 3.2 m across the inside, 7 m of it, and 2.4 m of standing room,
+which is a corridor down the middle with a station on either side and nobody
+stuck behind anybody.
 
-The style is the older van's, deliberately, down to the material names and
-colours: flat-shaded boxes, one flat colour per part, no bevels, no smoothing,
-no textures. Everything is built from `_box` and `_plane`, and the PS1 shader in
-Godot is what actually dresses it (`scripts/ps1.gdshader`).
+The style is that older van's, deliberately, down to the material names and
+colours: flat-shaded boxes, one flat colour per part, no bevels, no smoothing.
+Everything is built from `_box` and `_plane`, and the PS1 shader in Godot is
+what actually dresses it (`scripts/ps1.gdshader`). The one exception is the
+inside, which is lined with tiling textures — see `TEXTURED_MATERIALS` for why
+the room gets them and the outside of the truck does not.
 
 Axes are Blender's — **Z is up**, +Y is forward towards the cab, and the origin
 sits on the ground at the middle of the cargo floor. Godot's importer turns that
@@ -25,6 +28,7 @@ another.
 """
 
 import bpy
+import bmesh
 import os
 import math
 
@@ -106,8 +110,8 @@ WHEEL_SIDES = 12
 ## to clear the side wall outright rather than tuck under it.
 WHEEL_TRACK = BOX_HALF_WIDTH + WALL + WHEEL_WIDTH * 0.5
 
-## The palette, straight off `van.glb` so that the two vehicles are the same
-## fleet: `(base colour, roughness, metallic)`.
+## The palette, carried over from the panel van this replaced so that anything
+## else in the fleet still matches: `(base colour, roughness, metallic)`.
 MATERIALS = {
 	"VAN_Body": ((0.72, 0.19, 0.16), 0.6, 0.0),
 	"VAN_Box": ((0.78, 0.76, 0.71), 0.75, 0.0),
@@ -122,6 +126,202 @@ MATERIALS = {
 	"VAN_Tire": ((0.045, 0.045, 0.05), 0.9, 0.0),
 	"VAN_Rim": ((0.55, 0.56, 0.58), 0.35, 1.0),
 	"VAN_Shelf": ((0.34, 0.31, 0.27), 0.8, 0.0),
+}
+
+# --- The interior textures --------------------------------------------------
+#
+# Everything above is painted with one flat colour per part, which is the style
+# and stays the style *outside*. Inside is the one place it does not hold up:
+# the crew stands in this room for the whole lobby, a metre from the walls, and
+# a 3.2 by 7 metre surface of a single unbroken grey reads as a missing texture
+# rather than as a van. So the inside gets panelling — and only the inside.
+#
+# The textures are drawn here in code rather than loaded from a `.png`, for the
+# same reason the van itself is a script: a checked-in file is a thing you can
+# only edit, and a generator is a thing you can change one number in and rerun.
+# Blender packs the generated image straight into the `.glb`, so nothing has to
+# ship beside the model.
+#
+# They are PS1-sized on purpose — 64 pixels across a two-metre panel is coarse
+# enough that `filter_nearest` in `scripts/ps1.gdshader` has visible pixels to
+# show, which is the look. Anything finer just blurs back into the flat colour
+# it replaced.
+
+## How many pixels a texture is across. A power of two, and small: this is the
+## console the look is borrowed from, not a modern one.
+TEXTURE_SIZE = 64
+
+## How many metres of surface one tile of the texture covers. It is what sets
+## the apparent pixel size in the game, and it is the number to change if the
+## panelling reads too coarse or too fine — not `TEXTURE_SIZE`, which changes
+## how much detail is drawn rather than how large it lands.
+TEXTURE_SCALE = 2.0
+
+## How long a piece of lining is, in metres, before it is cut again.
+##
+## This is not a detail setting: it is what keeps the PS1 shader's vertex jitter
+## and affine texture mapping local enough to read as wobble rather than as a
+## broken wall — see `_lined_plane` for what a plate left uncut looks like.
+## Roughly half a metre is the coarsest that still holds together at the range
+## the player stands from these walls, and it is the number to raise if the
+## lining ever costs more than it is worth.
+SUBDIVISION = 0.5
+
+
+def _noise(x: int, y: int, seed: int) -> float:
+	"""A repeatable value in 0..1 for one pixel.
+
+	Hashed rather than randomised so that two runs of this script produce the
+	same van: a texture reseeded every rebuild would show up as a diff in the
+	`.glb` with no change behind it.
+	"""
+	h = (x * 374761393 + y * 668265263 + seed * 1442695040) & 0xFFFFFFFF
+	h = ((h ^ (h >> 13)) * 1274126177) & 0xFFFFFFFF
+	return ((h ^ (h >> 16)) & 0xFFFF) / 65535.0
+
+
+def _image(name: str, painter) -> "bpy.types.Image":
+	"""One generated texture, drawn by `painter(x, y) -> (r, g, b)`.
+
+	Reused rather than redrawn if it already exists, so that a rebuild in a
+	session that has already run once does not leave `Wall.001` behind it.
+
+	The pixel buffer is filled as one flat list and assigned in a single write:
+	`image.pixels[i] = v` on a 64x64 image is four thousand round trips through
+	the RNA property, which takes long enough to look like a hang.
+	"""
+	existing = bpy.data.images.get(name)
+	if existing is not None:
+		bpy.data.images.remove(existing)
+
+	image = bpy.data.images.new(name, width=TEXTURE_SIZE, height=TEXTURE_SIZE, alpha=False)
+	buffer = [0.0] * (TEXTURE_SIZE * TEXTURE_SIZE * 4)
+	for y in range(TEXTURE_SIZE):
+		for x in range(TEXTURE_SIZE):
+			red, green, blue = painter(x, y)
+			offset = (y * TEXTURE_SIZE + x) * 4
+			buffer[offset] = red
+			buffer[offset + 1] = green
+			buffer[offset + 2] = blue
+			buffer[offset + 3] = 1.0
+	image.pixels = buffer
+	# Without this the image is a `GENERATED` block with nowhere to be saved to,
+	# and the exporter has nothing to write into the `.glb`.
+	image.pack()
+	return image
+
+
+def _shade(color, amount: float):
+	"""`color` lightened (positive) or darkened (negative) by `amount`, clamped.
+
+	Every painter below works this way — one base colour off `MATERIALS` and a
+	handful of shades of it — so that the panelling stays recognisably the same
+	part it replaced rather than becoming a new colour scheme.
+	"""
+	return tuple(min(1.0, max(0.0, channel + amount)) for channel in color)
+
+
+def _paint_wall(x: int, y: int):
+	"""Corrugated sheet: vertical ribs, seams between panels, and grime.
+
+	The ribs run vertically because that is the way a box body's lining panels
+	are pressed, and because a vertical line is the one the player's eye reads
+	as height when standing in a long room.
+
+	There is deliberately no rail across it. A band drawn into this texture is a
+	band that *tiles*: the image repeats every `TEXTURE_SCALE` metres up the
+	wall as well as along it, so one rail at waist height is also a rail at the
+	knee and another at the shoulder. Anything that happens once in the room has
+	to be geometry — which is what the bench and the shelving already are.
+	"""
+	base = MATERIALS["VAN_Box"][0]
+	# The rib: a shallow trough every eight pixels, lit on one edge and shaded
+	# on the other so it reads as pressed metal rather than as a stripe.
+	phase = x % 8
+	if phase == 0:
+		color = _shade(base, -0.14)
+	elif phase == 1:
+		color = _shade(base, 0.07)
+	elif phase == 7:
+		color = _shade(base, -0.07)
+	else:
+		color = base
+
+	# The seam where one lining panel butts against the next. On the tile edge
+	# so that it lands once per `TEXTURE_SCALE` metres and reads as panel width.
+	if x % TEXTURE_SIZE == 0:
+		color = _shade(base, -0.18)
+
+	# Grime, plus the scuffing along the bottom where boots and crates hit.
+	grime = _noise(x, y, 11)
+	kick = max(0.0, (10 - y) / 10.0) if y < 10 else 0.0
+	return _shade(color, -0.06 * grime - 0.12 * kick * (0.4 + 0.6 * grime))
+
+
+def _paint_floor(x: int, y: int):
+	"""Treadplate: a raised stud every few pixels, scuffed along the walkway.
+
+	The studs are what say *floor* from above, which is the angle it is nearly
+	always seen from — a flat dark plate at the player's feet reads as a hole.
+	"""
+	base = MATERIALS["VAN_Floor"][0]
+	color = base
+
+	# Studs on a staggered grid, the way treadplate is actually stamped. Each is
+	# a solid 3x3 block with its top and left edges lit and its bottom and right
+	# shaded, which is what makes it sit *above* the plate. Shading only the two
+	# outer edges and leaving the corner between them alone is what turned the
+	# first attempt into a little arrow instead of a stud, so the body of the
+	# stud is filled first and the highlight laid over it.
+	row = y // 8
+	stud_x = (x + (4 if row % 2 else 0)) % 8
+	stud_y = y % 8
+	if 2 <= stud_x <= 4 and 2 <= stud_y <= 4:
+		color = _shade(base, 0.06)
+		if stud_x == 2 or stud_y == 4:
+			color = _shade(base, 0.13)
+		if stud_x == 4 or stud_y == 2:
+			color = _shade(base, -0.04)
+
+	# Wear polished into the metal, plus the general grain of a dirty floor.
+	return _shade(color, 0.05 * _noise(x, y, 23) - 0.02)
+
+
+def _paint_ceiling(x: int, y: int):
+	"""The roof lining: plain sheet on cross members, and nothing else.
+
+	It is the surface the player looks at least and the one a busy texture would
+	cost the most on — a patterned ceiling in a room this size reads as pressing
+	down on you.
+
+	The members are spaced on a divisor of `TEXTURE_SIZE` so that the spacing
+	survives the tile edge. On anything else the last gap before the seam comes
+	out a different width from the rest, and a ceiling of even ribs with one odd
+	one every two metres is more distracting than no ribs at all.
+	"""
+	base = _shade(MATERIALS["VAN_Box"][0], -0.06)
+	member = y % 16
+	if member == 0:
+		return _shade(base, -0.11)
+	if member == 1:
+		return _shade(base, -0.04)
+	return _shade(base, -0.05 * _noise(x, y, 37))
+
+
+## The lined surfaces: `name -> (painter, roughness)`.
+##
+## These are separate materials rather than textures hung on the ones above,
+## and that is the whole trick of keeping this to the inside. `VAN_Box` is the
+## body: the same material draws the outside of the truck and — because the
+## walls are slabs and `cull_disabled` in `scripts/ps1.gdshader` draws their far
+## side — the inside face of them too. Texturing `VAN_Box` would panel the
+## outside of the truck as well, which is not what was asked for and is not what
+## a box body looks like. So the room is lined instead: thin plates laid just
+## inside the walls, floor and roof, wearing these.
+TEXTURED_MATERIALS = {
+	"VAN_Lining_Wall": (_paint_wall, 0.8),
+	"VAN_Lining_Floor": (_paint_floor, 0.9),
+	"VAN_Lining_Ceiling": (_paint_ceiling, 0.85),
 }
 
 _root = None
@@ -141,6 +341,7 @@ def build() -> str:
 	_rear()
 	_wheels()
 	_interior()
+	_lining()
 
 	return _export()
 
@@ -306,6 +507,60 @@ def _wheels() -> None:
 					(WHEEL_WIDTH * 2.4, WHEEL_RADIUS * 2.5, 0.1), "VAN_Trim")
 
 
+def _lining() -> None:
+	"""The panelling: a lined plate laid over the inside face of every surface of
+	the room — the two side walls, the roof, the bulkhead and the rear jambs.
+
+	Plates rather than textures on the walls themselves, for the reason set out
+	at `TEXTURED_MATERIALS`: the wall slabs are shared with the outside of the
+	truck, and the outside stays flat-painted.
+
+	Each plate is a single quad facing into the room, floated a couple of
+	millimetres proud of the wall behind it — far enough that the depth buffer
+	never has to choose between the two at any range the player sees them from,
+	near enough that it reads as the surface and not as a board hung on it. The
+	floor is not here because it already had a plate of its own (`Int_Floor`);
+	it just changed material.
+	"""
+	mid_y = (BOX_FRONT + BOX_BACK) * 0.5
+	inner_roof = FLOOR_HEIGHT + BOX_HEIGHT
+	## How far a plate stands off the wall it covers.
+	skin = 0.004
+
+	# The side walls. Their quads are rotated to stand upright and turned to
+	# face the middle of the van, which is what puts the texture the right way
+	# up and its front face towards the player.
+	for side, sign in (("L", -1.0), ("R", 1.0)):
+		_lined_plane("Int_Lining_Wall_%s" % side,
+			(sign * (BOX_HALF_WIDTH - skin), mid_y, FLOOR_HEIGHT + BOX_HEIGHT * 0.5),
+			(BOX_LENGTH, BOX_HEIGHT), "VAN_Lining_Wall",
+			rotation=(math.pi * 0.5, 0.0, sign * math.pi * 0.5))
+
+	# The roof lining.
+	_lined_plane("Int_Lining_Ceiling", (0.0, mid_y, inner_roof - skin),
+		(BOX_HALF_WIDTH * 2, BOX_LENGTH), "VAN_Lining_Ceiling",
+		rotation=(math.pi, 0.0, 0.0))
+
+	# The bulkhead, the wall the crew faces down the length of the van. It is
+	# the one interior surface that is already its own material rather than the
+	# body's (`VAN_Interior`), but it is lined too: it is dead ahead of anybody
+	# walking in, which makes it the worst place in the van for a flat colour.
+	_lined_plane("Int_Lining_Bulkhead",
+		(0.0, BOX_FRONT - WALL - skin, FLOOR_HEIGHT + BOX_HEIGHT * 0.5),
+		(BOX_HALF_WIDTH * 2, BOX_HEIGHT), "VAN_Lining_Wall",
+		rotation=(math.pi * 0.5, 0.0, math.pi))
+
+	# The jambs either side of the rear doorway, seen edge-on walking in and
+	# square-on turning round at the far end.
+	jamb = BOX_HALF_WIDTH - DOOR_HALF_WIDTH
+	for side, sign in (("L", -1.0), ("R", 1.0)):
+		_lined_plane("Int_Lining_Jamb_%s" % side,
+			(sign * (DOOR_HALF_WIDTH + jamb * 0.5), BOX_BACK + WALL + skin,
+				FLOOR_HEIGHT + BOX_HEIGHT * 0.5),
+			(jamb, BOX_HEIGHT), "VAN_Lining_Wall",
+			rotation=(math.pi * 0.5, 0.0, 0.0))
+
+
 def _interior() -> None:
 	"""What is bolted inside: the floor plate, the benches down the walls and the
 	empty shelving the shop will fill.
@@ -317,8 +572,8 @@ def _interior() -> None:
 	"""
 	mid_y = (BOX_FRONT + BOX_BACK) * 0.5
 
-	_plane("Int_Floor", (0.0, mid_y, FLOOR_HEIGHT + 0.002),
-		(BOX_HALF_WIDTH * 2, BOX_LENGTH), "VAN_Floor")
+	_lined_plane("Int_Floor", (0.0, mid_y, FLOOR_HEIGHT + 0.002),
+		(BOX_HALF_WIDTH * 2, BOX_LENGTH), "VAN_Lining_Floor")
 
 	# A bench down each side, low enough to sit on and to stand a crate on.
 	for side, sign in (("L", -1.0), ("R", 1.0)):
@@ -382,6 +637,96 @@ def _plane(name: str, location, size, material: str, rotation=(0.0, 0.0, 0.0)):
 	return _finish(obj, material)
 
 
+def _lined_plane(name: str, location, size, material: str, rotation=(0.0, 0.0, 0.0)):
+	"""One tiled, **subdivided** panel of lining.
+
+	Two things separate this from `_plane`, and both are forced by
+	`scripts/ps1.gdshader` rather than chosen.
+
+	**The UVs.** The default unwrap Blender gives a primitive maps the image once
+	across the face whatever its size, so the same panelling would come out fine
+	grained on a jamb and stretched across seven metres of side wall. The quad is
+	measured instead: the corners are set to the plate's size in metres over
+	`TEXTURE_SCALE`, so one tile covers the same distance on every surface and a
+	rib is a rib everywhere in the van.
+
+	**The subdivision**, which is the part that is easy to leave out and ruins
+	the model when it is. The PS1 shader does two things per vertex that are only
+	tolerable on dense geometry:
+
+	  - It *snaps vertices to a grid* (`round(VERTEX / w * i) / i * w`), which is
+	    the console's wobble. Between two vertices the surface is straight, so
+	    the snap is spread across whatever distance separates them. On a four
+	    vertex plate seven metres long, the entire wall shears.
+	  - It *maps textures affinely* (`UV *= VERTEX.z`), which is the console's
+	    texture swim — real, wanted, and interpolated per triangle with no
+	    perspective correction. Across a seven metre triangle the swim is not a
+	    wobble any more; the ribs bend into curves and the ceiling tears open.
+
+	Nothing else in the map shows this because nothing else is both large and
+	textured: the walls and floors in `scenes/world.tscn` carry `albedo_color`
+	alone, and a flat colour hides any amount of warping. The lining is the first
+	textured surface in the van big enough to expose it.
+
+	So the plate is cut into roughly `SUBDIVISION` metre pieces. That is the same
+	answer the console's own artists gave — PS1 rooms are visibly gridded for
+	exactly this reason — and it keeps both effects local to one small quad,
+	which is what makes them read as period wobble instead of breakage.
+	"""
+	obj = _plane(name, location, size, material, rotation=rotation)
+
+	# Cut the plate up before touching the UVs, so the new loops are unwrapped
+	# along with the original corners rather than left at (0, 0).
+	cuts_u = max(1, int(round(size[0] / SUBDIVISION))) - 1
+	cuts_v = max(1, int(round(size[1] / SUBDIVISION))) - 1
+	if cuts_u > 0 or cuts_v > 0:
+		mesh = bmesh.new()
+		mesh.from_mesh(obj.data)
+		# `cuts` is per edge, and a quad's two axes need different counts, so the
+		# cuts are made one axis at a time: the edges running along the plate's
+		# width are cut to divide U, then the ones running along its length.
+		for axis, cuts in ((0, cuts_u), (1, cuts_v)):
+			if cuts <= 0:
+				continue
+			# The edges to cut are the ones *perpendicular* to the axis being
+			# divided — cutting an edge adds vertices along it, which is what
+			# splits the face across the other direction.
+			edges = [e for e in mesh.edges if _edge_axis(e) == axis]
+			bmesh.ops.subdivide_edges(mesh, edges=edges, cuts=cuts, use_grid_fill=True)
+		mesh.to_mesh(obj.data)
+		mesh.free()
+		obj.data.update()
+		for polygon in obj.data.polygons:
+			polygon.use_smooth = False
+
+	# Unwrap by position rather than by scaling whatever the primitive had: after
+	# subdivision the loops are no longer the four corners, so there is nothing
+	# left to scale. Each loop takes the UV its own vertex sits at, measured in
+	# tiles from the plate's corner, which tiles seamlessly across every piece.
+	uvs = obj.data.uv_layers.active or obj.data.uv_layers.new()
+	half_u = size[0] * 0.5
+	half_v = size[1] * 0.5
+	for polygon in obj.data.polygons:
+		for loop_index in polygon.loop_indices:
+			vertex = obj.data.vertices[obj.data.loops[loop_index].vertex_index].co
+			uvs.data[loop_index].uv = (
+				(vertex.x + half_u) / TEXTURE_SCALE,
+				(vertex.y + half_v) / TEXTURE_SCALE,
+			)
+	return obj
+
+
+def _edge_axis(edge) -> int:
+	"""Which of the plate's own axes `edge` runs along: 0 for X, 1 for Y.
+
+	The plate is built flat in XY and rotated afterwards by the object's
+	transform, so its vertices are still axis aligned in local space here — which
+	is what makes this a comparison rather than a projection.
+	"""
+	delta = edge.verts[1].co - edge.verts[0].co
+	return 0 if abs(delta.x) > abs(delta.y) else 1
+
+
 def _wheel(name: str, location):
 	"""A tyre with a rim face, as few sides as reads round at a distance."""
 	bpy.ops.mesh.primitive_cylinder_add(
@@ -427,8 +772,14 @@ def _clear() -> None:
 
 
 def _materials() -> None:
-	"""The palette. Flat Principled BSDFs — the PS1 shader in Godot is what
-	actually draws these, and all it reads off the import is the base colour."""
+	"""The palette, then the lined surfaces.
+
+	The flat half is Principled BSDFs carrying nothing but a base colour, which
+	is all the PS1 shader in Godot reads off them. The lined half additionally
+	hangs a generated image on the base colour, which that same shader picks up
+	as its `albedo` — see `scripts/ps1_material_applier.gd`, which takes the
+	texture off whatever material the importer left on the surface.
+	"""
 	for name, (color, roughness, metallic) in MATERIALS.items():
 		material = bpy.data.materials.get(name) or bpy.data.materials.new(name)
 		material.use_nodes = True
@@ -440,6 +791,39 @@ def _materials() -> None:
 		bsdf.inputs["Roughness"].default_value = roughness
 		bsdf.inputs["Metallic"].default_value = metallic
 		material.diffuse_color = (color[0], color[1], color[2], 1.0)
+
+	for name, (painter, roughness) in TEXTURED_MATERIALS.items():
+		_textured_material(name, painter, roughness)
+
+
+def _textured_material(name: str, painter, roughness: float):
+	"""One material whose base colour is a generated image rather than a value."""
+	material = bpy.data.materials.get(name) or bpy.data.materials.new(name)
+	material.use_nodes = True
+	tree = material.node_tree
+	bsdf = next(n for n in tree.nodes if n.type == "BSDF_PRINCIPLED")
+	bsdf.inputs["Roughness"].default_value = roughness
+	bsdf.inputs["Metallic"].default_value = 0.0
+
+	# Rebuilt rather than reused: running the script twice would otherwise stack
+	# a second image node on the first and leave the link pointing at whichever
+	# one Blender happened to connect last.
+	for node in [n for n in tree.nodes if n.type == "TEX_IMAGE"]:
+		tree.nodes.remove(node)
+
+	texture = tree.nodes.new("ShaderNodeTexImage")
+	texture.image = _image(name, painter)
+	# Nearest here as well as in the Godot shader. It is what the `.glb` carries
+	# as the sampler's filter, so the model looks the same opened in Blender or
+	# in any other viewer as it does in the game.
+	texture.interpolation = "Closest"
+	texture.location = (-320.0, 200.0)
+	tree.links.new(texture.outputs["Color"], bsdf.inputs["Base Color"])
+
+	# The viewport's flat colour, so the part is not white in solid shading.
+	middle = painter(TEXTURE_SIZE // 2, TEXTURE_SIZE // 2)
+	material.diffuse_color = (middle[0], middle[1], middle[2], 1.0)
+	return material
 
 
 def _export() -> str:

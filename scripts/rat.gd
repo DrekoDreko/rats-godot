@@ -163,6 +163,20 @@ const STRETCHED_SCALE := Vector3(0.85, 1.3, 0.85)
 const SQUEEZED_SCALE := Vector3(1.2, 1.2, 0.78)
 ## How long the body takes to go limp in the hand before being stowed.
 const LIMP_TIME := 0.5
+## How far the body settles as it dies, from where it was held.
+##
+## It used to be twelve centimetres down, and that was right for as long as the
+## player's hand let go on the killing squeeze: with nothing holding the animal
+## any more, a body sagging out of shot was the only thing left to read. Now the
+## fist stays closed on it and carries it away
+## (`PlayerViewModel.stow_hand`), and at twelve centimetres the rat visibly
+## slipped through the glove and hung below it for the whole slump — a dead rat
+## falling out of a hand that was still gripping.
+##
+## Small enough to read as a body going slack in a grip rather than out of one.
+## The forward part is untouched: the snout tipping towards the camera as the
+## neck gives is the slump, and it is not what came apart.
+const LIMP_SAG := Vector3(0.0, -0.04, 0.05)
 ## How long the stowing lasts: from the hand to the waist. The rat leaves the
 ## frame in the first half of the gesture; the rest is the arm finishing its
 ## descent with it.
@@ -1256,10 +1270,11 @@ func _process_limp(delta: float) -> void:
 	var hanging := Basis.from_euler(_radians(LIMP_POSE))
 	var pose := Basis(_held_transform.basis.get_rotation_quaternion().slerp(
 		hanging.get_rotation_quaternion(), minf(delta * 9.0, 1.0)))
-	# It slips out of the hand while going limp — always around the middle of its
-	# body, otherwise the limp body would leave the frame mid-slump.
+	# It settles in the fist as the strength goes out of it — always around the
+	# middle of its body, otherwise the limp body would leave the frame
+	# mid-slump.
 	var origin := _held_transform.origin.lerp(
-		_anchor(pose) + Vector3(0.0, -0.12, 0.05), minf(delta * 6.0, 1.0))
+		_anchor(pose) + LIMP_SAG, minf(delta * 6.0, 1.0))
 	_held_transform = Transform3D(pose, origin)
 	_follow_capture_point()
 	model.scale = model.scale.lerp(Vector3.ONE, minf(delta * 9.0, 1.0))

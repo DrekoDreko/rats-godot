@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3 uid="uid://ck8y2v1rw4mqn"]
+[gd_scene format=3 uid="uid://ck8y2v1rw4mqn"]
 
 [ext_resource type="Script" path="res://scripts/player_view_model.gd" id="1_view_model"]
 [ext_resource type="PackedScene" uid="uid://rowdmjh2bibw" path="res://models/hazmat_hand.glb" id="2_hand"]
+[ext_resource type="PackedScene" uid="uid://c6abr1dqlee33" path="res://models/baseball_bat_psx.glb" id="3_bat"]
 
 [node name="ViewModel" type="Node3D"]
 script = ExtResource("1_view_model")
@@ -10,6 +11,19 @@ script = ExtResource("1_view_model")
 
 [node name="Hand" parent="Right" instance=ExtResource("2_hand")]
 
+[node name="Upper" type="Node3D" parent="Right"]
+
+[node name="Arm" parent="Right/Upper" instance=ExtResource("2_hand")]
+
+[node name="Hold" type="Node3D" parent="Right"]
+
+[node name="BaseballBat" parent="Right/Hold" instance=ExtResource("3_bat")]
+visible = false
+
 [node name="Left" type="Node3D" parent="."]
 
 [node name="Hand" parent="Left" instance=ExtResource("2_hand")]
+
+[node name="Upper" type="Node3D" parent="Left"]
+
+[node name="Arm" parent="Left/Upper" instance=ExtResource("2_hand")]

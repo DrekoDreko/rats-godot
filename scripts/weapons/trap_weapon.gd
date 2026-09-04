@@ -49,12 +49,26 @@ extends Weapon
 @export var trap_scene: PackedScene
 ## How far along the sights a trap can be set down. It is the length of the ray
 ## and not a distance across the floor, and that is what makes the number look
-## large: the player's eyes are 1.6 m up, so a ray cast at the boards from a
-## comfortable glance downwards — twenty degrees or so — has already travelled
-## four and a half metres by the time it arrives. Anything much shorter than this
-## and the player has to stare at his own feet before the game will let him put
-## anything down.
-@export var place_range := 4.5
+## large: the player's eyes are 1.6 m up, so the ray has already spent most of
+## its length getting down to the boards before it has gone anywhere at all.
+##
+## The number is picked from the angle it costs the player, not from the distance
+## it buys him. A ray of length `r` from eyes `h` up only reaches the floor once
+## the head is tipped `asin(h / r)` — so 4.5 m, which is what this was, demands
+## nearly twenty-one degrees before a single trap will go down. That is not a
+## glance at the floor; it is staring at your own boots, and looking level at the
+## room in front of you showed no trap-to-be at all. At 8 m the same tip is 11.5
+## degrees, which is what a player actually does when he means "there, in front
+## of me". What it buys — a little under 8 m of floor — is then clipped back to
+## `max_floor_distance` so the extra reach is angle and not range.
+@export var place_range := 8.0
+## The furthest across the floor a trap will actually land, measured from the
+## player's own feet. `place_range` is spent on the *angle* — it is what lets the
+## player look at the floor rather than at his boots — and this is what keeps the
+## slack from turning into a trap set halfway across the room. Beyond it the ray
+## still finds floor and the ghost simply stops following, the way the glue stops
+## stretching at `max_length`.
+@export var max_floor_distance := 4.0
 ## What it costs to set down one that came back off the floor. A trap scraped out
 ## from under a dead rat is bent, and the box will not arm it again for nothing:
 ## the money goes at the moment it is set down, and the price hangs over the
@@ -140,7 +154,18 @@ func _ground_point() -> Vector3:
 		return INVALID_POINT
 	if (hit.normal as Vector3).y < MAX_SLOPE:
 		return INVALID_POINT
-	return (hit.position as Vector3) + Vector3.UP * FLOOR_LIFT
+	var spot := (hit.position as Vector3) + Vector3.UP * FLOOR_LIFT
+	# The reach across the boards is the player's arm, not the ray's length: the
+	# ray is long so that looking at the floor is a glance and not a stoop, and
+	# without this that same length would also let him set a trap on the far side
+	# of the room. Aiming past the limit puts the trap down at the limit, which is
+	# how the glue already treats a strip stretched too far.
+	var reach := spot - player.global_position
+	reach.y = 0.0
+	if reach.length() > max_floor_distance:
+		spot = player.global_position + reach.normalized() * max_floor_distance
+		spot.y = (hit.position as Vector3).y + FLOOR_LIFT
+	return spot
 
 # --- The price of what is going down ----------------------------------------
 

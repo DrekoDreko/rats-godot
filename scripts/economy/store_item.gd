@@ -53,6 +53,35 @@ enum Kind {
 ## unlocking the loop of the belt it hangs from, not building it.
 @export var weapon_node := ""
 
+@export_group("Preview")
+## The model the shop stands in the man's hand while this item is selected, and
+## nothing else. It is a scene of its own rather than the one the weapon carries
+## because those live in two different places and neither is reusable here: a
+## trap's model hangs inside a whole `Area3D` with its collision and its
+## interaction handle on it, and a club's is dressed under the arms of the view
+## model, which the shop's preview does not have.
+##
+## Empty is an item the shop shows empty-handed. That is the honest state of an
+## item nobody has modelled yet, and it is what keeps a new `.tres` from needing
+## art before it can go on the rack.
+@export var preview_model: PackedScene
+## Where that model sits beside his hand, in metres, on axes that are square to
+## the world rather than to the wrist: `+X` is off to the man's right as the
+## shopper sees him, `+Y` is up and `+Z` is out towards the shopper. The shop
+## squares them itself (`StoreScreen._build_preview_hand`) so that these numbers
+## mean the same thing in every frame of the idle he stands in.
+@export var preview_offset := Vector3.ZERO
+## How that model is turned before it is put there, in degrees. It is only ever
+## the model's own quirk being corrected — which way its exporter called up.
+@export var preview_rotation := Vector3.ZERO
+## **How big it should read, in metres along its longest side** — not a
+## multiplier. The shop measures the model and scales it to this, because a
+## scale of 1 means one thing on a model authored in metres and quite another on
+## one authored in centimetres, and the five in this folder are not agreed. What
+## a person setting this up actually knows is how big the thing should look in a
+## man's hand, so that is what is written.
+@export var preview_height := 0.4
+
 @export_group("Price")
 ## What one purchase costs.
 @export var price := 25

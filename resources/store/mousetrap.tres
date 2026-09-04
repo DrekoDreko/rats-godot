@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="StoreItem" format=3 uid="uid://d0h1x2pm2sk2a"]
+[gd_resource type="Resource" script_class="StoreItem" load_steps=3 format=3 uid="uid://d0h1x2pm2sk2a"]
 
 [ext_resource type="Script" uid="uid://bt727w2lnn8sn" path="res://scripts/economy/store_item.gd" id="1_item"]
+[ext_resource type="PackedScene" uid="uid://bnvjp3slad03s" path="res://assets/traps/glb/mousetrap.glb" id="2_preview"]
 
 [resource]
 script = ExtResource("1_item")
@@ -9,5 +10,9 @@ display_name = "Ratoeira"
 description = "Fecha de uma vez só. Três por caixa."
 kind = 2
 weapon_node = "Mousetrap"
+preview_model = ExtResource("2_preview")
+preview_offset = Vector3(-0.2, -0.05, 0.3)
+preview_rotation = Vector3(-60, 20, 0)
+preview_height = 0.32
 price = 25
 amount = 3

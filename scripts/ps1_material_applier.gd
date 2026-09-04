@@ -154,7 +154,7 @@ func _apply() -> void:
 ## An applier owns its parent's whole subtree, so finding one among a node's
 ## children means that node is spoken for and this applier keeps out of it —
 ## that is what lets a scene-wide applier coexist with the ones already sitting
-## inside `rat.tscn` and `van.glb`, each keeping its own settings.
+## inside `rat.tscn` and `box_van.glb`, each keeping its own settings.
 func _collect_meshes(node: Node) -> Array[MeshInstance3D]:
 	var found: Array[MeshInstance3D] = []
 

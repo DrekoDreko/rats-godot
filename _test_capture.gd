@@ -114,6 +114,13 @@ func _grab(which: String) -> bool:
 	# without this wait the first grab happened with the prompt still unhooked.
 	if _player.capture_started.get_connections().is_empty():
 		return false
+	# And the hands have to be free to take it. After a kill they are not, for
+	# rather longer than their own cadence: the player spends the next second and
+	# a half carrying the body down to his belt, and a click that landed
+	# mid-gesture would cut it in half (`hands.gd: _release`). Waited on rather
+	# than counted, so this bench keeps working when either duration is tuned.
+	if not _hands.is_ready():
+		return false
 	_rat = _closest()
 	if _rat == null:
 		print("FAIL: no loose rat for the %s test" % which)

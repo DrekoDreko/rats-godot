@@ -204,10 +204,57 @@ func _ready() -> void:
 	# anything to announce.
 	for weapon in inventory.weapons():
 		weapon.used.connect(func(hit: bool) -> void: attacked.emit(hit))
-		weapon.caught.connect(func(rat: Node3D) -> void: capture_started.emit(rat))
+		weapon.caught.connect(_on_weapon_caught)
 		weapon.pressure_changed.connect(func(fraction: float) -> void: capture_progress.emit(fraction))
-		weapon.finished.connect(func(killed: bool) -> void: capture_finished.emit(killed))
+		weapon.finished.connect(_on_weapon_finished)
+		# Only the hands carry a body away after the kill, and the day another
+		# weapon does it will say so with the same signal. Asked for rather than
+		# assumed: the belt holds weapons that settle everything in one blow, and
+		# they have no such gesture.
+		if weapon.has_signal(&"stowing"):
+			weapon.connect(&"stowing", _on_weapon_stowing)
 	inventory.equipped.connect(func(slot: int, weapon: Weapon) -> void: weapon_changed.emit(slot, weapon))
+
+
+## A weapon has taken hold of a rat.
+##
+## Two things happen, and they are separate on purpose: the world hears about it
+## through `capture_started`, and the player's own hand closes on the animal.
+## The second is the only one that is his alone — nobody else's screen has his
+## arms on it — which is why it is done here rather than by whatever listens to
+## the signal.
+func _on_weapon_caught(rat: Node3D) -> void:
+	view_model.set_gripping(true)
+	capture_started.emit(rat)
+
+
+## The rat is out of the hand, dead or gone — the hands are free either way, and
+## the screen is told so here: the pressure bar goes, the crosshair comes back,
+## and the click means grab again.
+##
+## The arm is a separate question, and the two used to be the same one. It opens
+## on a rat that got loose, because the animal took itself out of the fist and
+## there is nothing left in it. On a rat that was strangled it does not: the body
+## is dead *in the hand*, and what happens next is the player putting it away —
+## which `_on_weapon_stowing` has already started by the time this runs, and which
+## leaves the hand closed for as long as it takes.
+func _on_weapon_finished(killed: bool) -> void:
+	if not killed:
+		view_model.set_gripping(false)
+	capture_finished.emit(killed)
+
+
+## The rat died in the fist: the arm carries it down out of the frame and comes
+## back up empty.
+##
+## It is his alone, like the grip and for the same reason — nobody else's screen
+## has his arms on it — so it goes no further than the view model. What the rest
+## of the world sees of the same moment is the body itself travelling to his
+## waist, which the rat draws on every machine off its own capture point
+## (`rat.gd: _process_stow`).
+func _on_weapon_stowing(wait: float, fall: float, rise: float) -> void:
+	view_model.stow_hand(wait, fall, rise)
+
 
 ## Paints the player's own sleeves in the colour the crew says he is wearing,
 ## and keeps them painted when he picks another one.
@@ -303,6 +350,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("strangle") and inventory.is_busy():
 		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 			inventory.press_secondary()
+			# The squeeze is felt in the arm as well as in the camera. It is
+			# driven from the click rather than from the pressure the squeeze
+			# adds, because pressure also drains on its own while nobody is
+			# clicking (`hands.gd: decay`) — an arm following that would creep
+			# backwards through the whole hold instead of thrusting on each go.
+			view_model.punch()
 		else:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	elif event.is_action_pressed("interact") and _focused != null:
@@ -393,6 +446,10 @@ func _physics_process(delta: float) -> void:
 	# settle back rather than one in which they hold the last flick.
 	view_model.sway(delta, _look)
 	_look = Vector2.ZERO
+	# The hand's own travel — closing on a rat, opening off one, and settling
+	# after a squeeze. Apart from the sway because that one is switched off
+	# whenever `sway_lag` is zero, and a hand still has to close when it is.
+	view_model.advance(delta)
 	# After the move as well, and for the same reason: the sway is drawn from the
 	# ground he actually covered this frame, not from the keys he was holding.
 	_update_bob(delta)

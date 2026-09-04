@@ -5,6 +5,7 @@
 [ext_resource type="Script" uid="uid://dximu67j2r1kf" path="res://scripts/weapons/inventory.gd" id="3_inventory"]
 [ext_resource type="Script" path="res://scripts/weapons/mousetrap_weapon.gd" id="4_mousetrap"]
 [ext_resource type="Script" path="res://scripts/weapons/glue_weapon.gd" id="5_glue"]
+[ext_resource type="Script" path="res://scripts/weapons/melee_weapon.gd" id="10_melee"]
 [ext_resource type="PackedScene" path="res://scenes/traps/mousetrap.tscn" id="6_mousetrap_scene"]
 [ext_resource type="PackedScene" path="res://scenes/traps/glue_trap.tscn" id="7_glue_scene"]
 [ext_resource type="PackedScene" path="res://scenes/player_model.tscn" id="8_model"]
@@ -70,6 +71,16 @@ stock_id = "rat_glue"
 trap_scene = ExtResource("7_glue_scene")
 display_name = "Glue"
 cooldown = 0.6
+
+[node name="BaseballBat" type="Node3D" parent="Head"]
+transform = Transform3D(1, 0, 0, 0, 0.574, -0.819, 0, 0.819, 0.574, 0.33, -0.3, -0.3)
+script = ExtResource("10_melee")
+display_name = "Bat"
+reach = 2.2
+angle = 35.0
+cooldown = 0.55
+death_type = 6
+leap = 4.0
 
 [node name="CapturePoint" type="Node3D" parent="Head" unique_id=276718476]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.05, -0.6)
