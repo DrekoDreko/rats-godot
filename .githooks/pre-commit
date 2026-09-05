@@ -1,0 +1,38 @@
+#!/bin/sh
+#
+# Reject staged files that GitHub would refuse to receive.
+#
+# GitHub hard-blocks any single file over 100 MB at the pre-receive stage. It
+# scans the incoming commit objects, not the final tree, so a large file that is
+# committed and deleted later still blocks every future push of that branch and
+# can only be removed by rewriting history.
+#
+# Bypass for a deliberate exception: git commit --no-verify
+
+MAX_MB=50
+max_bytes=$((MAX_MB * 1024 * 1024))
+oversized=""
+
+while IFS= read -r file; do
+	[ -f "$file" ] || continue
+	size=$(wc -c < "$file" 2>/dev/null) || continue
+	if [ "$size" -gt "$max_bytes" ]; then
+		oversized="${oversized}  $(($size / 1048576)) MB\t${file}\n"
+	fi
+done <<EOF
+$(git diff --cached --name-only --diff-filter=ACM)
+EOF
+
+if [ -n "$oversized" ]; then
+	printf '\nCommit blocked: staged files exceed the %s MB limit.\n\n' "$MAX_MB" >&2
+	printf "$oversized" >&2
+	printf '\nGitHub refuses any file over 100 MB, and once such a file is committed\n' >&2
+	printf 'it blocks every future push of the branch until history is rewritten.\n\n' >&2
+	printf 'Options:\n' >&2
+	printf '  - Keep the asset out of git (add it to .gitignore)\n' >&2
+	printf '  - Track it with Git LFS: git lfs track "<path>"\n' >&2
+	printf '  - Override deliberately: git commit --no-verify\n\n' >&2
+	exit 1
+fi
+
+exit 0
