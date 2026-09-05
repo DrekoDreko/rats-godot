@@ -25,13 +25,20 @@ render_mode unshaded, skip_vertex_transform, cull_disabled;
 // nothing but the imported one's texture and colour — so a "Nearest" chosen on
 // the import or a "Closest" chosen in Blender never reaches the surface. This
 // line is the only place in the chain that decides it.
-uniform sampler2D albedo: source_color, hint_default_white, filter_nearest;
+uniform sampler2D albedo: source_color, hint_default_white, filter_nearest_mipmap;
 
 // Colour on top of the texture, as in `StandardMaterial3D`. It is what saves the
 // low-poly models painted with a solid colour alone — the ones from kits like
 // Kenney and Quaternius, with no texture at all: without it the whole object
 // would come out white.
 uniform vec4 albedo_color: source_color = vec4(1.0);
+
+// How many times the texture repeats over the surface's UVs, as
+// `StandardMaterial3D`'s `uv1_scale`. A `PlaneMesh` maps its whole surface to
+// UV 0..1, so a forty-metre floor would stretch one photograph over forty
+// metres without this; the applier leaves it at one, which is what every
+// model with baked UVs wants.
+uniform vec2 uv_scale = vec2(1.0);
 
 uniform float jitter: hint_range(0.0, 1.0) = 0.5;
 uniform bool jitter_z_coordinate = true;
@@ -148,7 +155,7 @@ void fragment() {
 		uv /= VERTEX.z;
 	}
 	
-	vec4 color = texture(albedo, uv) * albedo_color;
+	vec4 color = texture(albedo, uv * uv_scale) * albedo_color;
 	ALBEDO = recolor(color.rgb);
 	ALPHA = color.a;
 	// In 3.x this built-in was called just `ALPHA_SCISSOR`.

@@ -95,6 +95,33 @@ const ELBOW_DEPTH := 0.35
 ## as a fist closed around the animal rather than a hand somewhere behind it.
 const MIN_GLOVE_WIDTH := 1.0
 
+## How far apart the two fists have to be drawn, as a multiple of the rat's own
+## drawn width.
+##
+## The second hand is the right one mirrored (`PlayerViewModel._place`), and the
+## grip's yaw brings each fist from its own corner back towards the middle of
+## the screen — so without `grip_spread` holding them apart the two arrive at the
+## *same point*, sink into each other and read as one lump with two sleeves. That
+## is a failure nothing else in here can see: every check above is about one
+## glove and the rat, and both gloves pass all of them while occupying the same
+## cubic centimetres.
+##
+## What it is set against is the animal and not the frame, because a rat's width
+## is what "on either side of it" means — and because a fraction of the frame is
+## not the same measurement twice. The picture is a different shape with a window
+## open than it is headless, and the same pose read 0.16 of a frame in one run and
+## 0.09 in another.
+##
+## Graded on the headless run, which is the one whose timing is its own. With a
+## window open the bench walks its counted frames through real seconds, and the
+## reading lands on some earlier moment of the travel — a grip still closing,
+## with the hands not yet where they are going. The pictures are still worth
+## taking there; the numbers are not.
+##
+## It is the first-person counterpart of `_test_arms.gd: GRIP_REACH`, which asks
+## the same question of the body.
+const MIN_FIST_GAP := 1.0
+
 ## How wide the rat's body is, in metres. Measured across the shoulders, which
 ## is the part the fist closes on — not the length, which is what fills the
 ## frame.
@@ -424,6 +451,12 @@ func _check_fist_centred() -> void:
 		% [where.x, where.y, rat.x, rat.y])
 	if where.distance_to(rat) > GRIP_SCREEN:
 		_fail("the fist is drawn %.2f of a frame from the rat" % where.distance_to(rat))
+	# The other hand, asked in the same breath rather than from a step of its
+	# own. The steps are counted frames and the rat is on a clock while they run
+	# — it fights its way out of a hand that holds it long enough (`hands.gd`) —
+	# so a step added here is a step taken off the end of the hold, and the
+	# stowing at the bottom of the list is what runs out of animal.
+	_check_the_rat_is_between_the_fists()
 
 
 ## The elbow stays out of the picture. This is the failure reaching the arm out
@@ -431,23 +464,68 @@ func _check_fist_centred() -> void:
 ## further: a forearm that crosses the middle of the frame reads as an arm
 ## stretching for something instead of a hand holding it.
 func _check_elbow_out_of_shot() -> void:
-	var ends := _arm_ends()
+	# Both of them, because the strangling is drawn with both hands: the left
+	# arm is the right one mirrored and it crosses the opposite corner, so it has
+	# its own elbow to keep out of the picture. Skipped when it is not drawn,
+	# which is every pose but this one (`PlayerViewModel.show_left`).
+	for side in ["Right", "Left"]:
+		var arm := _view_model.get_node_or_null(side) as Node3D
+		if arm == null or not arm.visible:
+			continue
+		_check_one_elbow(side)
+
+
+## One elbow, on whichever arm.
+func _check_one_elbow(side: String) -> void:
+	var ends := _arm_ends(side)
 	if ends.is_empty():
-		_fail("the arm has no mesh to measure")
+		_fail("the %s arm has no mesh to measure" % side.to_lower())
 		return
 	var elbow: Vector3 = ends[0]
 	var depth := -elbow.z
-	_say("gripping, the elbow is %.2f m in front of the lens" % depth)
+	_say("gripping, the %s elbow is %.2f m in front of the lens" % [side.to_lower(), depth])
 	if depth >= ELBOW_DEPTH:
 		# Far enough out that the foreshortening is gone: a forearm there is
 		# simply a forearm, wherever it sits.
 		return
 	var where := _screen_position(elbow)
-	_say("gripping, the elbow is at (%.2f, %.2f) of the frame" % [where.x, where.y])
+	_say("gripping, the %s elbow is at (%.2f, %.2f) of the frame"
+		% [side.to_lower(), where.x, where.y])
 	var outside := where.x < -ELBOW_MARGIN or where.x > 1.0 + ELBOW_MARGIN \
 		or where.y < -ELBOW_MARGIN or where.y > 1.0 + ELBOW_MARGIN
 	if not outside:
-		_fail("the elbow is close to the lens and inside the picture; the sleeve will fill the screen")
+		_fail("the %s elbow is close to the lens and inside the picture; the sleeve will fill the screen"
+			% side.to_lower())
+
+
+## The animal is held *between* the two fists, and the two fists are two.
+##
+## The whole of the second hand is here. It arrives as a mirror of the first
+## (`PlayerViewModel._place`), and a mirror alone puts both palms on the middle
+## of the screen — the same point, at the same depth, one inside the other. On
+## screen that is not two hands holding something: it is one lump with a sleeve
+## running out of either side of it, and every other check in this file passes
+## while it happens, because every other check is about one glove and the rat.
+##
+## So it is asked the way a picture asks it: the two palms are far enough apart
+## to read as two, and the rat is between them rather than beside them.
+func _check_the_rat_is_between_the_fists() -> void:
+	var left_arm := _view_model.get_node_or_null("Left") as Node3D
+	if left_arm == null or not left_arm.visible:
+		_fail("the left hand is not drawn while a rat is being strangled")
+		return
+	var right := _screen_position(_hand_centre("Right"))
+	var left := _screen_position(_hand_centre("Left"))
+	var rat := _screen_position(_held_body_point())
+	var width := _rat_width_on_screen()
+	var gap := absf(right.x - left.x)
+	_say("gripping, the fists are %.2f of the animal's width apart, and the rat is between %.2f and %.2f"
+		% [gap / width if width > 0.0 else 0.0, minf(left.x, right.x), maxf(left.x, right.x)])
+	if gap < width * MIN_FIST_GAP:
+		_fail("the two fists are drawn %.2fx the rat's width apart; they will read as one hand"
+			% (gap / width if width > 0.0 else 0.0))
+	if rat.x < minf(left.x, right.x) or rat.x > maxf(left.x, right.x):
+		_fail("both fists are on the same side of the rat; it is beside them rather than between them")
 
 
 ## The fist has to hold its own against the animal it is squeezing.
@@ -540,7 +618,22 @@ func _check_the_hand_is_drawn_in_front() -> void:
 ## Called from `_process` while the rat is being held, so that the moments it
 ## grades are separated by frames the animal actually moved through.
 func _sample_occlusion() -> void:
+	# The two hands are read as two different questions, and the split is the
+	# whole of what the second hand changes in here.
+	#
+	# *Behind* is asked of the near hand alone. It is the failure this file was
+	# written for — the animal drawn through the fist that is supposed to be
+	# closed in front of it — and the far hand is behind the rat *on purpose*:
+	# that is what a far hand is, and counting it would be marking the pose wrong
+	# for doing the one thing that makes it read as two hands round a neck.
+	#
+	# *Covering* is asked of both, because covering is about the player's view of
+	# the animal and he is looking at the whole picture. Two gloves hide more of
+	# a rat than one, and that is exactly the cost `grip_spread` is traded
+	# against.
 	var glove := _depth_buffer(_view_model.get_node_or_null("Right"))
+	var both := glove.duplicate()
+	_merge_nearest(both, _depth_buffer(_view_model.get_node_or_null("Left")))
 	var rat := _depth_buffer(_rat.get_node_or_null("Model"))
 	if glove.is_empty() or rat.is_empty():
 		return
@@ -557,10 +650,21 @@ func _sample_occlusion() -> void:
 			_occlusion_behind += 1
 	_occlusion_rat_cells += rat.size()
 	for cell in rat:
-		if glove.has(cell) and glove[cell] - rat[cell] >= DEPTH_CLEARANCE:
+		if both.has(cell) and both[cell] - rat[cell] >= DEPTH_CLEARANCE:
 			_occlusion_hidden += 1
 
 
+
+
+## Folds one depth buffer into another, keeping whichever surface is nearer the
+## lens in each cell. It is what the renderer does with two objects, and it is
+## how the two gloves become the one silhouette the player is looking at.
+func _merge_nearest(into: Dictionary, other: Dictionary) -> void:
+	for cell in other:
+		# The camera looks down its own -Z, so the larger z is the nearer of two
+		# surfaces — the same convention `_sample_occlusion` compares by.
+		if not into.has(cell) or other[cell] > into[cell]:
+			into[cell] = other[cell]
 
 
 ## A depth buffer of everything drawn under `node`: for each cell of the picture,
@@ -842,8 +946,8 @@ func _check_hand_came_back_empty() -> void:
 ## It is read off the drawn geometry rather than computed from the exported
 ## numbers, so that the bench measures where the hand *is* rather than agreeing
 ## with the arithmetic that put it there.
-func _hand_centre() -> Vector3:
-	var ends := _arm_ends()
+func _hand_centre(side := "Right") -> Vector3:
+	var ends := _arm_ends(side)
 	if ends.is_empty():
 		return Vector3.ZERO
 	# The far end is the hand; back off a little towards the elbow to land on the
@@ -899,10 +1003,17 @@ func _glove_width_on_screen() -> float:
 
 ## How wide the rat's body is drawn, as a fraction of the frame — the same
 ## measurement, at the depth the animal is actually held.
+##
+## `RAT_WIDTH` is the animal's own width, and the animal in a hand is not drawn
+## at its own size: it is held at `rat.gd: HELD_SCALE`, which is a scale on the
+## whole node and therefore on the width too. Reading the constant alone
+## compares the glove against a rat a good deal wider than the one on screen,
+## and `MIN_GLOVE_WIDTH` then fails a pose the player would call correct.
 func _rat_width_on_screen() -> float:
+	var held := _rat.scale.x if _rat != null and is_instance_valid(_rat) else 1.0
 	var body := _held_body_point()
-	var left := body + Vector3(-RAT_WIDTH * 0.5, 0.0, 0.0)
-	var right := body + Vector3(RAT_WIDTH * 0.5, 0.0, 0.0)
+	var left := body + Vector3(-RAT_WIDTH * held * 0.5, 0.0, 0.0)
+	var right := body + Vector3(RAT_WIDTH * held * 0.5, 0.0, 0.0)
 	return absf(_screen_position(right).x - _screen_position(left).x)
 
 
@@ -932,12 +1043,12 @@ func _limb_far_end() -> Variant:
 
 ## The two ends of the right arm in camera space, elbow first. The same reading
 ## the view model bench takes, and taken the same way.
-func _arm_ends() -> Array:
+func _arm_ends(side := "Right") -> Array:
 	# The forearm alone, reached by name rather than by taking the first mesh
 	# under the arm: the upper arm hangs under there too, and which of them comes
 	# back first is the scene's ordering rather than anything this bench should
 	# depend on. The elbow being measured is the forearm's.
-	var arm := _view_model.get_node_or_null("Right/Hand")
+	var arm := _view_model.get_node_or_null(side + "/Hand")
 	if arm == null:
 		return []
 	var meshes := _meshes_under(arm)

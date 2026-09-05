@@ -83,6 +83,13 @@ const CREW_FONT_SIZE := 8
 @onready var _crew: VBoxContainer = $Center/Panel/Margin/Rows/Crew
 @onready var _crew_title: Label = $Center/Panel/Margin/Rows/CrewTitle
 @onready var _crew_separator: HSeparator = $Center/Panel/Margin/Rows/CrewSeparator
+@onready var _how_to: Button = $Center/Panel/Margin/Rows/HowTo
+## The controls page. It lives beside the buttons rather than on top of them, so
+## the panel takes the size of whichever of the two is showing and the menu never
+## has a page floating over a set of buttons that are still there underneath.
+@onready var _help: VBoxContainer = $Center/Panel/Margin/Help
+@onready var _rows: VBoxContainer = $Center/Panel/Margin/Rows
+@onready var _help_back: Button = $Center/Panel/Margin/Help/Back
 
 ## Whether the menu is up. Kept rather than read off `visible`, because the two
 ## can part company for one frame while a scene is being changed under us.
@@ -108,6 +115,8 @@ func _ready() -> void:
 	set_process(false)
 
 	_resume.pressed.connect(close)
+	_how_to.pressed.connect(_show_help)
+	_help_back.pressed.connect(_show_menu)
 	_leave.pressed.connect(_leave_match)
 	_quit.pressed.connect(_quit_game)
 
@@ -136,6 +145,11 @@ func _input(event: InputEvent) -> void:
 	if not _open and _player_is_busy():
 		return
 	get_viewport().set_input_as_handled()
+	# Esc on the controls page is a step back and not a way out: a man who opened
+	# a page to read it should not have to lose the whole menu to leave it again.
+	if _open and _help.visible:
+		_show_menu()
+		return
 	toggle()
 
 
@@ -152,6 +166,8 @@ func open() -> void:
 		return
 	_open = true
 	show()
+	# Always up on the buttons, whatever page was last read.
+	_show_menu()
 	# Built once on the way up, so the list is right in the first frame the
 	# player sees rather than half a second into it.
 	_refresh_crew()
@@ -392,3 +408,24 @@ func _ping_color(steam_id: int) -> Color:
 	if ping < 180:
 		return Color(0.95, 0.83, 0.35)
 	return Color(0.95, 0.42, 0.42)
+
+
+# --- The two pages -----------------------------------------------------------
+# One panel, two contents, never both. The crew list and its countdown belong to
+# the buttons page, so the countdown is left running either way: it costs a
+# subtraction a frame and it means the list is current the moment the page comes
+# back rather than up to half a second stale.
+
+
+## The controls page, and the mouse on the way out of it.
+func _show_help() -> void:
+	_rows.hide()
+	_help.show()
+	_help_back.grab_focus()
+
+
+## Back to the buttons.
+func _show_menu() -> void:
+	_help.hide()
+	_rows.show()
+	_resume.grab_focus()

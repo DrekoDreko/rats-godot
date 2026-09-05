@@ -13,6 +13,9 @@ properties/1/replication_mode = 1
 properties/2/path = NodePath(".:sync_state")
 properties/2/spawn = true
 properties/2/replication_mode = 1
+properties/3/path = NodePath(".:sync_arms")
+properties/3/spawn = true
+properties/3/replication_mode = 1
 
 [node name="PlayerAvatar" type="Node3D" groups=["player_avatars"]]
 process_mode = 3

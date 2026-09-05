@@ -26,6 +26,22 @@ extends Node3D
 ## there is something to blend *between* rather than *from* — aiming while
 ## walking, a strafe that reads off direction as well as speed — is the day this
 ## is worth revisiting, and not before.
+##
+## ## The arms are a second question
+##
+## What his legs are doing and what his hands are doing are asked separately —
+## `set_state` and `set_arms` — and that is the one place where the single
+## animation above is not the whole story. It has to be, because a man carrying
+## a rat can walk, and there is exactly one clip per state: `HOLDING` used to
+## borrow `Idle`, so on everybody else's screen a player who picked up an animal
+## had his feet nailed to the floor until he put it down.
+##
+## So the state still picks the clip, and the arms are posed on top of it by
+## `PlayerArms` — a `SkeletonModifier3D` this file puts under the imported
+## skeleton, because that is the one place in Godot where a pose survives the
+## animation being written the next frame. It is still not a state machine and
+## still not a tree: it is one layer over one clip, which is the smallest thing
+## that answers the question.
 
 ## How long one animation takes to give way to the next. Long enough that a stop
 ## is a settle rather than a snap, short enough that the body is never caught
@@ -48,18 +64,20 @@ const TINT_WHITENING := 0.5
 ## - **WALKING borrows `Running`.** There is no walk cycle in the model. Running
 ##   at a walk is wrong, but it is wrong in the way a placeholder is wrong — the
 ##   legs move, and the alternative is a man sliding across the floor.
-## - **HOLDING borrows `Idle`.** There is no animation of carrying anything. A
-##   man walking slowly with a rat in his hands looks like a man standing still,
-##   which at least is not a lie about the rat.
 ##
-## Both go the moment there is art for them, and neither needs anything else in
-## the game to change when it does.
+## It goes the moment there is art for it, and nothing else in the game has to
+## change when it does.
+##
+## `HOLDING` is *not* in here any more, and its absence is the point. What a man
+## with a rat in his hands is doing with his legs is whatever his legs are doing
+## — standing, walking, creeping — and his hands are a separate layer
+## (`set_arms`). It stays in `PlayerAvatar.State` because the number crosses the
+## wire and the values are not ours to renumber, but nothing produces it.
 const ANIMATIONS := {
 	PlayerAvatar.State.IDLE: &"Idle",
 	PlayerAvatar.State.WALKING: &"Running",
 	PlayerAvatar.State.RUNNING: &"Running",
 	PlayerAvatar.State.AIRBORNE: &"Jump",
-	PlayerAvatar.State.HOLDING: &"Idle",
 	PlayerAvatar.State.CROUCHING: &"CrouchIdle",
 	PlayerAvatar.State.CROUCH_WALKING: &"CrouchedWalking",
 }
@@ -74,9 +92,20 @@ var _started := false
 
 @onready var _animation: AnimationPlayer = $Hazmat/AnimationPlayer
 @onready var _mesh: MeshInstance3D = $Hazmat/Armature/Skeleton3D/Hazmat
+## The layer that poses the arms over whatever clip is playing. Built here in
+## code rather than dropped into `player_model.tscn`, and for the same reason
+## `set_shadows_only` reaches for the mesh from here: a `SkeletonModifier3D` has
+## to be a child of the `Skeleton3D`, and the skeleton lives inside the imported
+## GLB where the editor cannot put anything.
+##
+## Null on a skeleton that is not the one it was written for, in which case the
+## body simply has no arms layer and everything else goes on working — see
+## `PlayerArms._measure`.
+var _arms: PlayerArms
 
 
 func _ready() -> void:
+	_build_arms()
 	_play(_state)
 	_started = true
 
@@ -89,6 +118,43 @@ func set_state(state: PlayerAvatar.State) -> void:
 		return
 	_state = state
 	_play(state)
+
+
+## Whether his hands are full, which is a different question from what his legs
+## are doing and is asked separately for that reason. Called every frame by
+## whoever owns this model, and cheap on a value that has not changed.
+func set_arms(arms: PlayerAvatar.Arms) -> void:
+	if _arms == null:
+		return
+	_arms.holding = arms == PlayerAvatar.Arms.HOLDING
+
+
+## One squeeze of whatever is in his hands: a thing that happens rather than a
+## thing that is, so it arrives as a call and not as a state. It is what puts a
+## rhythm on the strangling for everybody who is only watching it — see
+## `PlayerArms.squeeze`.
+func squeeze() -> void:
+	if _arms == null:
+		return
+	_arms.squeeze()
+
+
+## Where this body is holding something, in world space.
+##
+## It is what a rat in these hands has to hang from, and `PlayerAvatar` moves
+## its `CapturePoint` onto it every frame so that the animal is drawn *in* the
+## grip rather than beside it. The body decides where its own hands are, so the
+## point comes from here rather than being a fixed spot in the avatar's scene —
+## which is what it used to be, and which is why the rat used to float next to a
+## man whose arms were down.
+##
+## Falls back to the middle of the body on a model with no arms layer. It is a
+## worse answer than the old fixed point, but it is only reached on a skeleton
+## this file does not understand, where every other answer would be wrong too.
+func grip_point() -> Vector3:
+	if _arms == null:
+		return global_position
+	return _arms.get_skeleton().global_transform * _arms.grip_point()
 
 
 ## The animation now running, by name. It exists for the benches
@@ -164,6 +230,18 @@ func set_shadows_only(enabled: bool) -> void:
 		return
 	_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY if enabled \
 		else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+
+
+## Puts the arms layer under the imported skeleton. Quietly does nothing when
+## there is no skeleton to put it under, which is every model that is not this
+## one and is not an error worth stopping the game for.
+func _build_arms() -> void:
+	var skeleton := get_node_or_null("Hazmat/Armature/Skeleton3D") as Skeleton3D
+	if skeleton == null:
+		return
+	_arms = PlayerArms.new()
+	_arms.name = "Arms"
+	skeleton.add_child(_arms)
 
 
 ## The animation itself. `Jump` is the one that does not loop, and that is on

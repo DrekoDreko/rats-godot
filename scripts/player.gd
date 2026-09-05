@@ -36,12 +36,18 @@ extends CharacterBody3D
 ## moved by it.
 ##
 ## And he is being watched. In a lobby, everything the other players see of him
-## is read off two things — `animation_state()` and the `attacked` signal — by
+## is read off four things — `animation_state()` and `arms_state()` for what he
+## is, the `attacked` and `squeezed` signals for what he does — by
 ## the avatar that stands for him on their screens
 ## (`scripts/steam/player_avatar.gd`). Nothing in this file knows that the wire
 ## exists: somebody else reads him and puts him on it.
 
 signal attacked(hit: bool)
+## Squeezed the neck of a rat already in his hands. It is relayed from the
+## weapon and goes out to everybody watching, which is the whole of why it
+## exists: the strangling is several seconds of deliberate work and, until this,
+## not one frame of it was visible from outside his own screen.
+signal squeezed()
 ## Relays from the weapon to the HUD.
 signal capture_started(rat: Node3D)
 signal capture_progress(fraction: float)
@@ -118,9 +124,31 @@ const MIN_HEIGHT := -20.0
 ## way per second. Quick enough not to be a drift, slow enough not to be a snap.
 const BOB_SETTLE := 8.0
 
+## How much of the animal's own fighting the hands follow, and how far they are
+## allowed to be carried by it, in metres.
+##
+## A rat in the fist trembles and kicks against the point it hangs from
+## (`rat.gd: TREMOR`, `_kick`), and it does it in the middle of the screen where
+## every centimetre of it is visible. Until this the hands did not move with it
+## at all, which is what made a fist buried in a thrashing animal read as a
+## picture pasted over one.
+##
+## A fraction rather than the whole of it, and that is the number that matters.
+## Following it completely welds the glove to the animal and nothing looks
+## difficult any more — the pair go about the screen together like one object.
+## Following a little is a man keeping hold of something that is trying to get
+## away, which is what is being drawn. The cap is what stops a good kick
+## throwing the arm off the pose it was solved in.
+const GRIP_FOLLOW := 0.7
+const GRIP_DRIFT := 0.04
+
 @onready var head: Node3D = $Head
 @onready var camera: Camera3D = $Head/Camera
 @onready var inventory: Inventory = $Head/Inventory
+## Where a rat he has caught is held, in front of his own camera. It is the same
+## node `Hands` hangs the animal off (`hands.gd: capture_point`), and it is read
+## here for the other half of that: how far the thing has dragged his hands.
+@onready var capture_point: Node3D = $Head/CapturePoint
 @onready var collision: CollisionShape3D = $Collision
 ## The room over his head, asked only when he wants it back: it is the standing
 ## capsule put where the standing capsule would go, and anything it touches is a
@@ -180,6 +208,17 @@ var _ui_open := false
 ## which is what keeps a flick reported over four events worth as much swing as
 ## the same flick reported over one.
 var _look := Vector2.ZERO
+## The rat in his own hands, or null. It is kept for one purpose — reading how
+## far the animal has fought its way off the point it hangs from, so his hands
+## can go with it (`_grip_drift`) — and it is dropped the moment the hands are
+## free, killed or escaped: a dead rat on its way to his belt travels the whole
+## height of the frame, and hands that followed *that* would be dragged down by
+## the body instead of putting it away.
+var _held_rat: Node3D
+## How much longer his arms are still busy with a rat he has already killed, in
+## seconds. It is what keeps the body holding the carcass for the length of the
+## stowing — see `_on_weapon_stowing` and `arms_state`.
+var _arms_busy := 0.0
 
 func _ready() -> void:
 	_start_position = global_position
@@ -207,6 +246,7 @@ func _ready() -> void:
 		weapon.caught.connect(_on_weapon_caught)
 		weapon.pressure_changed.connect(func(fraction: float) -> void: capture_progress.emit(fraction))
 		weapon.finished.connect(_on_weapon_finished)
+		weapon.squeezed.connect(_on_weapon_squeezed)
 		# Only the hands carry a body away after the kill, and the day another
 		# weapon does it will say so with the same signal. Asked for rather than
 		# assumed: the belt holds weapons that settle everything in one blow, and
@@ -225,6 +265,7 @@ func _ready() -> void:
 ## the signal.
 func _on_weapon_caught(rat: Node3D) -> void:
 	view_model.set_gripping(true)
+	_held_rat = rat
 	capture_started.emit(rat)
 
 
@@ -241,6 +282,7 @@ func _on_weapon_caught(rat: Node3D) -> void:
 func _on_weapon_finished(killed: bool) -> void:
 	if not killed:
 		view_model.set_gripping(false)
+	_held_rat = null
 	capture_finished.emit(killed)
 
 
@@ -254,6 +296,29 @@ func _on_weapon_finished(killed: bool) -> void:
 ## (`rat.gd: _process_stow`).
 func _on_weapon_stowing(wait: float, fall: float, rise: float) -> void:
 	view_model.stow_hand(wait, fall, rise)
+	# His body keeps hold of the carcass for as long as his arm does. The two
+	# used to part company here: `is_busy()` goes false on the killing squeeze,
+	# so to everybody watching him his arms dropped on the instant while the dead
+	# rat sailed down to his belt on its own (`rat.gd: _process_stow`). The
+	# `rise` is deliberately not counted — that is the empty arm coming back, and
+	# there is nothing in it to carry.
+	_arms_busy = wait + fall
+
+
+## One squeeze of the neck of a rat he is holding.
+##
+## It goes two ways from here, and they are separate calls because they are
+## separate bodies. His own hazmat suit is told directly — he cannot see it, but
+## it is what throws his shadow. And `squeezed` goes out for the avatars that
+## stand for him on the other players' screens, which is the half this was
+## written for.
+##
+## His *own* arm is not told here. It is driven straight off the click
+## (`_unhandled_input`), and deliberately so: the recoil in the sleeves has to
+## land on the frame the button went down, not one relay later.
+func _on_weapon_squeezed() -> void:
+	model.squeeze()
+	squeezed.emit()
 
 
 ## Paints the player's own sleeves in the colour the crew says he is wearing,
@@ -428,6 +493,10 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 
+	# The tail of a kill: his arms are still carrying the body down to his belt
+	# for a moment after the hands report themselves free (`arms_state`).
+	_arms_busy = maxf(_arms_busy - delta, 0.0)
+
 	# After the move, not before: `animation_state()` reads what the body did
 	# this frame, and asking it beforehand would draw him doing what he was doing
 	# a frame ago — walking into a wall included.
@@ -440,6 +509,11 @@ func _physics_process(delta: float) -> void:
 	# step (`PlayerViewModel.set_state`).
 	var state := animation_state()
 	model.set_state(state)
+	# His hands are a separate question from his legs, and his own body is told
+	# it for the same reason the avatars are: the shadow he throws on the floor
+	# is the one part of himself he can see, and a shadow with its arms down
+	# while it strangles something is the bug this fixes, seen from inside.
+	model.set_arms(arms_state())
 	view_model.set_state(state)
 	# The arms lag a little behind the turn. The reading is spent as it is used,
 	# so a frame in which the mouse did not move is a frame in which the arms
@@ -450,6 +524,10 @@ func _physics_process(delta: float) -> void:
 	# after a squeeze. Apart from the sway because that one is switched off
 	# whenever `sway_lag` is zero, and a hand still has to close when it is.
 	view_model.advance(delta)
+	# And how far the animal has pulled them off it. After `advance`, because
+	# that is what moves the hand between hanging and gripping, and the drift is
+	# something that happens to a hand already on its way.
+	view_model.set_grip_drift(_grip_drift())
 	# After the move as well, and for the same reason: the sway is drawn from the
 	# ground he actually covered this frame, not from the keys he was holding.
 	_update_bob(delta)
@@ -604,6 +682,12 @@ func respawn() -> void:
 	# died falling would otherwise stand at the van still folded into the pose of
 	# the jump, until the next physics frame thought better of it.
 	model.set_state(PlayerAvatar.State.IDLE)
+	# Empty-handed too. Dying mid-kill leaves the carcass behind and the clock
+	# still running, and a man who respawned with his arms still round a rat he
+	# no longer has is the one pose nobody could explain.
+	_arms_busy = 0.0
+	_held_rat = null
+	model.set_arms(PlayerAvatar.Arms.FREE)
 	# And the arms in front of him with it, still swung out from whatever turn he
 	# was making on the way down.
 	view_model.set_state(PlayerAvatar.State.IDLE)
@@ -617,8 +701,7 @@ func respawn() -> void:
 ## standing still, whatever his keyboard says, and that is what the man watching
 ## him should see.
 ##
-## The order is the order of what wins. A rat in the hands is the whole of what
-## he is doing, however he is moving; being off the ground beats being on it;
+## The order is the order of what wins. Being off the ground beats being on it;
 ## being down on his knees beats being on his feet; and the difference between
 ## walking and running is drawn halfway between the two speeds, so the moment he
 ## crosses it is the moment he looks like it.
@@ -630,8 +713,6 @@ func respawn() -> void:
 ## telling from a man sitting still — so the same `IDLE_SPEED` that separates
 ## standing from walking separates kneeling from creeping.
 func animation_state() -> PlayerAvatar.State:
-	if inventory.is_busy():
-		return PlayerAvatar.State.HOLDING
 	if not is_on_floor():
 		return PlayerAvatar.State.AIRBORNE
 	var speed := Vector2(velocity.x, velocity.z).length()
@@ -643,6 +724,50 @@ func animation_state() -> PlayerAvatar.State:
 	if speed > (walk_speed + run_speed) * 0.5:
 		return PlayerAvatar.State.RUNNING
 	return PlayerAvatar.State.WALKING
+
+
+## What his *hands* look like they are doing, which is asked separately from the
+## rest of him and read the same way — by the avatars on the other players'
+## screens, and by his own body for the shadow it throws.
+##
+## It used to be one question with the one above, and `HOLDING` beat every other
+## answer: a man with a rat in his hands was drawn standing perfectly still,
+## whatever his legs were up to. That is two bugs in one line — his arms hung at
+## his sides through the whole strangling, and his feet stayed nailed to the
+## floor while he walked off with the animal — and splitting the question is
+## what fixes both.
+##
+## It stays true a little past the kill. The hands are free the moment the last
+## squeeze lands (`Hands._release`), but the body is still in them and is
+## travelling down to his belt for a second afterwards, and arms that dropped on
+## the instant would leave the carcass flying to his waist on its own.
+func arms_state() -> PlayerAvatar.Arms:
+	if inventory.is_busy() or _arms_busy > 0.0:
+		return PlayerAvatar.Arms.HOLDING
+	return PlayerAvatar.Arms.FREE
+
+## How far the rat has fought its way off the point it hangs from, in the
+## camera's own axes, and how much of that his hands should go with.
+##
+## The whole of the movement is the animal's: `rat.gd` writes the tremor and the
+## kicks against the capture point, and this only reads the result — one
+## subtraction rather than a second wander rolled here, so the hand is provably
+## following the thing it is holding and cannot drift off on its own.
+##
+## `body_center` and not the origin, because the origin of a rat is on the floor
+## between its feet and the thing his fist is closed on is the middle of it.
+## Asked for rather than assumed, the way `Hands` asks before it trusts an
+## animal to answer.
+func _grip_drift() -> Vector3:
+	if _held_rat == null or not is_instance_valid(_held_rat) 			or not _held_rat.has_method("body_center"):
+		return Vector3.ZERO
+	var travelled: Vector3 = _held_rat.body_center() - capture_point.global_position
+	# Into the camera's coordinates, which is where the arms are posed. The
+	# basis is turned rather than inverted properly on purpose — it carries no
+	# scale, and for a rotation the transpose *is* the inverse.
+	var local := camera.global_basis.transposed() * travelled
+	return (local * GRIP_FOLLOW).limit_length(GRIP_DRIFT)
+
 
 # --- Hands on --------------------------------------------------------------
 

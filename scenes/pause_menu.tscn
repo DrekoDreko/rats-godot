@@ -89,6 +89,11 @@ custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 text = "Continuar"
 
+[node name="HowTo" type="Button" parent="Center/Panel/Margin/Rows"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Como jogar"
+
 [node name="Leave" type="Button" parent="Center/Panel/Margin/Rows"]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
@@ -98,3 +103,45 @@ text = "Sair da partida"
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 text = "Sair do jogo"
+
+[node name="Help" type="VBoxContainer" parent="Center/Panel/Margin"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="Center/Panel/Margin/Help"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+text = "COMO JOGAR"
+label_settings = SubResource("Label_pause_title")
+horizontal_alignment = 1
+
+[node name="Separator" type="HSeparator" parent="Center/Panel/Margin/Help"]
+layout_mode = 2
+
+[node name="Controls" type="Label" parent="Center/Panel/Margin/Help"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 8
+text = "WASD / arrows — move
+Shift — run
+Space — jump
+Mouse — look around
+Left button — grab the rat
+Left button (holding) — strangle
+1 2 3 — switch weapon
+E — use the computer
+E (holding) — clean a sprung trap ($2 to set it again)
+Esc — release the mouse"
+
+[node name="BackSeparator" type="HSeparator" parent="Center/Panel/Margin/Help"]
+layout_mode = 2
+
+[node name="Back" type="Button" parent="Center/Panel/Margin/Help"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "Voltar"

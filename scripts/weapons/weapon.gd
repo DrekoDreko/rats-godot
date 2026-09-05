@@ -34,6 +34,19 @@ signal pressure_changed(fraction: float)
 ## Let go of the rat: `killed` says whether it died or got away.
 @warning_ignore("unused_signal") # Emitted by subclasses (see hands.gd, glue_weapon.gd).
 signal finished(killed: bool)
+## One squeeze of a rat already held: the player pressed again and the weapon
+## did something to the animal in its grip.
+##
+## It is separate from `used` and carries nothing, and both of those are on
+## purpose. `used` is the swing that goes looking for a rat — it can miss, which
+## is what its `hit` says — and this one cannot: there is already an animal in
+## the hand or this would not have been called. What wants it is everybody
+## *else's* screen, where the whole of a strangling was invisible until the
+## squeezes crossed the wire (`PlayerAvatar.Action.SQUEEZE`); the pressure it
+## adds is a different signal (`pressure_changed`) because that one drains on
+## its own and this one is a thing the player did.
+@warning_ignore("unused_signal") # Emitted by subclasses (see hands.gd).
+signal squeezed()
 
 ## What the weapon is called on the player's belt.
 @export var display_name := "Weapon"

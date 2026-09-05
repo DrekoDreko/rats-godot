@@ -141,6 +141,39 @@ const FLIP_SPIN := PI
 ## body sits crooked sideways so it is not flat-on to the camera. Its tail and
 ## hind legs hang below it.
 const HELD_POSE := Vector3(66.0, 200.0, 0.0)
+## How big the animal is drawn in *somebody else's* hands.
+##
+## A man carrying a rat is drawn holding it in front of his chest, and at its own
+## size the animal is a good deal of him: it reads as a rat the size of a dog and
+## it hides the arms that are supposed to be doing the work. A little smaller and
+## the pose comes back.
+##
+## It is a scale on the *whole* node and not on `model`, which is already spoken
+## for by the squeeze and the crouch: those stay written against one, and this
+## multiplies them.
+##
+## **It is not applied to the rat in our own hands**, and that is the point of
+## `_held_scale` rather than an oversight. The first-person grip is a pose solved
+## against this animal at this size — where the fist sits, how much of the body
+## it covers, how much of it comes through the glove
+## (`player_view_model.gd: grip_offset`, `_test_grip.gd`) — and shrinking the rat
+## inside it takes the hand off the animal without moving the hand at all: the
+## glove went from covering an eighth of the rat to covering a fortieth, which is
+## a fist beside a rat rather than round one. The two views are two pictures with
+## two solutions, and this is the one for the picture taken from outside.
+const HELD_SCALE := Vector3(0.85, 0.85, 0.85)
+## How big the animal is drawn in *our own* hands.
+##
+## It exists because the animal was brought in front of the gloves rather than
+## left behind them: `Hands.hands_distance` came in from 0.48 metres to 0.26,
+## inside the fist at about 0.33, and perspective grows whatever comes nearer the
+## lens. At its own size the rat would then fill two frames instead of two thirds
+## of one. This is the distance it moved, 0.26 over 0.48, divided back out, so
+## what changed is which of the two is in front and not how big either is drawn.
+##
+## `Hands.hands_height` came in by the same fraction, and for the same reason:
+## what has to hold still is the picture, not the metres.
+const FIRST_PERSON_SCALE := Vector3(0.54, 0.54, 0.54)
 ## How it sits once dead, before being stowed: the body tips forward and slumps
 ## sideways, with nothing at all holding the head up.
 const LIMP_POSE := Vector3(16.0, 200.0, 28.0)
@@ -1107,8 +1140,12 @@ func _return_to_world() -> void:
 	# Nothing to put back: the rat never left its own branch of the tree, only
 	# the hand's coordinates. It is already standing where it was last drawn.
 	# Straightens the body: it goes back to the ground on its feet, not upside
-	# down.
+	# down. And back to its own size: `HELD_SCALE` is baked into the node while
+	# it hangs in a hand, and setting `rotation` keeps whatever scale is there —
+	# without this the rat that got loose would run off small for the rest of the
+	# hunt.
 	rotation = Vector3(0.0, rotation.y, 0.0)
+	scale = Vector3.ONE
 	set_deferred("collision_layer", _original_layer)
 	_capture_point = null
 	# Nobody's any more. It matters on the wire as much as here: a rat back on
@@ -1189,7 +1226,11 @@ func _process_rise(_delta: float) -> void:
 	var spin := _origin_basis.get_rotation_quaternion().slerp(pose.get_rotation_quaternion(), progress)
 	# The somersault unwinds as it arrives: at the end only the pose is left.
 	var flip := Quaternion(Vector3.RIGHT, FLIP_SPIN * (1.0 - progress))
-	global_basis = Basis(spin * flip)
+	# It shrinks to the size it is held at as it arrives, rather than snapping to
+	# it in the hand: the pull is the only frame where the two sizes are both on
+	# screen, and a rat that changes size mid-catch is a rat that pops.
+	global_basis = Basis(spin * flip).scaled(
+		Vector3.ONE.lerp(_held_scale(_holder_peer), progress))
 
 	model.scale = STRETCHED_SCALE.lerp(Vector3.ONE, progress)
 
@@ -1220,7 +1261,20 @@ func _snap_to_hand() -> void:
 func _follow_capture_point() -> void:
 	if _capture_point == null or not is_instance_valid(_capture_point):
 		return
-	global_transform = _capture_point.global_transform * _held_transform
+	global_transform = _capture_point.global_transform \
+		* _held_transform.scaled_local(_held_scale(_holder_peer))
+
+
+## How big to draw the animal in the hand it is in: `FIRST_PERSON_SCALE` in our
+## own hands, and `HELD_SCALE` in anybody else's. See there for why the two views do
+## not agree, and why they should not.
+##
+## Asked by whose hand it is rather than by which node the hand is, because that
+## is the question: the machine thinking for the rat holds every guest's catch on
+## an avatar and its own on a camera, and only the second one is the picture the
+## first-person pose was solved for.
+func _held_scale(peer_id: int) -> Vector3:
+	return FIRST_PERSON_SCALE if peer_id == _local_peer() else HELD_SCALE
 
 ## Where the rat's origin has to sit, in the `base` pose, for the middle of its
 ## body to land right on top of the capture point. It is why it struggles
@@ -2206,7 +2260,8 @@ func _draw_remote_capture(delta: float) -> void:
 ## is in the tree and placed in the world instead — for every hand, our own
 ## included; see `_draw_remote_capture` for why nothing here may be reparented.
 func _place_in_hand(point: Node3D, local_transform: Transform3D) -> void:
-	global_transform = point.global_transform * local_transform
+	global_transform = point.global_transform \
+		* local_transform.scaled_local(_held_scale(sync_holder))
 
 ## Where a watched rat sits in the coordinates of the hand holding it, whichever
 ## way it is being held. The watcher's counterpart to `_held_transform`.
@@ -2225,8 +2280,10 @@ func _release_remote_capture() -> void:
 		return
 	_held_remotely = false
 	_remote_limp = false
-	# Back on its feet: it was hanging nose-down in somebody's fist a frame ago.
+	# Back on its feet, and back to its own size: it was hanging nose-down in
+	# somebody's fist a frame ago, drawn at `HELD_SCALE`.
 	rotation = Vector3(0.0, rotation.y, 0.0)
+	scale = Vector3.ONE
 	global_position = sync_position
 
 ## The first packet: the rat stops being a rumour and becomes a body. Snapped

@@ -64,7 +64,27 @@ extends Weapon
 ## Bound to `PlayerViewModel.grip_offset`, `grip_rotation` and `grip_scale`: the
 ## four were solved together, and `_test_grip.gd` is what says the fist is still
 ## on the animal after any of them moves.
-@export var hands_distance := 0.48
+##
+## ## Why it came in past the fist anyway
+##
+## Everything above solves for the glove being drawn *in front of* the animal,
+## and at 0.48 it was: the fist sat at about 0.33 from the lens and the rat two
+## thirds of a hand behind it, so the sleeves closed over the animal and the
+## player's own arms were the thing he was watching. Brought inside the fist, to
+## 0.26, the rat is the near body and the gloves close behind it — the hand still
+## reads as holding the neck, because it is drawn either side of it and a tenth
+## of a frame above the body, but it no longer hides what it is holding.
+##
+## The size it gains by coming in is paid back in `rat.gd: FIRST_PERSON_SCALE`
+## rather than in `grip_scale`: the glove's own pose is what the arithmetic above
+## solved and it is left where it was.
+##
+## This inverts what `_test_grip.gd` measures. `MAX_BEHIND` and `MAX_HIDDEN` both
+## read *hand in front of rat* as the correct picture, so the bench now reports
+## the intended pose as three failures — the resting hand having no distance to
+## travel, the fist being behind the animal, and the animal covering the whole of
+## their overlap. The numbers on those lines are still the ones to read.
+@export var hands_distance := 0.26
 ## Height of the point the animal's middle is pinned to, relative to the centre
 ## of the screen.
 ##
@@ -81,13 +101,33 @@ extends Weapon
 ## the middle of the frame, and the tail ends above the prompt.
 ##
 ## `PlayerViewModel.grip_offset` has to come up with it, and not by this many
-## metres: the fist is held about 33 centimetres from the lens and the rat at
+## metres: the fist is held about 30 centimetres from the lens and the rat at
 ## `hands_distance`, so the same distance on screen is a shorter one in metres
 ## for whichever of the two is nearer. What has to be held constant is the gap
-## between them *on screen* — the fist about a sixth of a frame above the held
+## between them *on screen* — the fist about a tenth of a frame above the held
 ## point, which is where a neck is — and `_test_grip.gd` prints both readings
 ## every run.
-@export var hands_height := -0.04
+##
+## It came up from -0.04 when the animal came in past the fist: nearer the lens,
+## the same drop in metres is a longer one on screen, and at the old value the
+## body hung a seventh of a frame under the gloves instead of in them. It is
+## above centre now rather than below, which is the second half of the same
+## move: the drawn body is longer on screen at this distance, so the point it
+## hangs from has to rise for the *body* to straddle the middle of the frame.
+## The bench reads the drawn rat at 0.43 of the frame and the fist at 0.41.
+@export var hands_height := 0.030
+## How far the point the animal's middle is pinned to sits to the side of the
+## centre of the screen, in the same units as `hands_distance`. Negative is left.
+##
+## It is off centre because the gloves are. Both fists come from the right of the
+## frame — `PlayerViewModel.grip_offset.x` is positive and the far hand is the
+## near one mirrored and nudged, not a second arm — so the pair closes a little
+## right of the crosshair. A rat hung exactly on the crosshair is held by its
+## left-hand side, and this is what puts its neck back between the two fists.
+##
+## Small, and it stays small: this moves the *animal*, not the hands, so a large
+## value buys a rat off to one side of a grip that stayed where it was.
+@export var hands_side := -0.02
 
 ## The rat died in the hand and the player is putting it away: the arm holds the
 ## body for `wait` seconds, takes `fall` to carry it down out of the frame, and
@@ -166,7 +206,7 @@ var _effort := 1.0
 
 func _ready() -> void:
 	super()
-	capture_point.position = Vector3(0.0, hands_height, -hands_distance)
+	capture_point.position = Vector3(hands_side, hands_height, -hands_distance)
 
 func _process(delta: float) -> void:
 	super(delta)
@@ -225,6 +265,10 @@ func press_secondary() -> void:
 		return
 	_rat.squeeze()
 	_add_recoil(SQUEEZE_RECOIL)
+	# Announced before the arithmetic, so that a squeeze which happens to be the
+	# killing one is still seen as a squeeze: the last click of a strangling is
+	# the one a watcher most wants to see land.
+	squeezed.emit()
 	var goes := maxf(1.0, float(squeezes_to_kill) * _effort)
 	_set_pressure(_pressure + 1.0 / goes)
 	if _pressure >= 1.0:

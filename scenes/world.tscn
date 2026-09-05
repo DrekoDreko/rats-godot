@@ -19,23 +19,30 @@
 [ext_resource type="PackedScene" path="res://scenes/ready_station.tscn" id="19_ready"]
 [ext_resource type="PackedScene" path="res://scenes/hud_phase.tscn" id="20_hud_phase"]
 [ext_resource type="PackedScene" uid="uid://dq3n7vk8rj5wc" path="res://scenes/ps1_postprocess.tscn" id="21_ps1post"]
+[ext_resource type="Texture2D" path="res://assets/textures/floor/concrete_floor_atlas.png" id="23_floor_tex"]
 [ext_resource type="Script" uid="uid://ddlqj8ges01dg" path="res://scripts/map/map_table.gd" id="21_table"]
 [ext_resource type="PackedScene" path="res://scenes/result_screen.tscn" id="22_result"]
 [ext_resource type="PackedScene" path="res://scenes/pause_menu.tscn" id="99_pause"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_floor"]
-albedo_color = Color(0.13, 0.13, 0.14, 1)
+albedo_color = Color(0.68, 0.68, 0.7, 1)
+albedo_texture = ExtResource("23_floor_tex")
 metallic_specular = 0.1
 roughness = 0.95
+uv1_scale = Vector3(3, 6, 1)
 
 [sub_resource type="PlaneMesh" id="Mesh_floor"]
 material = SubResource("Mat_floor")
 size = Vector2(60, 60)
+subdivide_width = 59
+subdivide_depth = 59
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_kpybi"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.13, 0.13, 0.14, 1)
+shader_parameter/albedo = ExtResource("23_floor_tex")
+shader_parameter/albedo_color = Color(0.68, 0.68, 0.7, 1)
+shader_parameter/uv_scale = Vector2(3, 6)
 shader_parameter/jitter = 0.70000003325
 shader_parameter/jitter_z_coordinate = false
 shader_parameter/jitter_depth_independent = true
@@ -473,9 +480,6 @@ shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="BoxShape3D" id="Shape_table_body"]
 size = Vector3(1.5, 0.8, 0.9)
-
-[sub_resource type="LabelSettings" id="LabelSettings_jaeu2"]
-font_size = 8
 
 [sub_resource type="LabelSettings" id="LabelSettings_75jji"]
 font_size = 8
@@ -955,26 +959,6 @@ hole_name = "Back Room Vent"
 volume_db = -6.0
 
 [node name="HUD" type="CanvasLayer" parent="." unique_id=1294235576]
-
-[node name="Help" type="Label" parent="HUD" unique_id=715739734]
-offset_left = 16.0
-offset_top = 12.0
-offset_right = 320.0
-offset_bottom = 150.0
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 5
-text = "WASD / arrows — move
-Shift — run
-Space — jump
-Mouse — look around
-Left button — grab the rat
-Left button (holding) — strangle
-1 2 3 — switch weapon
-E — use the computer
-E (holding) — clean a sprung trap ($2 to set it again)
-Esc — release the mouse"
-label_settings = SubResource("LabelSettings_jaeu2")
 
 [node name="Counter" type="Label" parent="HUD" unique_id=535394653]
 anchors_preset = 1

@@ -19,6 +19,13 @@ const ALBEDO_UNIFORM := "albedo"
 ## exported without textures carry all their looks in this color alone.
 const ALBEDO_COLOR_UNIFORM := "albedo_color"
 
+## Name of the shader uniform that receives how many times the texture repeats
+## over a surface. It is read from the material the surface already had —
+## `uv1_scale` on a `StandardMaterial3D`, the same uniform on a `ShaderMaterial`
+## — because a floor tiles its concrete and a model with baked UVs does not, and
+## that difference belongs to the surface rather than to this node.
+const UV_SCALE_UNIFORM := "uv_scale"
+
 ## Shader material to apply. Shared by reference, so editing the .tres affects
 ## every object using it — unless `unique_material` is on.
 @export var material: ShaderMaterial:
@@ -186,6 +193,7 @@ func _apply_to(mesh_instance: MeshInstance3D) -> void:
 		if texture != null:
 			surface_material.set_shader_parameter(ALBEDO_UNIFORM, texture)
 		surface_material.set_shader_parameter(ALBEDO_COLOR_UNIFORM, color)
+		surface_material.set_shader_parameter(UV_SCALE_UNIFORM, _uv_scale_of(mesh_instance, surface))
 
 		mesh_instance.set_surface_override_material(surface, surface_material)
 		# Held past this applier's own lifetime, so that a scene being torn down
@@ -220,6 +228,22 @@ func _albedo_color_of(mesh_instance: MeshInstance3D, surface: int) -> Color:
 				return color
 
 	return Color.WHITE
+
+## How many times a surface's texture repeats over its UVs. One by one for
+## everything that arrives with its UVs already laid out, which is every
+## imported model — only the untextured primitives built in the editor, a
+## forty-metre floor plane among them, ask for more.
+func _uv_scale_of(mesh_instance: MeshInstance3D, surface: int) -> Vector2:
+	for source in _sources_of(mesh_instance, surface):
+		if source is BaseMaterial3D:
+			var scale := (source as BaseMaterial3D).uv1_scale
+			return Vector2(scale.x, scale.y)
+		elif source is ShaderMaterial:
+			var scale = (source as ShaderMaterial).get_shader_parameter(UV_SCALE_UNIFORM)
+			if scale != null:
+				return scale
+
+	return Vector2.ONE
 
 ## Where a surface's look can come from, best first: the override set on the
 ## instance, then the material baked into the mesh by the importer.

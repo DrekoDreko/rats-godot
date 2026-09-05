@@ -37,9 +37,11 @@ extends Node3D
 ## the same way on his screen and on his colleague's, and neither this file nor
 ## `player.gd` has to be told what running looks like.
 ##
-## What it asks of the character it stands for is two things and no more:
-## `animation_state()` and an `attacked` signal. That is the whole contract, and
-## it is why this file knows nothing about weapons, rats or belts.
+## What it asks of the character it stands for is four things and no more:
+## `animation_state()` and `arms_state()` for what he is, `attacked` and
+## `squeezed` for what he does. That is the whole contract, and it is why this
+## file knows nothing about weapons, rats or belts — a squeeze arrives here as a
+## squeeze, not as a click on a pair of hands.
 
 ## Somebody's arm went out — ours, or anybody else's by way of `act()`. It is
 ## what a sound would hang off the day there is one.
@@ -54,7 +56,17 @@ enum State {
 	RUNNING,
 	## Off the ground: jumped, or walked off something.
 	AIRBORNE,
-	## A rat in his hands, which is why he is walking so slowly.
+	## Retired. It used to mean "a rat in his hands", back when that was the
+	## whole of what a man could be seen doing and it beat everything else in
+	## `player.gd: animation_state()` — which is exactly why a player carrying a
+	## rat slid across the floor with his feet nailed down. What his legs do and
+	## what his hands do are two questions now, and this one is the wrong answer
+	## to both.
+	##
+	## Kept rather than deleted because the number is what crosses the wire:
+	## removing it would renumber everything under it, and two machines on
+	## different builds would read the same packet differently. Nothing produces
+	## it and nothing should.
 	HOLDING,
 	## Down on his knees and still. Waiting, listening, or lining something up.
 	CROUCHING,
@@ -71,12 +83,41 @@ enum State {
 	CROUCH_WALKING,
 }
 
+## What his *hands* are doing, which is a separate question from what the rest
+## of him is doing and crosses the wire separately.
+##
+## It is a second variable and not more values on `State` because the two
+## multiply: a man holding a rat can be standing, walking, running or down on
+## his knees, and folding that into one enum means four more values today and
+## four more again the next time a body can be in two conditions at once. Two
+## small numbers on the wire is cheaper than that in every sense, and it is what
+## lets `PlayerModel` keep one clip per state and pose the arms over the top.
+enum Arms {
+	## Empty, and doing whatever the animation says.
+	FREE,
+	## Full: a rat is being held in front of him, and being strangled. The arms
+	## are posed at it rather than animated (`PlayerArms`).
+	HOLDING,
+}
+
 ## The one-off things, the ones with no state to be in: they happen, everybody
 ## sees them happen, and a moment later there is nothing left to show. They go
 ## by `act()` and not by `State` for exactly that reason.
 enum Action {
 	## Used whatever is in his hands: a grab, a trap going down, a swing.
 	SWING,
+	## One squeeze of the neck of a rat already held.
+	##
+	## It is an action and not a state for the reason all of these are: it
+	## happens and then there is nothing left to show, and the *rhythm* of them
+	## is the whole of what a watcher learns from it. A man hammering at an
+	## animal is about to kill it; a man who has stopped is about to lose it
+	## (`hands.gd: decay`), and until this crossed the wire the two looked
+	## identical from outside — which is to say, both looked like a man standing
+	## still.
+	##
+	## New values go on the end, the same as `State` and for the same reason.
+	SQUEEZE,
 }
 
 ## How fast the drawn body closes on what the wire last said, per second. It is
@@ -139,6 +180,8 @@ var sync_position := Vector3.ZERO
 var sync_yaw := 0.0
 ## What he is doing, as a `State`.
 var sync_state := State.IDLE
+## What his hands are doing, as an `Arms`.
+var sync_arms := Arms.FREE
 
 ## The character this avatar reads, on the machine it belongs to. Null on
 ## everybody else's, where the wire is the source instead.
@@ -188,6 +231,15 @@ var _sync_age := 0.0
 ## screen, and that difference is the point. On the holder's own machine the
 ## animal is held against his camera, filling the frame; to everybody else he is
 ## a man carrying a rat in front of him, which is what they should see.
+##
+## **It is moved onto the hands every frame** (`_process`), rather than resting
+## at the fixed spot the scene puts it at. The spot in the scene was a guess at
+## where a pair of hands would be if the body had any, and it was near enough
+## while `HOLDING` played `Idle` and the arms hung at his sides — near enough,
+## that is, to a rat visibly floating in mid-air beside a man ignoring it. Now
+## that the arms are posed there is a real answer (`PlayerModel.grip_point`), and
+## the animal hangs in the grip. What the scene sets is only where it sits before
+## the first frame.
 @onready var capture_point: Node3D = $CapturePoint
 
 
@@ -235,6 +287,7 @@ func _physics_process(_delta: float) -> void:
 	sync_position = _source.global_position
 	sync_yaw = _source.rotation.y
 	sync_state = _source.animation_state()
+	sync_arms = _source.arms_state()
 	# Read off the character rather than worked out from his last position: he is
 	# a `CharacterBody3D` and already knows, and the number he knows is the true
 	# one rather than one frame's approximation of it.
@@ -288,6 +341,13 @@ func _process(delta: float) -> void:
 	# well. The capsule had to be dropped by hand to look like it was kneeling; a
 	# man with knees does not.
 	_model.set_state(sync_state)
+	# And his hands separately — see `Arms` for why the two are not one number.
+	_model.set_arms(sync_arms)
+	# The held rat hangs off the grip rather than off a fixed spot in the scene.
+	# After the model has been told, so that the point read is this frame's and
+	# not the last one's: the animal lagging the hands by a frame is the whole
+	# difference between a rat being carried and a rat being followed.
+	capture_point.global_position = _model.grip_point()
 	# Where the name is being read from. The camera and not our own character:
 	# the two part company the moment a player looks around, and it is the camera
 	# that is doing the reading. Null in a bench, and in the frames before a map
@@ -304,6 +364,7 @@ func _process(delta: float) -> void:
 func follow(player: Node3D) -> void:
 	_source = player
 	player.attacked.connect(_on_source_attacked)
+	player.squeezed.connect(_on_source_squeezed)
 
 
 ## Something that happened, rather than something that is. It runs on every
@@ -312,6 +373,8 @@ func follow(player: Node3D) -> void:
 ##
 ## Only the peer this avatar belongs to may call it, and that is the whole of
 ## the authority model here: everybody owns his own body and nobody else's.
+##
+## A squeeze shows: the hands close on the animal (`PlayerArms.squeeze`).
 ##
 ## **A swing currently shows nothing.** The capsule had a nub on its chest that
 ## was thrown forward and pulled back, and that went with the capsule; the model
@@ -322,6 +385,11 @@ func follow(player: Node3D) -> void:
 ## `PlayerModel`.
 @rpc("authority", "call_local", "reliable")
 func act(action: Action) -> void:
+	# The squeeze has something to draw, and it is drawn here rather than left to
+	# whatever listens to `acted`: it is the body's own gesture, and the body is
+	# this file's business. The swing still has nothing, for the reason above.
+	if action == Action.SQUEEZE and _model != null:
+		_model.squeeze()
 	acted.emit(action)
 
 # --- Drawing him ------------------------------------------------------------
@@ -414,3 +482,7 @@ func _autoload(autoload_name: String) -> Node:
 
 func _on_source_attacked(_hit: bool) -> void:
 	act.rpc(Action.SWING)
+
+
+func _on_source_squeezed() -> void:
+	act.rpc(Action.SQUEEZE)

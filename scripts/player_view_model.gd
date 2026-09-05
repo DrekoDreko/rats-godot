@@ -131,19 +131,21 @@ extends Node3D
 ## were 180 degrees away from where it looked.
 const ARM_FACING := Vector3(0.0, 180.0, 0.0)
 
-## Whether the left hand is drawn at all.
+## Whether the left hand is drawn *all the time*.
 ##
-## Off, and one hand is what the player sees. That is not a stand-in for the
-## second one being unfinished — it is what the game asks for today: a rat is
-## held in one hand and a trap set with the other, and until there is a gesture
-## that needs both at once, a second hand riding the corner of the screen is a
-## thing to look at rather than a thing doing anything. One hand also reads
-## better this close, where two crowd the bottom of the frame between them.
+## Off, and the player walks around with one hand, which is what the game asks
+## for while nothing is happening: a trap goes down with one hand and a corner
+## of the screen is enough for it, and two gloves this close crowd the bottom of
+## the frame between them with nothing to do.
 ##
-## It is a knob rather than a deleted node because the left hand costs nothing
-## while it is hidden and everything to rebuild: the mirror, the pose and the
-## tint all already work on it (`_place`), so the day a gesture wants both hands
-## this is the whole of turning it back on.
+## It is not what decides whether the second hand exists in the strangling. That
+## one comes up on its own with the grip — see `_apply`, where the left is shown
+## for any `_grip` above nothing. Strangling is the gesture that wants both
+## hands, it is the only one the game has, and the hand arrives with the animal
+## and leaves with it.
+##
+## So this is the knob for *always*, and turning it on is how the day comes that
+## a second gesture wants a left hand at rest.
 @export var show_left := false:
 	set(value):
 		show_left = value
@@ -360,6 +362,56 @@ const CROUCH_PULL := Vector3(0.0, 0.05, 0.09)
 		grip_scale = value
 		_apply()
 
+## How far the far fist is held off the near one while they grip, in the same
+## units as `grip_offset`.
+##
+## It is what keeps the two hands from being one. `_place` draws the left as the
+## right mirrored, and the grip's yaw of sixty-five degrees is what brings a
+## fist whose arm starts out at `grip_offset.x` back to the centre of the screen
+## — so mirrored without this, both fists arrive at the *same point*, sink into
+## each other and read as a single lump with two sleeves.
+##
+## The whole of it is spent on the far hand and none of it on the near one, for
+## the reason written out in `_apply`: the near hand's pose is solved against the
+## animal and moving it off the animal to make room is not a trade, it is the
+## pose being given up. So this reads as *where the second hand goes*, and the
+## first stays where it was photographed.
+##
+## It is the first-person reading of `PlayerArms.SPREAD`, and small for the same
+## reason: the two hands are on either side of one neck. Bigger and the man is
+## holding the rat at arm's length between two flat palms; smaller and he is
+## holding it in one fist that happens to have two sleeves.
+##
+## Photographed rather than solved, like every other number in this pose, and it
+## is the one that trades against `_test_grip.gd: MAX_HIDDEN` — two gloves cover
+## more of the animal than one, and moving them apart is what buys that back.
+@export_range(0.0, 0.2, 0.005) var grip_spread := 0.065:
+	set(value):
+		grip_spread = value
+		_apply()
+
+## Where the *far* hand sits, measured from where the mirror would put it, in
+## the units of `grip_offset`. Only `y` and `z` mean anything here: the two
+## hands are on either side of one neck and `grip_spread` is what says how far
+## apart, so a sideways nudge on top of it would be the same knob twice.
+##
+## It exists because a mirror is not a second hand. Mirrored exactly, the far
+## fist is drawn at the same distance from the lens as the near one, and two
+## fists at the same depth either side of a neck read as one V-shaped lump with
+## a sleeve running out of each end — the animal's head comes up between them
+## rather than being held by them. Sending it back into the picture, and a
+## little down, is what makes it the hand on the *other side* of the rat:
+## partly hidden by the animal, which is what being behind something looks like
+## and what tells the eye there are two of them.
+##
+## Small, and the depth is the half that matters. Too far back and the far hand
+## disappears behind the rat entirely, which costs the second hand the whole of
+## its job; too little and it is the lump again.
+@export var grip_far_offset := Vector3(0.0, -0.012, 0.040):
+	set(value):
+		grip_far_offset = value
+		_apply()
+
 ## How long the hand takes to travel between hanging and gripping, in seconds.
 ##
 ## Fast, because the grab it follows is fast: the rat is off the ground and at
@@ -511,8 +563,27 @@ const CROUCH_PULL := Vector3(0.0, 0.05, 0.09)
 ## says the player felt the squeeze, and this says the hand did it. Small on
 ## purpose — the fist is already buried in the animal, so a big shove would take
 ## it out the other side.
-const SQUEEZE_PUNCH := 0.035
+##
+## It came down from 0.035 when `SQUEEZE_CLOSE` was written. The two are one
+## gesture in two directions and the forward one is the weaker of them: a man
+## tightening on an animal closes his hands on it where it is, he does not
+## punch it away from himself once per click.
+const SQUEEZE_PUNCH := 0.025
 const SQUEEZE_DAMPING := 0.0004
+
+## How far the two fists come together at the peak of a squeeze, in the units of
+## `grip_spread` — which is what it is taken off.
+##
+## This is the half of the squeeze that reads. The thrust above says the arm
+## did something; this says *what*, because hands closing on a neck is the only
+## shape a strangling has. It rides the same `_punch` that the thrust does, so
+## one click is one gesture with one decay and there is no second clock to keep
+## in step (`_apply`).
+##
+## It is `PlayerArms.SQUEEZE_CLOSE` read in first person, and it has a ceiling
+## the body's version does not: it cannot be larger than `grip_spread`, or the
+## fists cross over each other at the peak.
+const SQUEEZE_CLOSE := 0.018
 
 ## The upper arm: a second copy of the same mesh, carrying the sleeve on from
 ## the forearm's cut back towards the shoulder.
@@ -596,6 +667,10 @@ var _grip := 0.0
 var _grip_target := 0.0
 ## What is left of the last squeeze's thrust, in metres along the arm.
 var _punch := 0.0
+## How far the hands are carried off the pose by the animal fighting them, in
+## the camera's own coordinates. Handed over by `player.gd` rather than rolled
+## here — see `set_grip_drift`.
+var _drift := Vector3.ZERO
 ## How far the arm is into carrying a dead rat away, from 0 holding it in the
 ## middle of the screen to 1 with the fist below the frame at the belt. It rides
 ## on top of `_grip` rather than replacing it: the arm goes on being an arm that
@@ -887,6 +962,35 @@ func punch() -> void:
 	_punch = SQUEEZE_PUNCH
 
 
+## How far the animal has pulled the hands off the pose: `x` across the picture,
+## `y` up it, `z` towards the lens, and in the units the rest of the pose is
+## written in rather than in finished metres — the division at the end of
+## `_apply` is what turns those into what the camera sees, and it has to reach
+## this the same way it reaches `grip_offset`.
+##
+## The third-person body has the opposite arrangement and it is worth saying why
+## this is not it. There, the *hold* wanders (`PlayerArms.STRUGGLE_SWING`) and
+## the rat hangs off it, because the animal is drawn wherever the hands put it.
+## Here the rat is the one with a mind of its own: it trembles and kicks against
+## the capture point on its own account (`rat.gd: TREMOR`, `_kick`), and it does
+## it in the middle of the screen where every centimetre is visible. Adding a
+## second wander on top of that would be two animals fighting.
+##
+## So the hands follow instead. What arrives here is a fraction of the distance
+## the animal has actually travelled, damped and capped by `player.gd`, and the
+## fraction is the point: at nothing the fists sit still while the rat thrashes
+## between them, which is what makes them read as a decal; at the whole of it
+## they are welded to the animal and nobody is holding anything difficult.
+##
+## Zero is the resting answer and the one to hand over the moment the hands are
+## empty, so that the pose does not keep the last twitch of a rat that is gone.
+func set_grip_drift(drift: Vector3) -> void:
+	if _drift.is_equal_approx(drift):
+		return
+	_drift = drift
+	_apply()
+
+
 ## Advances the arm's own movement — the travel between hanging and gripping,
 ## and what is left of the last squeeze.
 ##
@@ -1098,6 +1202,11 @@ func _apply() -> void:
 		var forward := Basis.from_euler(_radians(pose + ARM_FACING)) * Vector3.BACK
 		offset += forward * _punch * _grip
 
+	# What the animal is doing to the hands. It is added to the pose rather than
+	# blended with it: they are where the grip says they are, plus however far
+	# the thing they are holding has dragged them (`set_grip_drift`).
+	offset += _drift * _grip
+
 	# The walk still reaches a hand that is holding something, but not in full:
 	# an arm braced round an animal is a stiffer thing than one swinging free,
 	# and at the full amplitude the rat visibly rides the step.
@@ -1143,11 +1252,36 @@ func _apply() -> void:
 	angles += _swing_angles
 
 	_place(_right, offset, angles, 1.0)
+
+	# The far hand, which is the near one mirrored and then moved: out to its own
+	# side of the neck by `grip_spread`, and back into the picture by
+	# `grip_far_offset`. Both ride `_grip`, so the resting pair is an exact
+	# mirror and nothing here touches a hand that is not holding anything.
+	#
+	# All of the spread is spent here and none of it on the near hand, which is
+	# the whole reason the two are placed separately. That hand's pose is solved
+	# — where the fist sits on the animal, how much of it it covers, how much of
+	# it comes through the glove — and pushing it out to make room for its
+	# partner takes it off the rat: measured, a few centimetres of it cost a
+	# third of the overlap and took what the animal is drawn through from well
+	# under one per cent of it to six (`_test_grip.gd: MAX_BEHIND`). The second
+	# hand is free to move because nothing was ever solved for it.
+	#
+	# The closing rides `_punch` rather than a clock of its own, so the thrust
+	# above and this are one gesture with one decay: the near fist drives into
+	# the animal as the far one comes across to meet it. Clamped at nothing,
+	# because a squeeze deeper than the gap would send one fist through the other.
+	var far := offset + grip_far_offset * _grip
+	far.x += maxf(grip_spread - SQUEEZE_CLOSE * (_punch / SQUEEZE_PUNCH), 0.0) * _grip
 	# The left hand is placed even while it is hidden, so that turning it back on
 	# shows a hand that is already where it belongs rather than one that snaps
 	# into place on the next step.
-	_place(_left, offset, angles, -1.0)
-	_left.visible = show_left
+	_place(_left, far, angles, -1.0)
+	# The second hand belongs to the one gesture that wants two. It comes up with
+	# the grip and goes down with it, so a man walking about is drawn with the one
+	# hand the game is built around and a man strangling something is drawn with
+	# both — see `show_left` for the knob that keeps it out at rest as well.
+	_left.visible = show_left or not is_zero_approx(_grip)
 
 
 ## One arm, put down at `offset` turned to `angles`, mirrored when `side` is -1.

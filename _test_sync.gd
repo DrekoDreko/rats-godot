@@ -13,7 +13,7 @@ extends SceneTree
 ##
 ## `/root/A` is the host and `/root/B` is the guest. Each carries a stand-in for
 ## the character — a `Node3D` with the two things the avatar actually reads off
-## a player, `animation_state()` and an `attacked` signal — and the same
+## a player, `animation_state()`, `arms_state()` and two signals — and the same
 ## `Players` node the map carries. The stand-in is moved by hand rather than
 ## driven by `player.gd`, and that is deliberate: `Input` is global to the
 ## process, so a keypress meant for one of the two would move both, and a body
@@ -61,15 +61,22 @@ const CAUGHT_UP := 0.2
 ## more than this on one frame is a teleport.
 const NOT_A_TELEPORT := 0.5
 
-## The character the avatar reads, cut down to the two things it asks for. The
+## The character the avatar reads, cut down to the four things it asks for. The
 ## real one is `player.gd`, which has a belt, a camera and flesh on top of this.
 class StubPlayer extends Node3D:
 	signal attacked(hit: bool)
+	signal squeezed()
 
 	var state := PlayerAvatar.State.IDLE
+	## What his hands are doing, which is a separate question from what the rest
+	## of him is doing — see `PlayerAvatar.Arms`.
+	var arms := PlayerAvatar.Arms.FREE
 
 	func animation_state() -> PlayerAvatar.State:
 		return state
+
+	func arms_state() -> PlayerAvatar.Arms:
+		return arms
 
 	## The map puts every character on his own standing spot on the way in. The
 	## real one remembers it as the spot to respawn on; here there is nothing to
@@ -79,6 +86,9 @@ class StubPlayer extends Node3D:
 
 	func swing() -> void:
 		attacked.emit(true)
+
+	func squeeze() -> void:
+		squeezed.emit()
 
 
 var _lobby: Node
