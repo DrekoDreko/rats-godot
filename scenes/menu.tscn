@@ -9,7 +9,6 @@
 [ext_resource type="Script" uid="uid://c0najh3gpg2du" path="res://scripts/ui/contract_panel.gd" id="4_contract"]
 [ext_resource type="PackedScene" path="res://scenes/lobby.tscn" id="5_modal"]
 [ext_resource type="PackedScene" uid="uid://r6380qbonva8" path="res://scenes/black_button.tscn" id="7_i6lef"]
-[ext_resource type="PackedScene" uid="uid://dkb1q6aor3st0" path="res://scenes/garage/urban_garage.glb" id="8_garage"]
 [ext_resource type="Texture2D" path="res://assets/textures/floor/concrete_floor_atlas.png" id="9_floor_tex"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_i6lef"]
@@ -58,9 +57,6 @@ surface_material_override/0 = SubResource("ShaderMaterial_i6lef")
 transform = Transform3D(0.99996746, 0, 0.00806902, 0, 1, 0, -0.00806902, 0, 0.99996746, -0.0012350082, -2.3841858e-07, 0.009379387)
 mesh = SubResource("Mesh_floor")
 surface_material_override/0 = SubResource("ShaderMaterial_70i5f")
-
-[node name="Garage" parent="." unique_id=1980114532 instance=ExtResource("8_garage")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.25, 0, 3.5)
 
 [node name="Camera" type="Camera3D" parent="." unique_id=1721597996]
 transform = Transform3D(0.9999905, 0.0005873988, -0.004317632, 0, 0.9908722, 0.13480473, 0.0043574055, -0.13480344, 0.9908628, -0.96524316, 1.6588356, 5.4678407)
