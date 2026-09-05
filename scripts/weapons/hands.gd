@@ -38,21 +38,56 @@ extends Weapon
 ## itself.
 ##
 ## Bringing it in is the half of the fix that costs nothing, because the two
-## wants do not fight. Closer, the rat is *bigger*, not smaller — at this
-## distance it covers about two thirds of the frame's height rather than a half,
-## which is more of what it was set for, not less. And it is near enough that the
-## fist can be put on its neck without the forearm having to reach so far out
-## that the elbow lands in the middle of the picture.
+## wants do not fight. Closer, the rat is *bigger*, not smaller. And it is near
+## enough that the fist can be put on its neck without the forearm having to
+## reach so far out that the elbow lands in the middle of the picture.
 ##
-## Bound to `PlayerViewModel.grip_offset` and `grip_rotation`: the three were
-## solved together, and `_test_grip.gd` is what says the fist is still on the
-## animal after any of them moves.
-@export var hands_distance := 0.55
-## Height of the middle of its body relative to the centre of the screen. It
-## sits below centre on purpose: held by the neck it stretches its head upwards,
-## and it is the body — not the animal's geometric middle — that has to land in
-## the middle of the frame.
-@export var hands_height := -0.1
+## ## Why it cannot simply keep coming
+##
+## Because the hand is nearer the lens than the rat is, so perspective grows the
+## glove faster than the animal. Walking this in from 0.55 with the grip pose
+## following it, the rat gained a fifth of its width on screen and the glove
+## gained half again as much: at 0.42 the fist covered a fifth of the animal and
+## the resting hand was already touching it, which leaves no grab to make.
+##
+## So closing the distance only helps while `PlayerViewModel.grip_scale` comes
+## down to pay for it, and the two were solved together — the glove shrank from
+## 1.17 to 1.05 as this came from 0.55 to here. That buys the rat about fifteen
+## per cent more of the frame with the hand covering no more of it than before.
+##
+## Nearer than this stops paying. The margin against the animal's own kicking is
+## what runs out first: at 0.46 the rat was drawn through the glove on a twentieth
+## of their overlap and the reading swung by four points between runs, where here
+## it stays under one per cent of it and only a hard kick moves it
+## (`_test_grip.gd: MAX_BEHIND`).
+##
+## Bound to `PlayerViewModel.grip_offset`, `grip_rotation` and `grip_scale`: the
+## four were solved together, and `_test_grip.gd` is what says the fist is still
+## on the animal after any of them moves.
+@export var hands_distance := 0.48
+## Height of the point the animal's middle is pinned to, relative to the centre
+## of the screen.
+##
+## Below centre, and for the reason it always was: held by the neck the rat
+## stretches its head upwards, so the point it hangs from has to sit under the
+## middle of the frame for the *body* to land in the middle of it.
+##
+## It used to be 0.1, which is more than twice this, and it was too much of that
+## good thing. The held point came out twelve per cent of the frame below the
+## crosshair, and the animal hung on downwards from there: its body sat in the
+## bottom half of the picture and its tail crossed the strangling prompt, so the
+## player was hammering at a rat that had dropped out of his own aim and into the
+## HUD. Here the point sits five per cent below centre, the drawn body straddles
+## the middle of the frame, and the tail ends above the prompt.
+##
+## `PlayerViewModel.grip_offset` has to come up with it, and not by this many
+## metres: the fist is held about 33 centimetres from the lens and the rat at
+## `hands_distance`, so the same distance on screen is a shorter one in metres
+## for whichever of the two is nearer. What has to be held constant is the gap
+## between them *on screen* — the fist about a sixth of a frame above the held
+## point, which is where a neck is — and `_test_grip.gd` prints both readings
+## every run.
+@export var hands_height := -0.04
 
 ## The rat died in the hand and the player is putting it away: the arm holds the
 ## body for `wait` seconds, takes `fall` to carry it down out of the frame, and

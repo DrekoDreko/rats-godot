@@ -216,11 +216,12 @@ const CROUCH_PULL := Vector3(0.0, 0.05, 0.09)
 ## Solved rather than eyeballed, against the geometry of the model and of the
 ## hold. The narrow part of the mesh — the hand, as opposed to the sleeve — runs
 ## from about +0.10 to +0.20 down the model's own +Z, and this puts the middle
-## of that stretch on the rat's neck: a little above the capture point, because
-## the animal is held head-up, and a little in front of it, because a fist round
-## a neck is nearer the camera than the body hanging behind it. At
-## `Hands.hands_distance` that lands the palm within about eleven centimetres of
-## the held body and dead centre of the picture, which `_test_grip.gd` measures.
+## of that stretch up at the rat's nape: well above the capture point, because
+## the animal is held head-up and the capture point is the middle of its body,
+## and in front of it, because a fist round a neck is nearer the camera than the
+## body hanging behind it. At `Hands.hands_distance` that lands the palm about
+## twenty centimetres from the middle of the held body and a little above the
+## centre of the picture, which `_test_grip.gd` measures.
 ##
 ## The palm is put *in front of* the animal rather than level with it, and that
 ## is the difference between a hand on a rat and a hand behind one. Level, the
@@ -230,10 +231,73 @@ const CROUCH_PULL := Vector3(0.0, 0.05, 0.09)
 ## the lens and it is unmistakably the near object, which is what a fist round a
 ## neck is.
 ##
-## It is bound to `grip_rotation`, `grip_scale` and `Hands.hands_distance`, and
-## the four were solved together: change any one of them and the fist comes off
-## the animal. The bench is what says whether it is still on.
-@export var grip_offset := Vector3(0.311, -0.130, -0.591):
+## ## In front of the rat, and above it: the two ways this goes wrong
+##
+## The depth was once solved by comparing two points — the palm against the
+## capture point — which said the palm was seven centimetres nearer and that
+## everything was well. Neither of those points is a body. The rat is nearly a
+## metre of animal hung around the capture point and reaches some fifteen
+## centimetres nearer the lens than the point it hangs from; the arm is seventy
+## centimetres of sleeve swung across the frame at `grip_rotation`. The two
+## solids interpenetrated while both points measured correct, and the renderer
+## drew the animal *over* the sleeve: a rat sunk into the player's hand.
+##
+## The obvious repair is to push the hand forward until it clears, and it is a
+## trap. It does clear — and what it buys is a fist planted square in front of
+## the animal, hiding a fifth of it, with the player strangling something he can
+## barely see. That reads worse than the bug it fixes, and every check in the
+## bench passed it.
+##
+## The real constraint is that the hand cannot close. `hazmat_hand.glb` is a
+## rigid block with no fingers, so it can be in front of the animal or behind it
+## but never around it, and any pose that wins the depth test by sheer distance
+## wins it by covering. What breaks the deadlock is not depth at all but
+## *height*: put the fist up at the nape rather than across the middle of the
+## body, and it holds the one part of the animal a hand closes on while the body
+## hangs free below it. Same clearance, a third of the covering — eight per cent
+## of the rat rather than twenty.
+##
+## So both halves are measured now, and they pull against each other:
+## `_test_grip.gd: MAX_BEHIND` says the hand must not be drawn behind the animal,
+## `MAX_HIDDEN` says it must not be drawn over it either, and each of them
+## rejects the pose the other one would drift towards.
+##
+## Moving the *rat* forward instead was tried and is the wrong way round: it
+## makes the animal larger and nearer, so it overlaps more of the sleeve and by a
+## wider margin — the average went from eight centimetres of the rat in front to
+## nineteen.
+##
+## ## The height is not a free number, and the depth paid for it
+##
+## `y` is not chosen at all: it is read off `Hands.hands_height`, which says how
+## low the animal hangs. The rat was raised out of the bottom of the frame and
+## this came up with it, because what reads as a grip is the *gap between the two
+## on screen* — the fist a sixth of a frame above the point the body hangs from,
+## which is where a neck is — and that gap survives either of them moving only if
+## both move. It is not the same number of metres, either: the fist is a third of
+## a metre from the lens and the rat is at `Hands.hands_distance`, so the same
+## distance on screen is fewer centimetres for the nearer of the two.
+##
+## Raising the arm is what cost the depth. Both bodies went up by the same amount
+## of *picture*, so nothing about the fist and the neck changed — but the sleeve
+## runs from the fist back past the lens, nearly end-on, and swinging that line up
+## drags a longer stretch of it across the animal. The overlap went half again as
+## large and the rat came through the glove on four to six per cent of it, from
+## three (`_test_grip.gd: MAX_BEHIND`), which is the failure this pose exists to
+## prevent creeping back.
+##
+## So `z` came in from 0.395 to here — two and a half centimetres nearer the lens
+## — which is the move the section above calls a trap, bought deliberately and at
+## the stated price. Being nearer, the glove is drawn larger and covers more: the
+## rat comes through it on under one per cent of the overlap now, and the hand
+## hides eleven or twelve per cent of the animal where it used to hide eight.
+## `MAX_HIDDEN` allows fourteen, so the room this spends is real and there is not
+## much of it left.
+##
+## It is bound to `grip_rotation`, `grip_scale`, `Hands.hands_distance` and
+## `Hands.hands_height`, and they were solved together: change any one of them and
+## the fist comes off the animal. The bench is what says whether it is still on.
+@export var grip_offset := Vector3(0.245, 0.016, -0.370):
 	set(value):
 		grip_offset = value
 		_apply()
@@ -274,16 +338,24 @@ const CROUCH_PULL := Vector3(0.0, 0.05, 0.09)
 ## does not: the glove comes out narrower than the rat is wide, and a hand
 ## smaller than the thing it is squeezing reads as a hand somewhere behind it.
 ##
-## Measured against the animal rather than picked: at this the glove comes out
-## about a tenth wider than the rat's body, which is what a fist round something
-## looks like, and `_test_grip.gd` refuses anything narrower than the animal.
+## Measured against the animal rather than picked, and it is a ceiling as much as
+## a floor. Too small and the glove comes out narrower than the rat is wide,
+## which reads as a hand behind the animal — `_test_grip.gd: MIN_GLOVE_WIDTH`
+## refuses that. Too large and the fist simply covers the thing it is holding,
+## which `MAX_HIDDEN` refuses. Between them there is not much room: at this the
+## glove is about half again the rat's width and hides an eighth of it.
+##
+## It came down from 1.17 when the rat was brought nearer the lens
+## (`Hands.hands_distance`). Perspective grows whichever object is closer, and
+## the hand is the closer one, so holding this fixed while the animal came in
+## would have handed the glove more of the frame than the rat gained.
 ##
 ## It only means anything because `_apply` divides the change in size back out
 ## of the offset. Scaling this node moves the arm as well as growing it, and
 ## apparent size is width over distance — so without that division the two
 ## cancel exactly and this knob does nothing whatsoever, at any value. It read
 ## as the pose being wrong for a whole round of tuning. See `_apply`.
-@export_range(0.1, 3.0, 0.01) var grip_scale := 1.17:
+@export_range(0.1, 3.0, 0.01) var grip_scale := 1.05:
 	set(value):
 		grip_scale = value
 		_apply()

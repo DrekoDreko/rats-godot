@@ -20,6 +20,13 @@ extends SceneTree
 ##    the slip, the signature — and the money and the crates they earned are not.
 ## 6. The road home to the lobby still takes the whole shift with it: the money,
 ##    the crates and the signature are all cleared, and the crew is not.
+## 7. The bank pays the crew out on the doorstep: the house opens on the balance
+##    the shop closed on, and not on nought.
+## 8. The pay slip banks it again — what is left in the wallet plus the client's
+##    bonus — and a slip settled twice does not pay twice.
+## 9. Two houses in a row: the money carries down the road, the shelf spends it,
+##    and the next house opens on what is left.
+## 10. And the road home puts every purse back to the first day's hundred.
 ##
 ## The autoloads are picked up by node name rather than by their global names,
 ## which do not exist in a bench run with `--script`. For the same reason the
@@ -38,6 +45,24 @@ const CRUSHING := 6
 ## Frames of slack for a scene change to actually happen.
 const WAIT := 8
 
+## What a man is worth before anything is earned — `SessionManager.STARTING_MONEY`,
+## written out for the same reason the phases above are.
+const STARTING_MONEY := 100
+
+## What the bank is seeded with for the checks below. A round number that is
+## neither the starting hundred nor anything a rat pays, so a figure that turns up
+## in the wrong place is obvious.
+const BANKED := 250
+
+## The price of one thing off the shelf, for the check that shopping comes out of
+## the same purse the house pays into.
+const SPENT := 25
+
+## Stood in for the house, so that a bench about money does not also load and
+## light a whole map. What is under test is the phase the wallet is filled on, not
+## the room it is filled in.
+const EMPTY_SCENE := "res://_test_empty.tscn"
+
 const ANA := 111
 const BRUNO := 222
 
@@ -53,6 +78,10 @@ var _wallet: Node
 var _stock: Node
 var _report: Node
 var _contract_mgr: Node
+var _bank: Node
+
+## What the bank held when the last check left it, carried between two steps.
+var _banked := 0
 
 var _species: Resource
 
@@ -72,6 +101,7 @@ func _initialize() -> void:
 	_stock = root.get_node_or_null("Stock")
 	_report = root.get_node_or_null("ShiftReport")
 	_contract_mgr = root.get_node_or_null("ContractManager")
+	_bank = root.get_node_or_null("Bank")
 
 
 func _physics_process(_delta: float) -> bool:
@@ -86,6 +116,10 @@ func _physics_process(_delta: float) -> bool:
 		5: return _check_money_outside_a_hunt()
 		6: return _check_the_road_back_to_the_van()
 		7: return _check_the_way_home()
+		8: return _check_the_bank_pays_out_on_the_doorstep()
+		9: return _check_the_slip_banks_the_shift()
+		10: return _check_two_houses_in_a_row()
+		11: return _check_the_way_home_empties_the_purse()
 	return _finish()
 
 # --- Steps ------------------------------------------------------------------
@@ -267,6 +301,113 @@ func _check_the_way_home() -> bool:
 
 	_expect(_session.count() == 2, "the crew is still here — they finished a job, they did not leave")
 	_expect(_session.has_player(ANA) and _session.has_player(BRUNO), "both of them")
+	return _advance()
+
+## The doorstep. The shelf in the van spends `SessionManager`'s purse and the
+## house spends the `Wallet`, and the bank is what makes those one number: on the
+## way in from the road it pays the man out of the bank, so the HUD opens on what
+## the shop closed on rather than on nought.
+##
+## The crew is cut to one man on purpose. `LobbyManager.our_crew_id` falls back to
+## the only member of a one-man crew when Steam is not running, which is the only
+## way a bench can be somebody.
+func _check_the_bank_pays_out_on_the_doorstep() -> bool:
+	if _clock == 1:
+		_session.reset()
+		_session.register_player(ANA, "Ana", true)
+		_session.set_money(ANA, BANKED)
+		_wallet.reset()
+		_report.reset()
+		# Both the survey and the hunt, in one call, the way a signature does it.
+		_phase.set_house(EMPTY_SCENE)
+		_phase.go_to(TRAVEL)
+		return false
+	if _clock == WAIT:
+		_expect(_wallet.money == 0, "on the road the wallet is empty — the bank holds the money")
+		_expect(_session.money(ANA) == BANKED, "and the bank holds all of it")
+		_phase.go_to(SURVEY)
+		return false
+	if _clock < WAIT * 2:
+		return false
+
+	_expect(_phase.current() == SURVEY, "the crew is in the house")
+	_expect(_wallet.money == BANKED, "and the house opened on what the shop closed on")
+	_expect(_session.money(ANA) == BANKED, "the bank still says the same number — it was copied, not moved")
+	return _advance()
+
+## The pay slip. What is left in the wallet, plus what the client pays for a clear
+## house, goes back to the bank — and because the wallet was seeded from the bank,
+## what is written is the whole balance and not an addition to it. That is what
+## makes settling twice harmless, which is the second half of this check.
+func _check_the_slip_banks_the_shift() -> bool:
+	if _clock == 1:
+		_phase.go_to(HUNT)
+		_report.begin(2)
+		_wallet.collect(_species, STRANGULATION)
+		_wallet.collect(_species, STRANGULATION)
+		return false
+	if _clock == 2:
+		_expect(_wallet.money > BANKED, "the rats paid on top of what was carried in")
+		_phase.go_to(RESULT)
+		return false
+	if _clock < WAIT:
+		return false
+
+	_expect(_report.is_clear(), "the house came out clear")
+	var banked: int = _session.money(ANA)
+	_expect(banked == _wallet.money,
+		"the bank holds what the wallet closed on — %d" % banked)
+	_expect(banked == BANKED + _report.earned + _report.bonus(),
+		"which is what was carried in, what the rats paid and what the client paid")
+
+	_bank.settle()
+	_expect(_session.money(ANA) == banked, "and a slip settled twice does not pay twice")
+	return _advance()
+
+## Two houses in a row, which is the whole point of the loop: the money rides the
+## van to the next job, the shelf takes its cut out of the same purse, and the
+## house after that opens on what is left.
+func _check_two_houses_in_a_row() -> bool:
+	if _clock == 1:
+		_banked = _session.money(ANA)
+		_phase.advance()
+		return false
+	if _clock == WAIT:
+		_expect(_phase.current() == TRAVEL, "the pay slip let the crew back onto the road")
+		_expect(_session.money(ANA) == _banked, "with the money it made")
+		# What a purchase does, without standing the shelf up for it: `ShopManager`
+		# debits this same field, and what is under test here is the doorstep
+		# reading it afterwards.
+		_session.set_money(ANA, _banked - SPENT)
+		_phase.go_to(SURVEY)
+		return false
+	if _clock < WAIT * 2:
+		return false
+
+	_expect(_wallet.money == _banked - SPENT,
+		"and the next house opens on what was left after the shopping")
+	return _advance()
+
+## The end of the run. Going home to the menu is not the end of a job but the end
+## of an evening, so every purse goes back to the hundred a man is registered
+## with — a fresh crew in a fresh van, not one still carrying last night's takings.
+func _check_the_way_home_empties_the_purse() -> bool:
+	if _clock == 1:
+		_expect(_session.money(ANA) > STARTING_MONEY, "there is more than a hundred on the books")
+		_phase.go_to(LOBBY)
+
+		# Read on the spot rather than after the menu has loaded. `_clear_shift`
+		# runs inside the phase change, so the purse is already back; what happens
+		# over the frames after it is that the menu rebuilds the crew off the real
+		# lobby, and this bench's stand-in men are not in that one. Waiting would
+		# be asking after a man who has gone home.
+		_expect(_session.money(ANA) == STARTING_MONEY, "and the purse is back to the first day")
+		_expect(_wallet.money == 0, "with nothing left in the wallet either")
+		return false
+	if _clock < WAIT:
+		return false
+
+	_expect(_phase.current() == LOBBY, "the crew is home")
 	return _advance()
 
 # --- Plumbing ----------------------------------------------------------------

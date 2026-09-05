@@ -33,6 +33,7 @@ NetworkGuard="*res://scripts/session/network_guard.gd"
 TrapManager="*res://scripts/session/trap_manager.gd"
 SteamAvatars="*res://scripts/steam/steam_avatars.gd"
 ShiftReport="*res://scripts/session/shift_report.gd"
+Bank="*res://scripts/economy/bank.gd"
 
 [display]
 

@@ -23,12 +23,12 @@ extends Node
 ## same number in the van, on the road and in the house. `LobbyManager` is what
 ## ties the two together (`steam_id_of_peer`).
 ##
-## What it does *not* hold: the money already earned this session and the box of
-## traps in the van. Those are `Wallet` and `Stock`, they are older than this
-## file, and they are still single-player. The per-player `money` and
-## `inventory` fields below are where the crew's own purses will live once the
-## shop is on the wire; until then they are written by nobody and read by
-## nobody, and the two old autoloads carry on as they are.
+## The `money` and `inventory` fields below are the crew's own purses, one per
+## Steam ID: the shelf in the van spends them (`ShopManager`) and the bank writes
+## them at the two ends of a house (`scripts/economy/bank.gd`). They are the
+## balance of record. `Wallet` and `Stock` are older, single-player and still
+## here, and they are what this machine's own man actually spends from while he
+## is in the house — the bank is what keeps the two numbers the same one.
 
 ## Somebody joined the crew.
 signal player_joined(steam_id: int)
@@ -213,6 +213,51 @@ func ready_count() -> int:
 	return total
 
 
+## Whether everybody has said it with one man left out of the question.
+##
+## The man left out is the host, and it is the menu that asks: he has no ready
+## board of his own there — his button is the one that pulls the van away — so
+## counting him would leave the crew waiting on a flag nobody can raise.
+##
+## A crew of one answers true, unlike `all_ready()`: the only man in it is the
+## one being left out, so there is nobody left to wait on. Nothing walks a shift
+## forward off this — the host still has to press — which is what makes the
+## empty answer safe here and not there.
+func all_ready_except(steam_id: int) -> bool:
+	for other_id in players:
+		if other_id != steam_id and not players[other_id]["ready"]:
+			return false
+	return true
+
+
+## The same two numbers `ready_count()` and `count()` give, with one man out of
+## both — what the host's button draws as "1/3".
+func ready_counts_except(steam_id: int) -> Array[int]:
+	var ready_total := 0
+	var crew_total := 0
+	for other_id in players:
+		if other_id == steam_id:
+			continue
+		crew_total += 1
+		if players[other_id]["ready"]:
+			ready_total += 1
+	return [ready_total, crew_total]
+
+
+## Every purse back to what it held on the first day. The end of a run: the crew
+## goes home to the menu and whatever it made out there goes with the shift
+## (`PhaseManager._clear_shift`), so the next van pulls out on a hundred dollars
+## the way the first one did.
+##
+## A plain local write, like everything else in this file, and it does not need to
+## be anything else: `STARTING_MONEY` is a constant, so four machines running this
+## land on the same four numbers without a packet between them.
+func reset_money() -> void:
+	for steam_id in players:
+		players[steam_id]["money"] = STARTING_MONEY
+		player_changed.emit(steam_id)
+
+
 ## Everybody back to not-ready. It runs on every phase change: being ready to
 ## leave the van is not being ready to walk into the house, and a flag left
 ## standing would skip the next phase the instant it began.
@@ -223,8 +268,9 @@ func reset_ready() -> void:
 			player_changed.emit(steam_id)
 
 
-## Sets a player's money outright. The shop is what will call this, through the
-## host, once buying is on the wire.
+## Sets a player's money outright. Two callers, and both of them come through the
+## host: the shelf debiting a purchase (`ShopManager._apply`) and the bank writing
+## a shift's closing balance (`Bank._apply`).
 func set_money(steam_id: int, amount: int) -> void:
 	_write(steam_id, "money", maxi(0, amount))
 

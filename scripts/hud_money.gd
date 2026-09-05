@@ -1,6 +1,12 @@
 extends VBoxContainer
-## The wallet on screen: what the shift has earned so far, and a passing notice
-## of the last animal delivered.
+## The wallet on screen: what the player has to his name, and a passing notice of
+## the last animal delivered.
+##
+## It is the balance and not the shift's takings. The house opens on whatever was
+## left after the shopping in the van, because the bank pays it out of
+## `SessionManager` on the doorstep (`scripts/economy/bank.gd`) — so the number
+## here, the one on the pay slip and the one over the shelf are the same number
+## all evening.
 ##
 ## It only mirrors the `Wallet` autoload — it never keeps a count of its own, so
 ## the number on screen cannot drift from the one that survives the map.

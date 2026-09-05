@@ -129,6 +129,24 @@ func _hunt_multiplier() -> float:
 	return session.hunt_multiplier()
 
 
+## Writes the total outright, without anybody having caught anything.
+##
+## **This is the bank's door and nobody else's** (`scripts/economy/bank.gd`): the
+## balance is taken out of `SessionManager` on the way into the house and put back
+## on the pay slip, and both halves of that are a number being copied rather than
+## money being earned. Whoever is paying for a rat calls `collect`, which is what
+## announces a catch and what the notice on screen is drawn from.
+##
+## `money_changed` goes out with a gain of nought, so the total on the HUD moves
+## and no "+$10" flashes beside it for money that was already the player's.
+func set_balance(amount: int) -> void:
+	var settled := maxi(0, amount)
+	if settled == money:
+		return
+	money = settled
+	money_changed.emit(money, 0)
+
+
 ## Wipes everything: the start of a shift, and the start of every test bench.
 func reset() -> void:
 	money = 0

@@ -347,9 +347,17 @@ func _apply(phase: Phase.Type) -> void:
 ## tally: this player's money, this player's crates, this player's pay slip.
 ## The crew and their colours are untouched — they are the lobby's, and the
 ## lobby is where we are going.
+##
+## The purses go back to the first day's hundred rather than to nought
+## (`SessionManager.reset_money`), because that is what the crew is handed when it
+## is registered and a menu that gave them nothing would be a van that could not
+## buy its first trap. It is the one thing here that is not local — it is the
+## crew's replicated money — but it is a constant written the same way on every
+## machine, so it needs no packet to stay in step.
 func _clear_shift() -> void:
 	Wallet.reset()
 	Stock.reset()
+	SessionManager.reset_money()
 	_clear_job()
 
 

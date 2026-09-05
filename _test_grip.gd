@@ -100,6 +100,74 @@ const MIN_GLOVE_WIDTH := 1.0
 ## frame.
 const RAT_WIDTH := 0.12
 
+## How much of the rat the glove is allowed to be drawn *behind*, as a fraction
+## of the screen cells the two share.
+##
+## Near zero, because a hand painted behind the animal it is holding is the
+## animal sunk into the hand, and that is the whole failure. It is not *exactly*
+## zero for two reasons, and it is worth separating them because only one of
+## them is the bench's own fault.
+##
+## The first is aliasing: the comparison is a rasteriser working on cell centres,
+## so along the line where the two silhouettes cross there are always a few cells
+## whose middle falls on one body and whose depth is taken from the other. That
+## edge is a couple of hundred cells long here and a handful of them land the
+## wrong way. It is worth about a percent and the player cannot see it.
+##
+## The second is the rat. It does not merely tremble in the fist, it kicks
+## (`rat.gd: KICK_INTERVAL`), and a hard kick swings the body a good five
+## centimetres — briefly through the glove, at a pose that clears it the rest of
+## the time. Measured over repeated runs this sits at 0.6 to 1.0 per cent of the
+## shared area with an occasional moment at 3, which is one sample of eighteen
+## catching a kick at its peak.
+##
+## So the budget is set above that spike rather than below it, and the honest
+## reason is that the hand cannot close. `hazmat_hand.glb` is a rigid block, so
+## it can be beside the animal or in front of it but never around it, and a pose
+## that cleared even the hardest kick would have to sit so far off the body that
+## `GRIP_REACH` rejects it — which is exactly what the poses either side of this
+## one do. A fraction of a second of contact during a kick reads as an animal
+## fighting a grip. The failure this guards against does not look like that at
+## all: it is steady, it is most of the overlap, and the bug it was written for
+## measured 96 per cent of it.
+const MAX_BEHIND := 0.05
+
+## How much of the animal the glove may hide, as a fraction of the rat's own
+## drawn silhouette.
+##
+## The other half of the question above, and the half that was missed the first
+## time this was fixed. `MAX_BEHIND` alone says the hand must not be drawn behind
+## the rat, and a pose can satisfy that completely by sitting square in front of
+## the animal and covering it — which is what the first fix did. It passed every
+## check in this file and looked worse than the bug: a fist planted over the rat,
+## with the player strangling something he could barely see.
+##
+## The two together are what "holding" means. The hand has to win the depth test
+## where they overlap, *and* the overlap has to stay small: a fist on a neck hides
+## the neck, not the animal. The pose this is set for hides about eight per cent,
+## which is roughly the head and shoulders; the covering pose hid twenty-one.
+const MAX_HIDDEN := 0.14
+
+## How much clearance the glove has to keep, in metres, where it and the rat
+## share a cell of the picture.
+##
+## Being merely in front is not enough. The animal trembles in the fist the whole
+## time it is held (`rat.gd: TREMOR`), so a pose that clears by a millimetre in
+## the frame this bench measures does not clear in the next one, and what the
+## player sees is the rat cutting in and out of the sleeve. This is the margin
+## that survives the shaking.
+const DEPTH_CLEARANCE := 0.005
+
+## How fine the picture is cut up for that comparison, in cells across the frame.
+## Coarser than the screen on purpose: the question is whether the glove reads as
+## being in front, not whether some stray pixel of it does.
+const OCCLUSION_GRID := 160
+
+## One frame in this many is sampled for that comparison, while the rat is held.
+## Every frame would be a good deal of rasterising to say the same thing; this
+## still takes in a kick as well as the tremor between kicks.
+const OCCLUSION_EVERY := 3
+
 ## How far the fist may be from the body at the bottom of the stowing, in metres.
 ##
 ## Slacker than `GRIP_REACH`, and on purpose. At the top of the gesture the two
@@ -119,6 +187,20 @@ var _view_model: PlayerViewModel
 var _hands: Node3D
 var _capture_point: Node3D
 var _rat: Node3D
+
+## The running totals of the occlusion comparison, gathered frame by frame while
+## the rat is in the hand and read once by .
+var _occlusion_shared := 0
+var _occlusion_behind := 0
+var _occlusion_worst := INF
+var _occlusion_rat_cells := 0
+var _occlusion_moments := 0
+var _occlusion_hidden := 0
+## Set once the totals above have been read, which stops them being gathered any
+## further. After the kill the body goes limp and is carried off to the belt, and
+## whether the hand is in front of it there is the stowing checks question rather
+## than this one.
+var _occlusion_read := false
 
 var _step := 0
 var _clock := 0
@@ -192,6 +274,14 @@ func _process(_delta: float) -> bool:
 	# frames between two steps, and every reading afterwards was of an arm that
 	# had already finished and gone home.
 	_advance(1)
+	# Gathered here rather than inside the check that reads it: the rat struggles
+	# on the engine's frames, so the moments being compared have to be separated
+	# by frames rather than by a loop. Only while it is held, and only while the
+	# reading is still wanted — after the kill the body goes limp and is carried
+	# off, which is a different question, asked further down.
+	if _rat != null and is_instance_valid(_rat) and _hands.is_busy() \
+			and _rat.is_in_hand() and not _occlusion_read and _clock % OCCLUSION_EVERY == 0:
+		_sample_occlusion()
 	_clock += 1
 	if _clock < WAIT:
 		return false
@@ -208,16 +298,17 @@ func _process(_delta: float) -> bool:
 		8: _check_fist_centred()
 		9: _check_elbow_out_of_shot()
 		10: _check_fist_reads_against_the_rat()
-		11: _check_the_arm_reaches_the_shoulder()
-		12: _shoot("gripping")
-		13: _squeeze()
-		14: _check_squeeze_moved_the_arm()
-		15: _kill_it_and_watch_it_being_put_away()
-		16: _check_fist_keeps_the_dead_rat()
-		17: _check_the_rat_went_down_with_the_hand()
-		18: _check_the_hand_left_the_frame()
-		19: _check_hand_came_back_empty()
-		20: _shoot("released")
+		11: _check_the_hand_is_drawn_in_front()
+		12: _check_the_arm_reaches_the_shoulder()
+		13: _shoot("gripping")
+		14: _squeeze()
+		15: _check_squeeze_moved_the_arm()
+		16: _kill_it_and_watch_it_being_put_away()
+		17: _check_fist_keeps_the_dead_rat()
+		18: _check_the_rat_went_down_with_the_hand()
+		19: _check_the_hand_left_the_frame()
+		20: _check_hand_came_back_empty()
+		21: _shoot("released")
 		_:
 			_report()
 			return true
@@ -388,6 +479,161 @@ func _check_fist_reads_against_the_rat() -> void:
 	if glove < rat * MIN_GLOVE_WIDTH:
 		_fail("the glove is drawn %.2fx the rat's width; it is too small to read as gripping"
 			% (glove / rat if rat > 0.0 else 0.0))
+
+
+## The whole of the hand is drawn in front of the whole of the rat, everywhere
+## the two are painted on top of each other.
+##
+## This is the check the bug got past, and it got past because every question
+## above it is asked about *points*. `_check_fist_reads_against_the_rat` compares
+## the palm to the capture point, finds the palm seven centimetres nearer and
+## says the hand is in front — and both of those points stop being true the
+## moment they stand in for a body. The rat is nearly a metre of animal hung
+## around the capture point and its flank reaches fifteen centimetres nearer the
+## lens than the point it hangs from; the arm is seventy centimetres of sleeve
+## swung across the frame at `PlayerViewModel.grip_rotation`, so the part of it
+## that crosses the animal on screen is the wrist behind the palm, not the palm.
+##
+## The two solids therefore interpenetrated while both points measured correct,
+## and the renderer duly drew the rat over the sleeve — an animal sunk into the
+## player's hand, which is the one thing the grip pose exists to prevent and the
+## one thing no reading of two points can see.
+##
+## So it is asked here the way the renderer asks it. Both silhouettes are
+## rasterised into a coarse depth buffer, from real triangles through the live
+## transforms — so it follows `grip_scale`, `grip_rotation` and the perspective
+## at whatever depth the pose ended up — and every cell the two share is
+## compared. Where the animal comes out nearer, the player sees it through the
+## hand.
+func _check_the_hand_is_drawn_in_front() -> void:
+	# Sampled over a stretch of the struggle rather than judged on one frame.
+	# The animal never stops moving in the fist — a constant tremor, and a kick
+	# every second or so (`rat.gd: TREMOR`, `KICK_INTERVAL`) that swings it a
+	# good five centimetres. A single frame therefore grades whichever moment of
+	# the shaking the bench happened to land on, and it showed: the same pose
+	# came back clear on one run and sunk into the hand on the next. What has to
+	# hold is the worst moment of the struggle, not a lucky one.
+	#
+	# The samples are taken by `_sample_occlusion` on the bench's own frames —
+	# the rat is stepped by the engine and not by this script, so the moments
+	# have to be separated by real frames rather than by a loop here, which would
+	# read one pose over and over and call it a struggle.
+	_occlusion_read = true
+	if _occlusion_shared == 0:
+		_fail("the glove and the rat share no part of the picture; the hand is not on the animal")
+		return
+	var share := float(_occlusion_behind) / float(_occlusion_shared)
+	_say("over %d moments the hand and the rat share %d cells, the hand behind on %d (%.1f%%), clearing by %.3f m at worst"
+		% [_occlusion_moments, _occlusion_shared, _occlusion_behind, share * 100.0, _occlusion_worst])
+	var hidden := float(_occlusion_hidden) / float(maxi(_occlusion_rat_cells, 1))
+	_say("the glove covers %.0f%% of the animal" % (hidden * 100.0))
+	if hidden > MAX_HIDDEN:
+		_fail("the glove hides %.0f%% of the rat; it is planted in front of the animal rather than holding it"
+			% (hidden * 100.0))
+	if share > MAX_BEHIND:
+		_fail("the rat is drawn over the hand on %.0f%% of where they meet; it will read as sinking into it"
+			% (share * 100.0))
+
+
+## One moment of that comparison, folded into the running totals.
+##
+## Called from `_process` while the rat is being held, so that the moments it
+## grades are separated by frames the animal actually moved through.
+func _sample_occlusion() -> void:
+	var glove := _depth_buffer(_view_model.get_node_or_null("Right"))
+	var rat := _depth_buffer(_rat.get_node_or_null("Model"))
+	if glove.is_empty() or rat.is_empty():
+		return
+	_occlusion_moments += 1
+	for cell in rat:
+		if not glove.has(cell):
+			continue
+		_occlusion_shared += 1
+		# The camera looks down its own -Z, so a *larger* z is nearer the lens
+		# and a positive clearance is the hand being in front.
+		var clearance: float = glove[cell] - rat[cell]
+		_occlusion_worst = minf(_occlusion_worst, clearance)
+		if clearance < DEPTH_CLEARANCE:
+			_occlusion_behind += 1
+	_occlusion_rat_cells += rat.size()
+	for cell in rat:
+		if glove.has(cell) and glove[cell] - rat[cell] >= DEPTH_CLEARANCE:
+			_occlusion_hidden += 1
+
+
+
+
+## A depth buffer of everything drawn under `node`: for each cell of the picture,
+## how near the lens the nearest surface covering it is, in camera space.
+##
+## Built from the meshes' own triangles and not from their bounding boxes. A box
+## is no use for this question and would have hidden the bug all over again: the
+## arm is swung across the frame, so its box is half a picture of empty air, and
+## the rat's box holds a good deal of nothing around a thin animal. What is being
+## asked is which surface the player actually sees.
+func _depth_buffer(node: Node) -> Dictionary:
+	var buffer := {}
+	if node == null:
+		return buffer
+	var into_camera := _camera.global_transform.affine_inverse()
+	for mesh in _meshes_under(node):
+		if not mesh.visible:
+			continue
+		var geometry := mesh.mesh
+		if geometry == null:
+			continue
+		var to_camera := into_camera * mesh.global_transform
+		for surface in geometry.get_surface_count():
+			var arrays := geometry.surface_get_arrays(surface)
+			var points: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var order: PackedInt32Array = arrays[Mesh.ARRAY_INDEX] \
+				if arrays[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
+			var count := order.size() if order.size() > 0 else points.size()
+			var i := 0
+			while i + 2 < count:
+				var a := to_camera * points[order[i] if order.size() > 0 else i]
+				var b := to_camera * points[order[i + 1] if order.size() > 0 else i + 1]
+				var c := to_camera * points[order[i + 2] if order.size() > 0 else i + 2]
+				i += 3
+				# Anything at or behind the lens has no screen position worth
+				# taking: `unproject_position` on it comes back as nonsense.
+				if a.z >= 0.0 or b.z >= 0.0 or c.z >= 0.0:
+					continue
+				_draw_triangle(a, b, c, buffer)
+	return buffer
+
+
+## Rasterises one triangle into `buffer`, keeping in each cell it covers whichever
+## surface is nearest the lens.
+func _draw_triangle(a: Vector3, b: Vector3, c: Vector3, buffer: Dictionary) -> void:
+	var sa := _screen_position(a)
+	var sb := _screen_position(b)
+	var sc := _screen_position(c)
+	var area := (sb - sa).cross(sc - sa)
+	if is_zero_approx(area):
+		return
+	var low := Vector2(minf(sa.x, minf(sb.x, sc.x)), minf(sa.y, minf(sb.y, sc.y)))
+	var high := Vector2(maxf(sa.x, maxf(sb.x, sc.x)), maxf(sa.y, maxf(sb.y, sc.y)))
+	# Clipped to the picture, which is both correct and what keeps this cheap: an
+	# arm swung across the frame has triangles reaching a long way outside it.
+	var x0 := maxi(0, int(low.x * OCCLUSION_GRID))
+	var x1 := mini(OCCLUSION_GRID - 1, int(high.x * OCCLUSION_GRID))
+	var y0 := maxi(0, int(low.y * OCCLUSION_GRID))
+	var y1 := mini(OCCLUSION_GRID - 1, int(high.y * OCCLUSION_GRID))
+	for y in range(y0, y1 + 1):
+		for x in range(x0, x1 + 1):
+			var point := Vector2((x + 0.5) / OCCLUSION_GRID, (y + 0.5) / OCCLUSION_GRID)
+			# Barycentric, so a cell counts only where its middle is really
+			# covered rather than merely near.
+			var wa := (sb - point).cross(sc - point) / area
+			var wb := (sc - point).cross(sa - point) / area
+			var wc := (sa - point).cross(sb - point) / area
+			if wa < 0.0 or wb < 0.0 or wc < 0.0:
+				continue
+			var depth := a.z * wa + b.z * wb + c.z * wc
+			var cell := Vector2i(x, y)
+			if not buffer.has(cell) or depth > buffer[cell]:
+				buffer[cell] = depth
 
 
 ## The sleeve has to run off the edge of the picture rather than stop in mid-air.

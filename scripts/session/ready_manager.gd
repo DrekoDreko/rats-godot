@@ -116,6 +116,24 @@ func counts() -> Array[int]:
 	return [SessionManager.ready_count(), SessionManager.count()]
 
 
+## Whether everybody the host is waiting on has said it. `steam_id` is the man
+## doing the waiting — the host — and he is left out of the count for the reason
+## `SessionManager.all_ready_except` gives: in the menu he holds the button
+## instead of a board, so his own flag never moves.
+##
+## It is what the menu's PLAY asks before it starts a shift. The stations in the
+## van keep asking `SessionManager.all_ready()`, because out there the host slaps
+## a board like everybody else.
+func others_ready(steam_id: int) -> bool:
+	return SessionManager.all_ready_except(steam_id)
+
+
+## How many of them have said it, and how many they are — the two numbers the
+## host's button draws, with himself out of both.
+func others_counts(steam_id: int) -> Array[int]:
+	return SessionManager.ready_counts_except(steam_id)
+
+
 ## Asks the host to flip our own flag. **This is the only way in from a
 ## station** — it never writes anything itself, and what comes back is `_apply`
 ## on every machine at once, our own included.

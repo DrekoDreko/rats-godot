@@ -28,6 +28,11 @@ const ERROR_COLOR := Color(0.95, 0.32, 0.28)
 const NOTICE_COLOR := Color(0.55, 0.85, 0.45)
 const IDLE_COLOR := Color(1, 1, 1, 0.6)
 
+## What the host is told when he presses a button that is not his to press yet.
+## The button is greyed out as well, so this is for the man who got a press in
+## before the last of his crew went red again.
+const WAITING_ON_CREW := "The crew is not ready yet."
+
 ## How high above a man's feet his card floats, in metres. Just over head height
 ## on a crouched body, so the picture sits above him rather than on him.
 const CARD_HEIGHT := 1.62
@@ -148,16 +153,22 @@ func _seat_the_solo_player() -> void:
 
 # --- The buttons ------------------------------------------------------------
 
-## Play for the host, Ready for everybody else. The host is not made to wait on
-## the crew — he can pull off with men still un-ready, the same way the ready
-## boards in the van never blocked him — so the count on his button is news and
-## not a lock.
+## Play for the host, Ready for everybody else. The host presses the one that
+## starts the shift, and he may only press it once the whole crew has said yes:
+## the count on his button is a lock and not only news, so a man still picking a
+## colour is not dragged onto the road behind an impatient host.
+##
+## The check is made again here rather than trusted to the greyed-out button,
+## because a crew member can go red in the frame between the two.
 func _on_play_pressed() -> void:
 	if _we_are_the_host():
+		if not _crew_is_ready():
+			_say(WAITING_ON_CREW, ERROR_COLOR)
+			_refresh_play()
+			return
 		LobbyManager.start_game()
 		return
 	ReadyManager.request_toggle(LobbyManager.our_crew_id())
-
 
 
 func _on_public_pressed() -> void:
@@ -253,15 +264,28 @@ func _place_card(steam_id: int) -> void:
 	card.position = at - Vector2(card.size.x * 0.5, card.size.y)
 
 
-## What the big button says. The host reads how many of his crew are ready; a
-## client reads what pressing it would do.
+## What the big button says, and whether it may be pressed at all. The host
+## reads how many of his crew are ready and cannot press until they all are; a
+## client reads what pressing it would do and may always press it.
+##
+## The host is not in his own count. He has no ready flag to raise in the menu,
+## so counting himself would draw "1/2" at a crew that is entirely ready.
 func _refresh_play() -> void:
 	if _we_are_the_host():
-		var counts := ReadyManager.counts()
+		var counts := ReadyManager.others_counts(LobbyManager.our_crew_id())
 		_play.text = "PLAY  %d/%d" % [counts[0], counts[1]]
+		_play.disabled = not _crew_is_ready()
 		return
 	var ours := LobbyManager.our_crew_id()
+	_play.disabled = false
 	_play.text = "CANCEL" if ReadyManager.is_ready(ours) else "READY"
+
+
+## Whether the shift may start: everybody but the host has said he is ready. A
+## solo player is a crew of one and is always ready by it, since the only man
+## there is the one holding the button.
+func _crew_is_ready() -> bool:
+	return ReadyManager.others_ready(LobbyManager.our_crew_id())
 
 
 ## Whether this machine decides. A solo player with no lobby is his own host,

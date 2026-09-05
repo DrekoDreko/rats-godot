@@ -39,6 +39,12 @@ const ESCAPED_COLOR := Color(0.95, 0.42, 0.42)
 ## has been put down and there is nothing to do but wait on the crew leader.
 const WAITING_TEXT := "Waiting for the crew leader..."
 
+## What the line under the total reads: the money the crew drives away with, and
+## so the money the shelf in the van will let them spend on the next house. It is
+## the whole point of the shift being a loop rather than a score, so it is said
+## in as many words rather than left to be worked out from the total.
+const CARRIED_TEXT := "CARRIED TO THE VAN   $ %d"
+
 ## The in-game HUD, which has nothing to say once the shift is over: the
 ## crosshair, the belt, the health bar, the help text and the running rat count
 ## are all instructions for a hunt that has finished. Named rather than reached
@@ -46,12 +52,17 @@ const WAITING_TEXT := "Waiting for the crew leader..."
 ## layer hides the lot.
 @export var hud_path: NodePath = ^"../HUD"
 
+@onready var _rows: VBoxContainer = $Center/Panel/Margin/Rows
 @onready var _title: Label = $Center/Panel/Margin/Rows/Title
 @onready var _subtitle: Label = $Center/Panel/Margin/Rows/Subtitle
 @onready var _lines: VBoxContainer = $Center/Panel/Margin/Rows/Lines
 @onready var _total: Label = $Center/Panel/Margin/Rows/Total
 @onready var _ok: Button = $Center/Panel/Margin/Rows/OK
 @onready var _waiting: Label = $Center/Panel/Margin/Rows/Waiting
+
+## The line under the total, built here rather than in the scene: it is one label
+## in the house style, and `_label` already knows what that is.
+var _carried: Label
 
 var _player: Node
 
@@ -71,6 +82,12 @@ func _ready() -> void:
 	hide()
 	_ok.add_theme_font_size_override("font_size", FONT_SIZE)
 	_ok.pressed.connect(_on_ok_pressed)
+
+	_carried = _label("", CLEARED_COLOR)
+	_carried.name = "Carried"
+	_carried.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_rows.add_child(_carried)
+	_rows.move_child(_carried, _total.get_index() + 1)
 
 	PhaseManager.phase_changed.connect(_on_phase_changed)
 
@@ -197,6 +214,13 @@ func _draw() -> void:
 		_add_line("Contract bonus", "$ %d" % bonus, CLEARED_COLOR)
 
 	_total.text = "TOTAL   $ %d" % ShiftReport.total()
+
+	# Read off the bank rather than off `SessionManager`, on purpose. The deposit
+	# is a round trip through the host (`Bank.settle`), and on a guest the answer
+	# would not be back yet when this slip is drawn — the two are announced by the
+	# same phase change. The bank's own closing figure is settled locally and is
+	# the number the host is about to write down anyway.
+	_carried.text = CARRIED_TEXT % Bank.closing_balance()
 
 	# Armed again, and the waiting line back down: a second shift draws a fresh
 	# slip, and it should not open already spent from the last one.
