@@ -46,10 +46,6 @@ shader = ExtResource("2_kxyy5")
 shader_parameter/albedo = ExtResource("23_floor_tex")
 shader_parameter/albedo_color = Color(0.68, 0.68, 0.7, 1)
 shader_parameter/uv_scale = Vector2(3, 6)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="BoxShape3D" id="Shape_floor"]
@@ -67,10 +63,6 @@ size = Vector3(68, 10, 4)
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.36, 0.36, 0.38, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="BoxShape3D" id="Shape_wall_ns"]
@@ -80,10 +72,6 @@ size = Vector3(68, 10, 4)
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.36, 0.36, 0.38, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="BoxMesh" id="Mesh_wall_ew"]
@@ -94,10 +82,6 @@ size = Vector3(4, 10, 68)
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.36, 0.36, 0.38, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="BoxShape3D" id="Shape_wall_ew"]
@@ -107,10 +91,6 @@ size = Vector3(4, 10, 68)
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.36, 0.36, 0.38, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="StandardMaterial3D" id="Mat_block"]
@@ -125,10 +105,6 @@ size = Vector3(8, 14, 8)
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.5, 0.5, 0.53, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="BoxShape3D" id="Shape_block"]
@@ -138,50 +114,30 @@ size = Vector3(8, 14, 8)
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.5, 0.5, 0.53, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_navra"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.5, 0.5, 0.53, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_luhhm"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.5, 0.5, 0.53, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_fh13f"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.5, 0.5, 0.53, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_rup4s"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.5, 0.5, 0.53, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="StandardMaterial3D" id="Mat_crate"]
@@ -196,10 +152,6 @@ size = Vector3(6, 6, 6)
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="BoxShape3D" id="Shape_crate_medium"]
@@ -209,40 +161,24 @@ size = Vector3(6, 6, 6)
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_x2olw"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_817gm"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_ggc52"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="BoxMesh" id="Mesh_crate_small"]
@@ -253,10 +189,6 @@ size = Vector3(3, 3, 3)
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="BoxShape3D" id="Shape_crate_small"]
@@ -266,50 +198,30 @@ size = Vector3(3, 3, 3)
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_8u370"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_rga7q"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_6oujy"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_hi6a0"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="StandardMaterial3D" id="Mat_column"]
@@ -326,10 +238,6 @@ height = 8.0
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.74, 0.74, 0.76, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="CylinderShape3D" id="Shape_column"]
@@ -340,30 +248,18 @@ radius = 1.5
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.74, 0.74, 0.76, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_4wdv8"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.74, 0.74, 0.76, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_d46x8"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.74, 0.74, 0.76, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="StandardMaterial3D" id="Mat_ramp"]
@@ -378,10 +274,6 @@ size = Vector3(10, 1, 10)
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.58, 0.56, 0.52, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="BoxShape3D" id="Shape_platform"]
@@ -395,10 +287,6 @@ size = Vector3(6, 1, 14)
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.58, 0.56, 0.52, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="BoxShape3D" id="Shape_ramp"]
@@ -408,20 +296,12 @@ size = Vector3(6, 1, 14)
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.58, 0.56, 0.52, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_1dgkn"]
 render_priority = 0
 shader = ExtResource("2_kxyy5")
 shader_parameter/albedo_color = Color(0.58, 0.56, 0.52, 1)
-shader_parameter/jitter = 0.7599999904633
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="NavigationMesh" id="Nav_mesh"]
