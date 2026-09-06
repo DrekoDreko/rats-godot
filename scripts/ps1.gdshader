@@ -40,10 +40,42 @@ uniform vec4 albedo_color: source_color = vec4(1.0);
 // model with baked UVs wants.
 uniform vec2 uv_scale = vec2(1.0);
 
-uniform float jitter: hint_range(0.0, 1.0) = 0.5;
+// How coarse the vertex snap is, from zero (off entirely) to one. It is the
+// wobble a PS1 has because it had no floating point in its transform unit, and
+// the game does not use it: see `affine_strength` for the console this look
+// actually aims at now. Left in because it is a look, not a mistake, and
+// switching it back on is one number.
+//
+// **Zero really is off.** The grid it snaps to is `(1 - jitter) * viewport / 2`,
+// so a jitter of zero is not a fine grid but still a grid — half a pixel at
+// 640x360 — and geometry still crawls on it. Nothing but skipping the snap
+// stops it, which is what `vertex()` does at zero.
+uniform float jitter: hint_range(0.0, 1.0) = 0.0;
 uniform bool jitter_z_coordinate = true;
 uniform bool jitter_depth_independent = true;
-uniform bool affine_texture_mapping = true;
+
+// How much of the affine texture swim to keep, from zero (perspective correct,
+// the texture stays nailed to the surface however the camera moves) to one (a
+// PS1's full error, the texture sliding across every triangle).
+//
+// **Zero is the game's look, and it is the N64's rather than the PS1's.** Both
+// consoles drew the same low-poly flat-shaded world, and the difference the eye
+// actually reads is this one: the N64 interpolated texture coordinates with
+// perspective correction, so its surfaces hold still. The PS1 did not, and its
+// textures crawl — which on the van's lining, a metre from the player's face,
+// stopped reading as period charm and started reading as the wall moving.
+// Everything else about the look is unchanged: the flat shading, the nearest
+// filtering, the 640x360 viewport, the untextured painted surfaces.
+//
+// In between is a real setting and not a switch, and it is worth knowing how.
+// The UVs are scaled by `depth^strength` per vertex and divided by the same
+// value per pixel; the divisor is interpolated with perspective correction, so
+// each corner's UV ends up weighted by `depth^(strength - 1)`. At one those
+// weights are flat, which is exactly the affine error; at zero they are
+// `1/depth`, which is exactly correct sampling. The exponent is what makes the
+// dial safe — mixing towards one linearly instead passes through zero at some
+// depth in front of the camera, and the UVs blow up there.
+uniform float affine_strength: hint_range(0.0, 1.0) = 0.0;
 uniform float alpha_scissor: hint_range(0.0, 1.0) = 1.0;
 
 // --- Recolouring the suit ---------------------------------------------------
@@ -126,33 +158,51 @@ vec3 recolor(vec3 rgb) {
 	return mix(rgb, painted, weight);
 }
 
+// What the UVs are scaled by in `vertex()` and divided by again in `fragment()`.
+//
+// It is carried as a varying rather than recomputed from `VERTEX.z` in the
+// fragment, and that is load-bearing rather than an optimisation: a varying is
+// interpolated with perspective correction, so the fragment divides by
+// `interpolate(depth^strength)`. Recomputing `pow(VERTEX.z, strength)` there
+// gives `interpolate(depth)^strength` instead, which is a different value
+// everywhere except at the vertices — the two disagree by a bulge that reads as
+// the wall bending, and at half strength that bulge is worse than the swim it
+// was meant to halve.
+varying float affine_divisor;
+
 void vertex() {
 	VERTEX = (MODELVIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	
-	float z_orig = VERTEX.z;
-	float i = (1.0 - jitter) * min(VIEWPORT_SIZE.x, VIEWPORT_SIZE.y) / 2.0;
-	
-	if (jitter_depth_independent) {
-		float w = (PROJECTION_MATRIX * vec4(VERTEX, 1.0)).w;
-		VERTEX = round(VERTEX / w * i) / i * w;
-	} else {
-		VERTEX = round(VERTEX * i) / i;
-	}
-	
-	if (!jitter_z_coordinate) {
-		VERTEX.z = z_orig;
+	if (jitter > 0.0) {
+		float z_orig = VERTEX.z;
+		float i = (1.0 - jitter) * min(VIEWPORT_SIZE.x, VIEWPORT_SIZE.y) / 2.0;
+
+		if (jitter_depth_independent) {
+			float w = (PROJECTION_MATRIX * vec4(VERTEX, 1.0)).w;
+			VERTEX = round(VERTEX / w * i) / i * w;
+		} else {
+			VERTEX = round(VERTEX * i) / i;
+		}
+
+		if (!jitter_z_coordinate) {
+			VERTEX.z = z_orig;
+		}
 	}
 
-	if (affine_texture_mapping) {
-		UV *= VERTEX.z;
+	// View space puts what is in front of the camera at negative Z, so the depth
+	// is negated before the power — `pow` of a negative base is undefined — and
+	// clamped off zero for anything sitting on the near plane.
+	affine_divisor = pow(max(-VERTEX.z, 0.001), affine_strength);
+	if (affine_strength > 0.0) {
+		UV *= affine_divisor;
 	}
 }
 
 void fragment() {
 	vec2 uv = UV;
 	
-	if (affine_texture_mapping) {
-		uv /= VERTEX.z;
+	if (affine_strength > 0.0) {
+		uv /= affine_divisor;
 	}
 	
 	vec4 color = texture(albedo, uv * uv_scale) * albedo_color;

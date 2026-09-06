@@ -159,12 +159,16 @@ TEXTURE_SCALE = 2.0
 
 ## How long a piece of lining is, in metres, before it is cut again.
 ##
-## This is not a detail setting: it is what keeps the PS1 shader's vertex jitter
-## and affine texture mapping local enough to read as wobble rather than as a
-## broken wall — see `_lined_plane` for what a plate left uncut looks like.
-## Roughly half a metre is the coarsest that still holds together at the range
-## the player stands from these walls, and it is the number to raise if the
-## lining ever costs more than it is worth.
+## Half a metre, which is margin rather than a requirement now.
+##
+## It used to be the thing holding the room together: `scripts/ps1.gdshader` ran
+## the PS1's affine texture mapping and its vertex snap, both of which are only
+## tolerable on small faces, and an uncut seven metre plate tore open under them
+## — see `_lined_plane`. The shader now runs perspective-correct and unsnapped by
+## default (`affine_strength` and `jitter` at zero, the N64's look rather than the
+## PS1's), and a single quad would hold still just as well. The cut stays because
+## it costs a few hundred vertices and it is what makes turning that look back on
+## a one-number change instead of a re-export.
 SUBDIVISION = 0.5
 
 
@@ -525,7 +529,17 @@ def _lining() -> None:
 	mid_y = (BOX_FRONT + BOX_BACK) * 0.5
 	inner_roof = FLOOR_HEIGHT + BOX_HEIGHT
 	## How far a plate stands off the wall it covers.
-	skin = 0.004
+	##
+	## Two centimetres, which is more than a lining panel would really stand
+	## proud of a wall and is set by the depth buffer rather than by the join.
+	## The plate and the wall behind it are parallel and both drawn — the body is
+	## a solid slab and `cull_disabled` in `scripts/ps1.gdshader` draws its inside
+	## face too — so a few millimetres of gap is inside the depth buffer's
+	## precision at the far end of a seven metre van, and the flat white of the
+	## body punches through the panelling in torn triangles. It is worse under the
+	## PS1 shader than it would be otherwise, because the vertex snap moves the
+	## two surfaces by different amounts across the screen.
+	skin = 0.02
 
 	# The side walls. Their quads are rotated to stand upright and turned to
 	# face the middle of the van, which is what puts the texture the right way
@@ -572,7 +586,10 @@ def _interior() -> None:
 	"""
 	mid_y = (BOX_FRONT + BOX_BACK) * 0.5
 
-	_lined_plane("Int_Floor", (0.0, mid_y, FLOOR_HEIGHT + 0.002),
+	# Floated the same two centimetres as the wall plates and for the same reason
+	# — see `skin` in `_lining`. Two millimetres is inside the depth buffer's
+	# precision here and the floor tears white.
+	_lined_plane("Int_Floor", (0.0, mid_y, FLOOR_HEIGHT + 0.02),
 		(BOX_HALF_WIDTH * 2, BOX_LENGTH), "VAN_Lining_Floor")
 
 	# A bench down each side, low enough to sit on and to stand a crate on.
@@ -650,9 +667,10 @@ def _lined_plane(name: str, location, size, material: str, rotation=(0.0, 0.0, 0
 	`TEXTURE_SCALE`, so one tile covers the same distance on every surface and a
 	rib is a rib everywhere in the van.
 
-	**The subdivision**, which is the part that is easy to leave out and ruins
-	the model when it is. The PS1 shader does two things per vertex that are only
-	tolerable on dense geometry:
+	**The subdivision**, which is margin for the PS1 look rather than something
+	the current one needs — see `SUBDIVISION`. With `affine_strength` or `jitter`
+	turned up, the shader does two things per vertex that are only tolerable on
+	dense geometry:
 
 	  - It *snaps vertices to a grid* (`round(VERTEX / w * i) / i * w`), which is
 	    the console's wobble. Between two vertices the surface is straight, so
@@ -672,6 +690,9 @@ def _lined_plane(name: str, location, size, material: str, rotation=(0.0, 0.0, 0
 	answer the console's own artists gave — PS1 rooms are visibly gridded for
 	exactly this reason — and it keeps both effects local to one small quad,
 	which is what makes them read as period wobble instead of breakage.
+
+	None of that is happening at the shader's current settings. It is kept so
+	that they can be changed back.
 	"""
 	obj = _plane(name, location, size, material, rotation=rotation)
 

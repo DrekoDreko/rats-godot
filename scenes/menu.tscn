@@ -15,10 +15,6 @@
 render_priority = 0
 shader = ExtResource("4_70i5f")
 shader_parameter/albedo_color = Color(1, 1, 1, 1)
-shader_parameter/jitter = 0.450000021375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [sub_resource type="StandardMaterial3D" id="Mat_floor"]
@@ -38,10 +34,6 @@ shader = ExtResource("4_70i5f")
 shader_parameter/albedo = ExtResource("9_floor_tex")
 shader_parameter/albedo_color = Color(1, 1, 1, 1)
 shader_parameter/uv_scale = Vector2(5, 10)
-shader_parameter/jitter = 0.450000021375
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
 
 [node name="Menu" type="Node3D" unique_id=2125750364]
