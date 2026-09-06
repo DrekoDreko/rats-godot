@@ -1,15 +1,23 @@
 class_name StoreScreen
-extends CanvasLayer
+extends Control
 ## The store the crew shops at on the road: the man himself on the left, his
 ## name and his money over him, and the racks of weapons he can buy on the
 ## right.
 ##
-## **It is a screen, not a fitting.** The shop used to be a cabinet bolted to the
-## wall of the van (`shop_shelf.gd`), and a man bought things by walking up to it
-## and looking at the right box. That is gone. `E` opens this from anywhere in
-## the back of the van, which is what the van is *for* on the road — two minutes
-## of driving is shopping time, and making it a place in the room meant one man
-## standing in the corner while the other three waited for the wall.
+## **It is a `Control` and not a `CanvasLayer` any more.** A layer buys ordering
+## against the rest of the HUD, and there is no rest of the HUD inside a monitor:
+## the viewport holds this and nothing else, at whatever size the glass is.
+##
+## **It is drawn on the monitor and not over it.** This layer lives inside the
+## `SubViewport` painted onto the glass of the totem at the front of the van
+## (`scripts/session/store_terminal.gd`), so the racks are pixels on a screen in
+## the room rather than a window in front of the room. The terminal walks the
+## camera up until the monitor fills the view before showing any of it.
+##
+## **It does not open itself, and it does not read keys.** Nothing in the window
+## reaches a layer inside a `SubViewport`: the terminal owns the camera, the man
+## and the keys while the store is up, and hands the mouse through onto the glass
+## itself. This screen is only shown, drawn and hidden.
 ##
 ## **Only while the wheels are turning.** `ShopManager.is_open()` is the one
 ## answer, and it is the phase and nothing else: the lobby has not left yet and
@@ -39,10 +47,17 @@ extends CanvasLayer
 ## and is corrected a moment later is worse than one that takes a beat to be
 ## right.
 
-## The whole HUD is drawn at 640x360, where 8 px is the normal size of a letter.
-const FONT_SIZE := 8
+## The store was shut. The terminal listens: it is what walks the camera back to
+## the man and hands him his legs again.
+signal closed
+
+## The monitor's viewport is 640x507, and 14 px is the smallest a letter reads
+## at once the glass is a metre away and the whole thing is run through the PS1
+## filter. It is not the 8 px the rest of the HUD uses: the HUD is drawn at the
+## window's own scale, and this is drawn on a screen inside the room.
+const FONT_SIZE := 14
 ## The size the column headers and the store's own title are set in.
-const HEADING_SIZE := 8
+const HEADING_SIZE := 14
 
 ## Green while the money is there, red while it is not — the two colours the
 ## health bar and the old shelf already use.
@@ -73,8 +88,8 @@ const SLOTS_PER_COLUMN := 5
 
 ## How tall one frame on the rack is, and how far the writing on it stands off
 ## the frame's own edge.
-const TILE_HEIGHT := 30
-const TILE_INSET := Vector2(4, 2)
+const TILE_HEIGHT := 44
+const TILE_INSET := Vector2(6, 3)
 
 ## How long a refused tile flashes for, and how many times. A blink and not a
 ## colour change, so that a man who pressed twice sees the second refusal as
@@ -102,7 +117,7 @@ const PREVIEW_HAND_BONE := &"mixamorig_LeftHand"
 ## What the buy button reads, and how wide it is kept so that the footer does not
 ## shuffle sideways as the word under it changes.
 const BUY_TEXT := "BUY"
-const BUY_WIDTH := 52
+const BUY_WIDTH := 76
 
 ## How long the button flashes green after a purchase goes through. It is the
 ## only thing that says "that worked" on a rack where the count on the tile may
@@ -116,14 +131,7 @@ const BOUGHT_FLASH_TIME := 0.35
 const MODEL_SCENE := preload("res://scenes/player_model.tscn")
 const PS1_SCENE := preload("res://scenes/ps1.tscn")
 
-## The pieces of the van's HUD that leave the screen while the store is up. They
-## are paths and not node references because this scene is instanced into the
-## van beside that HUD rather than inside it.
-@export var crosshair_path := NodePath("../HUD/Crosshair")
-@export var prompt_path := NodePath("../HUD/Prompt")
-
 @onready var _root: Control = $Root
-@onready var _hint: Label = $Hint
 @onready var _money: Label = $Root/Margin/Rows/Header/Money
 @onready var _player_name: Label = $Root/Margin/Rows/Body/Left/PlayerName
 @onready var _columns: HBoxContainer = $Root/Margin/Rows/Body/Columns
@@ -167,8 +175,8 @@ var _open := false
 
 
 func _ready() -> void:
+	add_to_group("store_screen")
 	_root.hide()
-	_hint.hide()
 
 	_build_racks()
 	_build_preview()
@@ -193,12 +201,6 @@ func _ready() -> void:
 		return
 
 	_player = get_tree().get_first_node_in_group("player") as Node3D
-	if _player != null:
-		# The hint has to come and go as he looks from a station to the floor,
-		# and that is the one thing here that changes without anything in the
-		# game changing. The character already announces it, so the corner is
-		# rewritten off his announcement rather than off a frame of its own.
-		_player.interactable_changed.connect(_on_interactable_changed)
 	_refresh()
 
 
@@ -215,43 +217,14 @@ func _process(_delta: float) -> void:
 	_preview_hand.global_position = _upright_hand.global_position
 
 
-## `E` opens the store and `E` closes it again, and Esc closes it too for the
-## man who reaches for that first. One press is one of those and never both: the
-## screen is either up or it is not when the event arrives.
-##
-## The press is spent here so that it does not go on to be read as reaching for
-## something. The character below swallows `E` itself when he is looking at a
-## station, which is what keeps the map table and the ready board from opening
-## the store instead of themselves — and `_can_open` checks the same thing, so
-## that the answer does not depend on which of us the viewport asks first.
-func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("interact"):
-		if _open:
-			close()
-		elif _can_open():
-			open()
-		else:
-			return
-	elif _open and event.is_action_pressed("toggle_mouse"):
-		close()
-	else:
-		return
-	get_viewport().set_input_as_handled()
-
 # --- Opening and closing ----------------------------------------------------
 
-## Whether `E` means the store right now: the van is on the road, there is a man
-## to take over, and he is not already busy with a screen, a station or a rat in
-## his hands.
-func _can_open() -> bool:
-	if _open or _player == null or not ShopManager.is_open():
-		return false
-	if _player.is_ui_open() or _player.focused() != null:
-		return false
-	var inventory: Node = _player.inventory
-	return inventory == null or not inventory.is_busy()
-
-
+## Puts the racks on the glass. Called by the terminal once the camera has
+## arrived, and by the benches directly.
+##
+## The man himself is not touched here: the terminal took him over before the
+## camera moved and hands him back after it has moved again, so that he is not
+## walking around the van for the half second the screen is flying home.
 func open() -> void:
 	if _open:
 		return
@@ -259,9 +232,6 @@ func open() -> void:
 	_notice.text = ""
 	_refresh()
 	_root.show()
-	_hint.hide()
-	if _player != null:
-		_player.set_ui_open(true)
 	_show_rest_of_hud(false)
 
 
@@ -277,31 +247,38 @@ func close() -> void:
 	_show_held_item(null)
 	_refresh()
 	_root.hide()
-	if _player != null:
-		_player.set_ui_open(false)
 	_show_rest_of_hud(true)
-	_update_hint()
+	closed.emit()
 
 
 ## The crosshair and the prompt have nothing to say while a man is shopping. The
 ## prompt is the one that does not come back on its own account: he may still be
 ## standing at a station, and the character announces it again on the next frame.
+##
+## The HUD is hunted for by name rather than pointed at. This layer is inside the
+## monitor's own viewport now, several nodes down a branch of the van, and a
+## relative path from in there is one rename away from silently pointing at
+## nothing — the map table pays the same toll to find the layer it draws on.
 func _show_rest_of_hud(on: bool) -> void:
-	var crosshair := get_node_or_null(crosshair_path) as CanvasItem
+	# The clock over the road goes with them. It is drawn in the middle of the
+	# top of the window, which is exactly where the monitor is while a man is
+	# reading it — a phase counter across the racks is the one thing on screen
+	# that is neither the van nor the shop.
+	var clock := get_tree().get_first_node_in_group("hud_phase") as CanvasLayer
+	if clock != null:
+		clock.visible = on
+
+	var hud := get_tree().root.find_child("HUD", true, false)
+	if hud == null:
+		return
+	var crosshair := hud.get_node_or_null("Crosshair") as CanvasItem
 	if crosshair != null:
 		crosshair.visible = on
 	if not on:
-		var prompt := get_node_or_null(prompt_path) as CanvasItem
+		var prompt := hud.get_node_or_null("Prompt") as CanvasItem
 		if prompt != null:
 			prompt.hide()
 
-
-## The line in the corner that says the key is there at all. It is up whenever
-## the store could be opened and nothing else is in the way, which is the same
-## question `_can_open` asks — a hint offering a key that would do nothing is
-## worse than no hint.
-func _update_hint() -> void:
-	_hint.visible = _can_open()
 
 # --- The racks --------------------------------------------------------------
 
@@ -323,6 +300,10 @@ func _build_racks() -> void:
 func _build_column(title: String, items: Array[StoreItem]) -> VBoxContainer:
 	var column := VBoxContainer.new()
 	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	# The rack fills the glass it is drawn on. The monitor is a 5:4 screen and
+	# the frames were sized for a 16:9 HUD, so a rack that kept `TILE_HEIGHT`
+	# would hang from the top of the screen with a third of it empty underneath.
+	column.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_theme_constant_override("separation", 2)
 
 	var heading := _label(title, HEADING_SIZE)
@@ -391,6 +372,7 @@ func _build_empty_tile() -> Button:
 func _frame() -> Button:
 	var button := Button.new()
 	button.custom_minimum_size = Vector2(0, TILE_HEIGHT)
+	button.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	button.add_theme_stylebox_override("normal", _frame_style(0.06, 0.4))
 	button.add_theme_stylebox_override("hover", _frame_style(0.16, 0.9))
 	button.add_theme_stylebox_override("pressed", _frame_style(0.24, 1.0))
@@ -415,7 +397,7 @@ func _label(text: String, size: int) -> Label:
 	label.add_theme_font_size_override("font_size", size)
 	label.add_theme_color_override("font_color", Color(1, 1, 1, 1))
 	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 1))
-	label.add_theme_constant_override("outline_size", 4)
+	label.add_theme_constant_override("outline_size", 2)
 	return label
 
 
@@ -629,7 +611,6 @@ func _refresh() -> void:
 		# the footer is the one that goes dead.
 		_mark_selected(button, item == _selected)
 	_refresh_buy_button()
-	_update_hint()
 
 
 ## The button that spends: what it costs to buy the thing in his hand, and
@@ -733,12 +714,6 @@ func _on_player_changed(steam_id: int) -> void:
 		_refresh()
 
 
-## He looked at a station, or away from one. The key means that station while he
-## is on it, so the corner stops offering the store.
-func _on_interactable_changed(_interactable: Interactable) -> void:
-	_update_hint()
-
-
 func _on_color_changed(steam_id: int, _color: Color) -> void:
 	if steam_id == _our_steam_id():
 		_refresh_player()
@@ -750,7 +725,6 @@ func _on_color_changed(steam_id: int, _color: Color) -> void:
 func _on_phase_changed(_previous: Phase.Type, _current: Phase.Type) -> void:
 	if not ShopManager.is_open():
 		close()
-	_update_hint()
 
 # --- Odds and ends ----------------------------------------------------------
 

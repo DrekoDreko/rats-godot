@@ -2,7 +2,10 @@ extends SceneTree
 ## Store screen test bench: taking a thing off the rack, seeing it in the man's
 ## hand, and the button that is the only thing which spends money.
 ##
-## Run with: godot res://scenes/van_travel.tscn --script _test_store_pick.gd
+## Run with: godot res://_test_empty.tscn --script _test_store_pick.gd
+##
+## The empty scene and not the van: the bench stands its own van up, and booting
+## into a second one leaves two stores in the tree for the group lookup below.
 ##
 ## It needs the van and a real viewport, unlike `_test_van_shop.gd`, which is
 ## about the till and runs headless. What is being checked here is the *screen*,
@@ -105,7 +108,9 @@ func _stand_the_van_up() -> bool:
 func _check_rack_spends_nothing() -> bool:
 	if _clock < WAIT:
 		return false
-	_store = _van.get_node_or_null("StoreScreen")
+	# By group and not by path: the screen lives inside the monitor's own
+	# viewport on the totem now (`scripts/session/store_terminal.gd`).
+	_store = get_first_node_in_group("store_screen")
 	if _store == null:
 		print("FAIL: the van has no store screen in it")
 		return _finish()

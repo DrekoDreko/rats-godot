@@ -687,6 +687,14 @@ var _stow_fall := 0.0
 var _stow_rise := 0.0
 ## Where the stowing is, in seconds from the kill. Negative when there is none.
 var _stow_time := -1.0
+## Whether the second hand is still on the animal.
+##
+## It is not `_grip` because the two part company at the bottom of the stow: the
+## rat leaves the fist at the belt, and from there the arm is coming back up
+## empty while `_grip` is still winding down out of the holding pose. The left
+## hand goes with the body, so this is what says it does — without it the pair
+## rises together and the player is shown two empty gloves.
+var _left_carried := false
 ## Where the swing is, in seconds from the click: through the wind-up, then the
 ## follow-through, then the settle back. Negative when the arm is not swinging.
 var _swing_time := -1.0
@@ -843,6 +851,11 @@ func sway(delta: float, look: Vector2) -> void:
 ## knows two poses and a fraction between them, and nothing about why.
 func set_gripping(gripping: bool) -> void:
 	var wanted := 1.0 if gripping else 0.0
+	if gripping:
+		# Set before the early return: a grab that arrives with the target
+		# already at one is a grab on top of a stow, and the second hand has to
+		# come back with the new animal either way.
+		_left_carried = true
 	if is_equal_approx(_grip_target, wanted):
 		return
 	_grip_target = wanted
@@ -1010,6 +1023,10 @@ func advance(delta: float) -> void:
 		_stow_time += delta
 		_stow = _stow_fraction()
 		moved = true
+		if _stow_time >= _stow_wait + _stow_fall:
+			# Bottom of the fall: the body is at the belt and out of the hands.
+			# Only the right one comes back up.
+			_left_carried = false
 		if _stow_time >= _stow_wait + _stow_fall + _stow_rise:
 			# Back up and empty. The hand only lets go here, at the top of the
 			# rise, and not at the kill: everything between the two was the arm
@@ -1278,10 +1295,13 @@ func _apply() -> void:
 	# into place on the next step.
 	_place(_left, far, angles, -1.0)
 	# The second hand belongs to the one gesture that wants two. It comes up with
-	# the grip and goes down with it, so a man walking about is drawn with the one
-	# hand the game is built around and a man strangling something is drawn with
-	# both — see `show_left` for the knob that keeps it out at rest as well.
-	_left.visible = show_left or not is_zero_approx(_grip)
+	# the grip and leaves with the animal, so a man walking about is drawn with
+	# the one hand the game is built around and a man strangling something is
+	# drawn with both. `_left_carried` is what says the animal is still there: a
+	# rat stowed leaves the fist at the belt, and the hand that came with it does
+	# not ride back up empty — see `show_left` for the knob that keeps the second
+	# hand out at rest as well.
+	_left.visible = show_left or (_left_carried and not is_zero_approx(_grip))
 
 
 ## One arm, put down at `offset` turned to `angles`, mirrored when `side` is -1.

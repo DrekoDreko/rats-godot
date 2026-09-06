@@ -1,6 +1,7 @@
 [gd_scene load_steps=46 format=3]
 
 [ext_resource type="PackedScene" uid="uid://cnc3cxoy5gjim" path="res://models/box_van.glb" id="1_van"]
+[ext_resource type="PackedScene" uid="uid://dmio8uviym8en" path="res://models/totem.glb" id="18_totem"]
 [ext_resource type="PackedScene" uid="uid://bgordf5uoxh7c" path="res://scenes/ps1.tscn" id="2_ps1"]
 [ext_resource type="PackedScene" uid="uid://dq3n7vk8rj5wc" path="res://scenes/ps1_postprocess.tscn" id="16_ps1post"]
 [ext_resource type="PackedScene" uid="uid://bvvcrva6c1ve" path="res://scenes/player.tscn" id="3_player"]
@@ -11,6 +12,7 @@
 [ext_resource type="Script" uid="uid://bv088710brpjr" path="res://scripts/steam/player_avatars.gd" id="8_avatars"]
 [ext_resource type="Script" uid="uid://bgxxpnjqmrumj" path="res://scripts/hud_prompt.gd" id="9_prompt"]
 [ext_resource type="Script" uid="uid://c5txs44n7kkuu" path="res://scripts/session/pending_station.gd" id="10_pending"]
+[ext_resource type="Script" path="res://scripts/session/store_terminal.gd" id="19_terminal"]
 [ext_resource type="Script" path="res://scripts/travel/van_travel.gd" id="11_travel"]
 [ext_resource type="Script" path="res://scripts/travel/road_scroll.gd" id="12_road"]
 [ext_resource type="Script" path="res://scripts/travel/cabin_shake.gd" id="13_shake"]
@@ -87,18 +89,14 @@ size = Vector3(2.3, 2.1, 0.08)
 albedo_color = Color(0.26, 0.25, 0.23, 1)
 roughness = 0.8
 
-[sub_resource type="BoxShape3D" id="Shape_reach_table"]
-size = Vector3(1.3, 0.7, 1.0)
+[sub_resource type="QuadMesh" id="Mesh_totem_screen"]
+size = Vector2(0.4293, 0.3398)
 
-[sub_resource type="BoxShape3D" id="Shape_table_body"]
-size = Vector3(1.2, 0.86, 0.8)
+[sub_resource type="BoxShape3D" id="Shape_reach_terminal"]
+size = Vector3(0.7, 1.2, 0.9)
 
-[sub_resource type="BoxMesh" id="Mesh_table_top"]
-size = Vector3(1.2, 0.07, 0.8)
-
-[sub_resource type="StandardMaterial3D" id="Mat_table"]
-albedo_color = Color(0.31, 0.27, 0.22, 1)
-roughness = 0.9
+[sub_resource type="BoxShape3D" id="Shape_totem_body"]
+size = Vector3(0.56, 1.5, 0.68)
 
 [sub_resource type="StandardMaterial3D" id="Mat_table_sheet"]
 resource_local_to_scene = true
@@ -267,6 +265,17 @@ surface_material_override/0 = SubResource("Mat_shutter")
 
 [node name="Lamps" type="Node3D" parent="Van"]
 
+[node name="Totem" parent="Van" instance=ExtResource("18_totem")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.622, -3.05)
+
+[node name="Body" type="StaticBody3D" parent="Van/Totem" groups=["scenery"]]
+collision_layer = 1
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="Van/Totem/Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0.07)
+shape = SubResource("Shape_totem_body")
+
 [node name="CabinShake" type="Node" parent="."]
 script = ExtResource("13_shake")
 
@@ -281,7 +290,7 @@ volume_db = -18.0
 [node name="Stations" type="Node3D" parent="."]
 
 [node name="MapTable" type="Area3D" parent="Stations" groups=["map_station"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, -2.75)
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -1.55, 1.55, 0.6)
 collision_layer = 8
 collision_mask = 0
 monitoring = false
@@ -289,14 +298,10 @@ script = ExtResource("15_table")
 prompt = "study the plan"
 
 [node name="Reach" type="CollisionShape3D" parent="Stations/MapTable"]
-shape = SubResource("Shape_reach_table")
-
-[node name="Top" type="MeshInstance3D" parent="Stations/MapTable"]
-mesh = SubResource("Mesh_table_top")
-surface_material_override/0 = SubResource("Mat_table")
+shape = SubResource("Shape_reach_contract")
 
 [node name="PlanSurface" type="MeshInstance3D" parent="Stations/MapTable"]
-transform = Transform3D(1, 0, 0, 0, -4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0.04, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.03)
 mesh = SubResource("Mesh_table_sheet")
 
 [node name="Open" type="AudioStreamPlayer3D" parent="Stations/MapTable"]
@@ -307,13 +312,31 @@ max_distance = 12.0
 unit_size = 3.0
 max_distance = 12.0
 
-[node name="Body" type="StaticBody3D" parent="Stations/MapTable" groups=["scenery"]]
-collision_layer = 1
+[node name="StoreTerminal" type="Area3D" parent="Stations" groups=["store_station"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, -2.75)
+collision_layer = 8
 collision_mask = 0
+monitoring = false
+script = ExtResource("19_terminal")
+prompt = "use the terminal"
 
-[node name="Collision" type="CollisionShape3D" parent="Stations/MapTable/Body"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.4, 0)
-shape = SubResource("Shape_table_body")
+[node name="Reach" type="CollisionShape3D" parent="Stations/StoreTerminal"]
+shape = SubResource("Shape_reach_terminal")
+
+[node name="Refused" type="AudioStreamPlayer3D" parent="Stations/StoreTerminal"]
+unit_size = 3.0
+max_distance = 12.0
+
+[node name="Screen" type="MeshInstance3D" parent="Stations/StoreTerminal"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00175, 0.4501, -0.0745)
+mesh = SubResource("Mesh_totem_screen")
+
+[node name="Viewport" type="SubViewport" parent="Stations/StoreTerminal/Screen"]
+handle_input_locally = true
+size = Vector2i(640, 507)
+render_target_update_mode = 4
+
+[node name="StoreScreen" parent="Stations/StoreTerminal/Screen/Viewport" instance=ExtResource("17_store")]
 
 [node name="ReadyStation" parent="Stations" instance=ExtResource("4_ready")]
 transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -1.55, 1.62, 2.35)
@@ -438,4 +461,3 @@ horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="PauseMenu" parent="." instance=ExtResource("99_pause")]
-[node name="StoreScreen" parent="." instance=ExtResource("17_store")]
