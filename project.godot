@@ -37,8 +37,8 @@ Bank="*res://scripts/economy/bank.gd"
 
 [display]
 
-window/size/viewport_width=640
-window/size/viewport_height=360
+window/size/viewport_width=854
+window/size/viewport_height=480
 window/size/window_width_override=1280
 window/size/window_height_override=720
 window/stretch/mode="viewport"

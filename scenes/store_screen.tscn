@@ -1,6 +1,16 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/store_screen.gd" id="1_store"]
+[ext_resource type="FontFile" uid="uid://b3vvnk0rcn80q" path="res://assets/fonts/matchup.ttf" id="2_font"]
+
+[sub_resource type="FontVariation" id="Font_store"]
+base_font = ExtResource("2_font")
+spacing_top = -4
+spacing_bottom = -1
+
+[sub_resource type="Theme" id="Theme_store"]
+default_font = SubResource("Font_store")
+default_font_size = 16
 
 [sub_resource type="Environment" id="Env_store"]
 background_mode = 1
@@ -19,6 +29,7 @@ border_color = Color(0.45, 0.72, 0.9, 0.45)
 
 [node name="StoreScreen" type="Control"]
 anchors_preset = 15
+theme = SubResource("Theme_store")
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
@@ -48,9 +59,9 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 22
+theme_override_constants/margin_left = 14
 theme_override_constants/margin_top = 16
-theme_override_constants/margin_right = 22
+theme_override_constants/margin_right = 14
 theme_override_constants/margin_bottom = 16
 
 [node name="Rows" type="VBoxContainer" parent="Root/Margin"]
@@ -65,7 +76,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.45, 0.72, 0.9, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 24
 text = "STORE"
 
 [node name="Money" type="Label" parent="Root/Margin/Rows/Header"]
@@ -74,7 +85,7 @@ size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.55, 0.85, 0.45, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 24
 text = "$ 0"
 horizontal_alignment = 2
 
@@ -87,12 +98,12 @@ size_flags_vertical = 3
 theme_override_constants/separation = 8
 
 [node name="Left" type="VBoxContainer" parent="Root/Margin/Rows/Body"]
-custom_minimum_size = Vector2(150, 0)
+custom_minimum_size = Vector2(118, 0)
 layout_mode = 2
 theme_override_constants/separation = 4
 
 [node name="Preview" type="SubViewportContainer" parent="Root/Margin/Rows/Body/Left"]
-custom_minimum_size = Vector2(150, 190)
+custom_minimum_size = Vector2(118, 190)
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
@@ -102,7 +113,7 @@ stretch = true
 [node name="View" type="SubViewport" parent="Root/Margin/Rows/Body/Left/Preview"]
 own_world_3d = true
 handle_input_locally = false
-size = Vector2i(150, 190)
+size = Vector2i(118, 190)
 render_target_update_mode = 2
 
 [node name="Environment" type="WorldEnvironment" parent="Root/Margin/Rows/Body/Left/Preview/View"]
@@ -130,7 +141,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 24
 text = "PLAYER"
 horizontal_alignment = 1
 text_overrun_behavior = 3
@@ -142,6 +153,7 @@ theme_override_constants/separation = 6
 
 [node name="Footer" type="HBoxContainer" parent="Root/Margin/Rows"]
 layout_mode = 2
+theme_override_constants/separation = 10
 
 [node name="Notice" type="Label" parent="Root/Margin/Rows/Footer"]
 layout_mode = 2
@@ -149,13 +161,13 @@ size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.95, 0.32, 0.28, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 24
 
 [node name="Close" type="Label" parent="Root/Margin/Rows/Footer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 0.7)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 24
 text = "E — CLOSE"
 horizontal_alignment = 2

@@ -51,13 +51,25 @@ extends Control
 ## the man and hands him his legs again.
 signal closed
 
-## The monitor's viewport is 640x507, and 14 px is the smallest a letter reads
-## at once the glass is a metre away and the whole thing is run through the PS1
+## The monitor's viewport is 640x507, and this is the smallest a letter reads at
+## once the glass is a metre away and the whole thing is run through the PS1
 ## filter. It is not the 8 px the rest of the HUD uses: the HUD is drawn at the
 ## window's own scale, and this is drawn on a screen inside the room.
-const FONT_SIZE := 14
+##
+## It is bigger than it looks. The screen is set in `matchup`, whose capitals
+## fill about half of whatever size they are asked for — the rest of the box is
+## the room the font leaves for accents — so 24 here is the 12 px of ink that
+## the old default font drew at 14.
+const FONT_SIZE := 24
 ## The size the column headers and the store's own title are set in.
-const HEADING_SIZE := 14
+const HEADING_SIZE := 24
+## And the size an item's own name is set in, which is smaller than the price
+## under it. There are three columns across 500 px and the longest name in the
+## catalogue is "Queijo Explosivo": at the size the rest of the screen is set
+## in, that is trimmed to "Queijo Expl…" on every rack. A shop where the names
+## do not fit is a shop nobody can read, and the price is the line that has to
+## stay large — it is the one a man is actually comparing.
+const NAME_SIZE := 16
 
 ## Green while the money is there, red while it is not — the two colours the
 ## health bar and the old shelf already use.
@@ -86,10 +98,67 @@ const COLUMNS: Array[Dictionary] = [
 ## fill is drawn empty and waiting — see the note at the top.
 const SLOTS_PER_COLUMN := 5
 
-## How tall one frame on the rack is, and how far the writing on it stands off
-## the frame's own edge.
+## The least a frame on the rack can be, and how far the writing on it stands
+## off the frame's own edge.
+##
+## It is a floor and not the height: what a tile actually comes out at is the
+## name, the picture and the price added up (`_tile_min_height`), and five of
+## those stacked is already more than this. It is left here for the empty frames
+## at the bottom of a rack, which have none of the three.
 const TILE_HEIGHT := 44
-const TILE_INSET := Vector2(6, 3)
+const TILE_INSET := Vector2(6, 2)
+
+## The window the item's own model is drawn in, in the middle of its tile: the
+## name over it, the price under it, and the thing itself between them, which is
+## the shape every shop screen in a shooter has taught a player to read.
+##
+## Its width is whatever the rack gives it — a column is not a fixed number of
+## pixels on a screen that is stretched to the glass — so only the height is
+## written here, and the framing below reads the width back off the container
+## once the rack has been laid out.
+const ICON_HEIGHT := 44
+
+## Where the icon camera stands, looking at the origin. Slightly above and to
+## one side, orthogonal, so that the thing in the window reads as a *silhouette
+## on a shelf* rather than as a thing in perspective.
+const ICON_CAMERA_POSITION := Vector3(0.4, 0.32, 0.86)
+
+## How much air is left around the item inside its window. Barely above 1: the
+## strip is 44 px tall and every pixel spent on a margin is one the object is
+## not drawn in.
+const ICON_FRAMING := 1.06
+
+## How far the items are laid over from the horizontal once they are lying on
+## it, in degrees.
+##
+## The lay-over itself is the whole reason the icons read at all. The window is
+## three times as wide as it is tall and the long things in the catalogue are
+## modelled standing on whichever axis their exporter felt like — a bat is
+## 0.8 m along `Y` in 0.07 m of width, a broom 15 m along `Z` — so an item shown
+## as modelled is either a scratch down the middle of an empty strip or a shape
+## running off both ends of it. Every item is laid on its longest axis first
+## (`_lay_flat`) and then tipped back by this much, which is the diagonal a shop
+## screen in a shooter shows a rifle at, and for the same reason: it fills a
+## wide frame and still reads as an object rather than as a rule.
+##
+## It is a steep diagonal rather than a shallow one because of the broom, which
+## is fifty times as long as it is thick. Laid nearly flat its length sets the
+## zoom and its handle comes out a pixel wide; carried up the diagonal, its
+## length is spread over the frame's height as well as its width, the zoom comes
+## in, and there is a broom on the tile instead of a scratch.
+const ICON_TILT := 34.0
+
+## How big an item is built at in its own window, in metres along its longest
+## side. It is the same for every item — the camera is then framed off what that
+## actually covers on screen — so a bat and a mousetrap fill their tiles equally
+## rather than the bat being drawn the size of the rack and the trap the size of
+## a full stop.
+const ICON_MODEL_SIZE := 0.5
+
+## How fast the thing in the tile turns, in degrees a second. Slow: it is there
+## to show the shape from more than one side over a few seconds of reading, not
+## to spin.
+const ICON_SPIN_SPEED := 24.0
 
 ## How long a refused tile flashes for, and how many times. A blink and not a
 ## colour change, so that a man who pressed twice sees the second refusal as
@@ -131,6 +200,22 @@ const BOUGHT_FLASH_TIME := 0.35
 const MODEL_SCENE := preload("res://scenes/player_model.tscn")
 const PS1_SCENE := preload("res://scenes/ps1.tscn")
 
+## The snapping grid the previews are pinned to, and the whole reason they need
+## pinning at all.
+##
+## The PS1 shader reads its grid off the viewport it is drawn in — the game's
+## own 854x480 lands on 156 — which is the right rule everywhere except a panel.
+## These previews are `SubViewport`s the size of the strip they sit in: 118x190
+## for the body, 44 tall for an icon. Left alone they snap onto grids of 38 and
+## 14, four and eleven times coarser than the world outside the windscreen, and
+## at fourteen a broom is not a low-poly broom, it is three vertices in a heap.
+## The hand was the giveaway — the fingers collapsed into one square.
+##
+## Pinning them to the game's own number is what makes a preview show the model
+## the player will be holding, snapped exactly as hard as everything else he can
+## see, instead of a ruin of it.
+const PREVIEW_JITTER_GRID := 156.0
+
 @onready var _root: Control = $Root
 @onready var _money: Label = $Root/Margin/Rows/Header/Money
 @onready var _player_name: Label = $Root/Margin/Rows/Body/Left/PlayerName
@@ -159,6 +244,12 @@ var _preview_item: Node3D
 ## One entry per frame on the racks that has something in it: the item it sells,
 ## the button that selects it and the two labels on it.
 var _tiles: Array[Dictionary] = []
+## One entry per picture on the rack: the node its model hangs from, the camera
+## looking at it, the window that camera draws into and how big the model came
+## out once it had been scaled. Kept flat rather than looked up off the tiles,
+## because the two things ever done with them — turning them and reframing them
+## — are done to all of them at once.
+var _icons: Array[Dictionary] = []
 ## The item under the man's arm, or null with nothing chosen. It is what `BUY`
 ## spends on, and it is the one piece of state this screen keeps of its own —
 ## everything else is redrawn off the purse and the catalogue.
@@ -211,8 +302,21 @@ func _ready() -> void:
 ##
 ## Only while the store is up and only with something chosen: the rest of the
 ## time there is nothing to carry and the body is not being drawn.
-func _process(_delta: float) -> void:
-	if not _open or _preview_hand == null or _upright_hand == null:
+func _process(delta: float) -> void:
+	if not _open:
+		return
+	# Reframed before it is turned, because a picture whose window has only just
+	# reached its final size would otherwise spend that frame drawn at the wrong
+	# zoom. It costs a compare per icon on every frame but the handful where the
+	# rack actually changes shape — see `_frame_icons`.
+	_frame_icons()
+	# Everything on the rack turns, whether or not anything is chosen: the spin
+	# is what shows the shape of a thing from more than the one side an icon
+	# would otherwise be stuck on.
+	var step := deg_to_rad(ICON_SPIN_SPEED) * delta
+	for icon in _icons:
+		(icon["spin"] as Node3D).rotate_y(step)
+	if _preview_hand == null or _upright_hand == null:
 		return
 	_preview_hand.global_position = _upright_hand.global_position
 
@@ -329,6 +433,7 @@ func _build_column(title: String, items: Array[StoreItem]) -> VBoxContainer:
 ## footer. See the note at the top for why the rack is two clicks deep.
 func _build_tile(item: StoreItem) -> Button:
 	var button := _frame()
+	button.custom_minimum_size.y = _tile_min_height()
 	button.tooltip_text = item.description
 	button.pressed.connect(_select.bind(item))
 
@@ -341,16 +446,238 @@ func _build_tile(item: StoreItem) -> Button:
 	rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	rows.add_theme_constant_override("separation", 0)
 
-	var name_label := _label(item.display_name, FONT_SIZE)
+	var name_label := _label(item.display_name, NAME_SIZE)
+	# Thicker outline than the rest of the screen. The name is the smallest
+	# writing on the rack and it sits over a picture rather than over a flat
+	# panel, so at a metre and through the filter it is the one line that goes
+	# grey — the price beside it is twice the size and green.
+	name_label.add_theme_constant_override("outline_size", 4)
 	name_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	var price_label := _label("", FONT_SIZE)
+	price_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	# The price keeps a line of its own that the picture cannot grow into. The
+	# icon is the only thing on the tile that expands, and without a floor under
+	# the price it is the picture that takes the last few pixels and the digits
+	# that end up drawn across a broom.
+	price_label.custom_minimum_size.y = get_theme_font(&"font").get_height(FONT_SIZE)
+	price_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	rows.add_child(name_label)
+	# The model between the two lines, which is what makes the rack scan as a
+	# shop rather than as a price list. It takes whatever height is left over
+	# after the name and the price, so a taller rack shows a bigger thing rather
+	# than the same thing with more air under it.
+	rows.add_child(_build_icon(item))
 	rows.add_child(price_label)
 	button.add_child(rows)
 
 	_tiles.append({"item": item, "button": button, "price": price_label})
 	return button
+
+
+## The item's own model, standing in the middle of its tile.
+##
+## **A viewport each, and not a rendered picture.** An icon baked to a texture
+## would be one draw instead of fifteen, and it is not what is wanted here: the
+## models are the ones the man will actually hold, they are dressed by the PS1
+## shader at runtime like everything else, and a new `.tres` dropped in the
+## folder has to appear on the rack without anybody rendering art for it first.
+## Fifteen 64x34 viewports is the price of a shop that stays as easy to add to as
+## the folder scan promises.
+##
+## **Its own world, and its own lamps.** The same reason the man on the left
+## carries his: the van's applier cannot see into a `SubViewport`, and a world
+## shared with the body would light the icons off the lamps framing a man.
+##
+## An item with no `preview_model` gets an empty strip of the right height
+## rather than no strip at all, so a rack of modelled and unmodelled things
+## keeps one shape — the same bargain the empty frames at the bottom strike.
+func _build_icon(item: StoreItem) -> Control:
+	var frame := SubViewportContainer.new()
+	frame.custom_minimum_size = Vector2(0, ICON_HEIGHT)
+	frame.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	frame.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.stretch = true
+	# Kept inside its own strip. The framing below fits the box the model
+	# reports, and a model whose box is larger than the shape anybody can see —
+	# the broom's is six metres of nothing around a metre of broom — draws over
+	# the price under it without this.
+	frame.clip_contents = true
+	if item.preview_model == null:
+		return frame
+
+	var view := SubViewport.new()
+	view.own_world_3d = true
+	view.transparent_bg = true
+	view.handle_input_locally = false
+	view.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	frame.add_child(view)
+
+	var model := item.preview_model.instantiate() as Node3D
+	if model == null:
+		return frame
+
+	# Three nodes and not one, because three different things are being done to
+	# the model and each of them would undo the next if they shared a transform:
+	# `spin` is turned every frame, `lie` is the fixed lay-over onto the
+	# diagonal, and the model's own transform carries the recentring and the
+	# scale. The item's `preview_rotation` is deliberately *not* read here — it
+	# is written to stand a thing correctly in a fist, and the rack is not a
+	# fist.
+	var spin := Node3D.new()
+	view.add_child(spin)
+	var lie := Node3D.new()
+	spin.add_child(lie)
+	lie.add_child(model)
+
+	# Sized to one length for every item and recentred on its own bounds, for
+	# the same two reasons `_show_held_item` does it: the five models in the
+	# folder disagree about both their scale and where their origin sits, and a
+	# rack has to frame them identically anyway.
+	var bounds := _bounds_of(model)
+	var extent := maxf(bounds.size.x, maxf(bounds.size.y, bounds.size.z))
+	if extent <= 0.0:
+		return frame
+	model.scale = Vector3.ONE * (ICON_MODEL_SIZE / extent)
+	model.position = -bounds.get_center() * model.scale
+	model.add_child(_ps1_applier())
+	lie.rotation_degrees = _lay_flat(bounds.size)
+
+	var camera := _build_icon_camera(view)
+	_build_icon_lights(view)
+	# The frame it has to fit is not known yet: the rack has not been laid out,
+	# so the container is still zero-sized and the viewport with it. The size
+	# the model sweeps out is what *is* known now, and it is kept beside the
+	# camera so the framing can be worked out — and reworked whenever the glass
+	# changes shape — in `_frame_icons`.
+	# Measured off `lie` and not off the model, so the box is the one the spin
+	# actually turns: the lay-over has already tipped a bat's length out of `Y`
+	# and into `X` by here, and framing on the upright box would leave the
+	# picture a fraction of the width it could be.
+	_icons.append({
+		"spin": spin,
+		"camera": camera,
+		"view": view,
+		"bounds": _bounds_of(lie, lie.transform),
+		# The size the camera was last framed against, so that the check above
+		# has something to compare with. Zero because it has not been framed.
+		"framed": Vector2i.ZERO,
+	})
+	return frame
+
+
+## The camera every icon is framed by: orthogonal, looking down at the origin
+## from one corner.
+##
+## Orthogonal and not perspective because these are shelf pictures. A
+## perspective lens at this size throws the near end of a bat twice the width of
+## its far end, and a rack of things each distorted differently is a rack where
+## the shapes stop being comparable — which is the one job the picture has.
+##
+## **It is framed off the model and not off a number**, because the model turns.
+## `size` on an orthogonal camera is its *height* in metres and the window is
+## twice as wide as it is tall, so a size that fits the bat lying flat cuts its
+## ends off a second later when the spin has stood it up again. What is fitted
+## instead is the sphere the model sweeps out as it turns — the half-diagonal of
+## its own box — against whichever of the two edges is tighter, so that nothing
+## leaves the frame at any angle of the spin.
+func _build_icon_camera(view: SubViewport) -> Camera3D:
+	var camera := Camera3D.new()
+	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+	# Near and far are pulled in around the item: the default near plane of
+	# 0.05 m is further out than some of these models are big, which would clip
+	# the front off a mousetrap.
+	camera.near = 0.01
+	camera.far = ICON_MODEL_SIZE * 8.0
+	camera.position = ICON_CAMERA_POSITION.normalized() * (ICON_MODEL_SIZE * 3.0)
+	camera.look_at_from_position(camera.position, Vector3.ZERO, Vector3.UP)
+	view.add_child(camera)
+	return camera
+
+
+## Sets every icon camera to what its own window turned out to be.
+##
+## It is done after the rack has been laid out and again whenever the rack
+## changes size, because the width of a column is not a number anybody wrote: it
+## is what the glass divided by three came to, and a camera framed off a guess
+## at that either clips the ends off a bat or draws it in the middle of an empty
+## strip.
+##
+## **What is fitted is the sweep and not the shape**, and it is measured after
+## the lay-over rather than before it. `size` on an orthogonal camera is its
+## *height* in metres. The model turns about the spin's `Y`, so what is fixed
+## through the turn is its extent along that axis and what comes and goes is its
+## reach out from it — a camera framed on the shape as it stands right now cuts
+## the ends off a bat a second later. So the box is taken in the spin's own
+## space, its height fitted against the frame's height and its whole turning
+## circle against the frame's width, and the larger of the two demands wins.
+func _frame_icons() -> void:
+	for icon in _icons:
+		var view: SubViewport = icon["view"]
+		var camera: Camera3D = icon["camera"]
+		var bounds: AABB = icon["bounds"]
+		# Nothing to do until the window has actually changed shape, which for
+		# most of the life of the screen is never. It is checked here rather
+		# than hung off `resized` because a rack settles its own width a frame
+		# before the windows inside it take theirs — a signal on the parent
+		# fires while every viewport under it is still zero, and one on each
+		# container can fire before this screen is listening at all. A compare
+		# against five remembered sizes costs nothing and cannot be missed.
+		if view.size == icon["framed"]:
+			continue
+		icon["framed"] = view.size
+		var aspect := maxf(Vector2(view.size).aspect(), 0.01)
+		# The turning circle is measured from the axis and not from the origin:
+		# a model recentred on its own box still swings about the spin's `Y`,
+		# and it is how far the *far corner* gets from that axis that says how
+		# wide the picture has to be.
+		var reach := 0.0
+		for corner in 8:
+			var point := bounds.get_endpoint(corner)
+			reach = maxf(reach, Vector2(point.x, point.z).length())
+		camera.size = maxf(bounds.size.y, (reach * 2.0) / aspect) * ICON_FRAMING
+
+
+## How to lay an item down so that it runs across its window rather than up or
+## through it, from the box it fills.
+##
+## The five models in the folder each stand on a different axis — the bat on
+## `Y`, the broom on `Z`, the mousetrap flat on `X` — and none of them says so
+## anywhere. It is read off the box instead of written in the `.tres` for the
+## same reason the sizing is: what somebody dropping a sixth model in the folder
+## knows is how big the thing should look, not which way its exporter called up,
+## and a rack that works that out itself is a rack that never needs the file
+## touched.
+##
+## The turn puts the longest axis along `X` — the wide way of the window — and
+## then tips the result back by `ICON_TILT` so that it sits on a diagonal rather
+## than dead flat. An item that is already widest along `X` needs only the tip.
+func _lay_flat(size: Vector3) -> Vector3:
+	var tilt := Vector3(0, 0, ICON_TILT)
+	if size.y >= size.x and size.y >= size.z:
+		# Standing up: tipped over onto its side.
+		return tilt + Vector3(0, 0, -90)
+	if size.z >= size.x and size.z >= size.y:
+		# Running away from the camera: swung round to run across it.
+		return tilt + Vector3(0, 90, 0)
+	return tilt
+
+
+## Two lamps per icon, from the same two sides as the ones over the man on the
+## left, so that a thing in his hand and the same thing on the rack are not lit
+## as though they were in two different rooms.
+func _build_icon_lights(view: SubViewport) -> void:
+	var key := DirectionalLight3D.new()
+	key.rotation_degrees = Vector3(-40, -35, 0)
+	key.light_energy = 2.2
+	view.add_child(key)
+
+	var fill := DirectionalLight3D.new()
+	fill.rotation_degrees = Vector3(-15, 130, 0)
+	fill.light_color = Color(0.63, 0.78, 1.0)
+	fill.light_energy = 0.9
+	view.add_child(fill)
 
 
 ## A frame with nothing in it yet. It is a dead button and not a panel, so that
@@ -362,7 +689,19 @@ func _build_empty_tile() -> Button:
 	button.text = EMPTY_TEXT
 	button.add_theme_font_size_override("font_size", FONT_SIZE)
 	button.add_theme_color_override("font_disabled_color", EMPTY_COLOR)
+	# Tall enough to hold a name, a picture and a price, so that the empty end
+	# of a rack is the same shape as the full end of it and the frames line up
+	# across all three columns.
+	button.custom_minimum_size.y = _tile_min_height()
 	return button
+
+
+## How tall a frame with something in it comes out: two lines of writing and the
+## picture between them. It is worked out rather than written down, because the
+## font is set by the scene's theme and a size named twice is a size that drifts.
+func _tile_min_height() -> int:
+	var line := get_theme_font(&"font").get_height(FONT_SIZE)
+	return int(ceil(line * 2.0 + ICON_HEIGHT + TILE_INSET.y * 2.0))
 
 
 ## The frame a slot is drawn in, whether or not there is anything in it: a dark
@@ -372,6 +711,7 @@ func _build_empty_tile() -> Button:
 func _frame() -> Button:
 	var button := Button.new()
 	button.custom_minimum_size = Vector2(0, TILE_HEIGHT)
+	button.clip_contents = true
 	button.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	button.add_theme_stylebox_override("normal", _frame_style(0.06, 0.4))
 	button.add_theme_stylebox_override("hover", _frame_style(0.16, 0.9))
@@ -457,7 +797,7 @@ func _build_preview() -> void:
 	_preview_seat.add_child(_model)
 	# The van dresses its models from an applier at the root of the scene, and
 	# that applier cannot see into another world. This one carries its own.
-	_model.add_child(PS1_SCENE.instantiate())
+	_model.add_child(_ps1_applier())
 	# The pose is set after the model is in the tree: `set_state` reaches for the
 	# `AnimationPlayer` through an `@onready`, which is not resolved before then.
 	_model.set_state(PREVIEW_STATE)
@@ -545,7 +885,15 @@ func _show_held_item(item: StoreItem) -> void:
 	# Same reason the body carries its own: the van's applier cannot reach into
 	# this world, so the thing in his hand would be the one unshaded object on
 	# the screen without one of these.
-	model.add_child(PS1_SCENE.instantiate())
+	model.add_child(_ps1_applier())
+
+
+## A PS1 applier for a model standing in one of this screen's `SubViewport`s,
+## with its snapping grid pinned to the game's own. See `PREVIEW_JITTER_GRID`.
+func _ps1_applier() -> Node:
+	var applier := PS1_SCENE.instantiate()
+	applier.jitter_grid = PREVIEW_JITTER_GRID
+	return applier
 
 
 ## The box a model fills, in the coordinates of the node it is rooted at, merged

@@ -41,6 +41,23 @@ uniform vec4 albedo_color: source_color = vec4(1.0);
 uniform vec2 uv_scale = vec2(1.0);
 
 uniform float jitter: hint_range(0.0, 1.0) = 0.5;
+
+// The snapping grid, when it must not be read off the viewport.
+//
+// `jitter` alone asks for a grid *relative to the viewport it is drawn in* —
+// `(1.0 - jitter) * min(VIEWPORT_SIZE) / 2.0` — which is right for the game and
+// wrong for anything rendered in a `SubViewport` small enough to be a panel. A
+// 44-pixel icon strip lands on a grid of 14, against the game's 156: eleven
+// times coarser, and at that pitch a broom's every vertex collapses onto the
+// same point and the model comes out a smear. The store's hand was the tell —
+// four fingers snapped into one square.
+//
+// So a positive value here *is* the grid, whatever size the viewport happens to
+// be, and the caller works it out from the resolution the look was tuned at.
+// Zero, the default, leaves the viewport-relative rule alone, so every surface
+// in the game is untouched by this and only the panels opt in.
+uniform float jitter_grid = 0.0;
+
 uniform bool jitter_z_coordinate = true;
 uniform bool jitter_depth_independent = true;
 uniform bool affine_texture_mapping = true;
@@ -130,7 +147,10 @@ void vertex() {
 	VERTEX = (MODELVIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	
 	float z_orig = VERTEX.z;
-	float i = (1.0 - jitter) * min(VIEWPORT_SIZE.x, VIEWPORT_SIZE.y) / 2.0;
+	// An explicit grid wins over the viewport-relative one. See `jitter_grid`.
+	float i = jitter_grid > 0.0
+		? jitter_grid
+		: (1.0 - jitter) * min(VIEWPORT_SIZE.x, VIEWPORT_SIZE.y) / 2.0;
 	
 	if (jitter_depth_independent) {
 		float w = (PROJECTION_MATRIX * vec4(VERTEX, 1.0)).w;

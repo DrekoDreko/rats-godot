@@ -9,20 +9,27 @@
 [ext_resource type="Script" uid="uid://c0najh3gpg2du" path="res://scripts/ui/contract_panel.gd" id="4_contract"]
 [ext_resource type="PackedScene" path="res://scenes/lobby.tscn" id="5_modal"]
 [ext_resource type="PackedScene" uid="uid://r6380qbonva8" path="res://scenes/black_button.tscn" id="7_i6lef"]
-[ext_resource type="Texture2D" path="res://assets/textures/floor/concrete_floor_atlas.png" id="9_floor_tex"]
+[ext_resource type="Texture2D" uid="uid://d4n0gjqdch0t2" path="res://assets/textures/floor/concrete_floor_atlas.png" id="9_floor_tex"]
+[ext_resource type="PackedScene" uid="uid://dyb2bu6wxtp7m" path="res://models/van_exterior.glb" id="10_van"]
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_i6lef"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_70i5f"]
 render_priority = 0
 shader = ExtResource("4_70i5f")
 shader_parameter/albedo_color = Color(1, 1, 1, 1)
-shader_parameter/jitter = 0.450000021375
+shader_parameter/uv_scale = Vector2(1, 1)
+shader_parameter/jitter = 0.3499999940395
+shader_parameter/jitter_grid = 0.0
 shader_parameter/jitter_z_coordinate = false
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
+shader_parameter/recolor_target = Color(1, 1, 1, 1)
+shader_parameter/recolor_strength = 0.0
+shader_parameter/recolor_hue = 0.1406
+shader_parameter/recolor_hue_range = 0.09
+shader_parameter/recolor_min_saturation = 0.25
 
 [sub_resource type="StandardMaterial3D" id="Mat_floor"]
-albedo_color = Color(1, 1, 1, 1)
 albedo_texture = ExtResource("9_floor_tex")
 uv1_scale = Vector3(5, 10, 1)
 
@@ -32,35 +39,45 @@ size = Vector2(40, 40)
 subdivide_width = 39
 subdivide_depth = 39
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_70i5f"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_mj5lg"]
 render_priority = 0
 shader = ExtResource("4_70i5f")
 shader_parameter/albedo = ExtResource("9_floor_tex")
 shader_parameter/albedo_color = Color(1, 1, 1, 1)
 shader_parameter/uv_scale = Vector2(5, 10)
-shader_parameter/jitter = 0.450000021375
+shader_parameter/jitter = 0.3499999940395
+shader_parameter/jitter_grid = 0.0
 shader_parameter/jitter_z_coordinate = false
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
+shader_parameter/recolor_target = Color(1, 1, 1, 1)
+shader_parameter/recolor_strength = 0.0
+shader_parameter/recolor_hue = 0.1406
+shader_parameter/recolor_hue_range = 0.09
+shader_parameter/recolor_min_saturation = 0.25
 
 [node name="Menu" type="Node3D" unique_id=2125750364]
 script = ExtResource("1_menu")
 
 [node name="PS1" parent="." unique_id=1777166207 instance=ExtResource("2_13sgg")]
+jitter_grid = null
 
 [node name="PS1PostProcess" parent="." unique_id=667602802 instance=ExtResource("3_i6lef")]
 transform = Transform3D(0.99994415, 0, -0.0105678635, 0, 1, 0, 0.0105678635, 0, 0.99994415, 0, 0, 0)
-surface_material_override/0 = SubResource("ShaderMaterial_i6lef")
+surface_material_override/0 = SubResource("ShaderMaterial_70i5f")
 
 [node name="Floor" type="MeshInstance3D" parent="." unique_id=564645654]
 transform = Transform3D(0.99996746, 0, 0.00806902, 0, 1, 0, -0.00806902, 0, 0.99996746, -0.0012350082, -2.3841858e-07, 0.009379387)
 mesh = SubResource("Mesh_floor")
-surface_material_override/0 = SubResource("ShaderMaterial_70i5f")
+surface_material_override/0 = SubResource("ShaderMaterial_mj5lg")
 
 [node name="Camera" type="Camera3D" parent="." unique_id=1721597996]
 transform = Transform3D(0.9999905, 0.0005873988, -0.004317632, 0, 0.9908722, 0.13480473, 0.0043574055, -0.13480344, 0.9908628, -0.96524316, 1.6588356, 5.4678407)
 fov = 45.0
+
+[node name="Van" parent="." unique_id=1560646599 instance=ExtResource("10_van")]
+transform = Transform3D(0.9961947, 0, -0.087155744, 0, 1, 0, 0.087155744, 0, 0.9961947, -0.55, 0, -3.4)
 
 [node name="Crew" type="Node3D" parent="." unique_id=1560646598]
 script = ExtResource("2_crew")

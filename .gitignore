@@ -7,3 +7,8 @@
 
 # Editor/plugin temp files
 *.TMP
+
+# Blender working files: autosaves and the caches its scripts leave behind
+*.blend1
+*.blend.bak
+__pycache__/

@@ -6,8 +6,15 @@
 render_priority = 0
 shader = ExtResource("1_shader")
 shader_parameter/albedo_color = Color(1, 1, 1, 1)
-shader_parameter/jitter = 0.450000021375
+shader_parameter/uv_scale = Vector2(1, 1)
+shader_parameter/jitter = 0.3499999940395
+shader_parameter/jitter_grid = 0.0
 shader_parameter/jitter_z_coordinate = false
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_texture_mapping = true
 shader_parameter/alpha_scissor = 0.5
+shader_parameter/recolor_target = Color(1, 1, 1, 1)
+shader_parameter/recolor_strength = 0.0
+shader_parameter/recolor_hue = 0.1406
+shader_parameter/recolor_hue_range = 0.09
+shader_parameter/recolor_min_saturation = 0.25

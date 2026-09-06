@@ -26,6 +26,10 @@ const ALBEDO_COLOR_UNIFORM := "albedo_color"
 ## that difference belongs to the surface rather than to this node.
 const UV_SCALE_UNIFORM := "uv_scale"
 
+## Name of the shader uniform that pins the snapping grid to an absolute size
+## rather than reading it off the viewport. See `jitter_grid` below.
+const JITTER_GRID_UNIFORM := "jitter_grid"
+
 ## Shader material to apply. Shared by reference, so editing the .tres affects
 ## every object using it — unless `unique_material` is on.
 @export var material: ShaderMaterial:
@@ -38,6 +42,25 @@ const UV_SCALE_UNIFORM := "uv_scale"
 @export var unique_material := false:
 	set(value):
 		unique_material = value
+		_apply()
+
+## Pins the vertex snapping to an absolute grid, for a subtree drawn inside a
+## `SubViewport` that is not the size of the game.
+##
+## The shader works its grid out from the viewport it is drawn in, which is the
+## right rule for the world and the wrong one for a panel: an icon strip 44
+## pixels tall snaps onto a grid eleven times coarser than the game's, and a
+## model that coarse is not a low-poly model, it is a smear. Setting this to the
+## grid the game itself lands on gives a preview the same snapping the player
+## sees out of the windscreen, whatever size the panel is.
+##
+## Zero leaves the shader's own viewport-relative rule alone, which is what
+## every applier in the world wants. Setting it implies `unique_material`: the
+## grid belongs to this subtree and writing it on the shared resource would pin
+## the whole game to a panel's number.
+@export var jitter_grid := 0.0:
+	set(value):
+		jitter_grid = value
 		_apply()
 
 ## Turns the applier off without removing it from the scene, restoring whatever
@@ -194,6 +217,10 @@ func _apply_to(mesh_instance: MeshInstance3D) -> void:
 			surface_material.set_shader_parameter(ALBEDO_UNIFORM, texture)
 		surface_material.set_shader_parameter(ALBEDO_COLOR_UNIFORM, color)
 		surface_material.set_shader_parameter(UV_SCALE_UNIFORM, _uv_scale_of(mesh_instance, surface))
+		# Only written when asked for, so that a surface in the world keeps the
+		# shader's default of zero and goes on reading its grid off the viewport.
+		if jitter_grid > 0.0:
+			surface_material.set_shader_parameter(JITTER_GRID_UNIFORM, jitter_grid)
 
 		mesh_instance.set_surface_override_material(surface, surface_material)
 		# Held past this applier's own lifetime, so that a scene being torn down
