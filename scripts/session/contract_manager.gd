@@ -27,12 +27,6 @@ extends Node
 ## alone. Dropping a new `.tres` in that folder puts it on the board on every
 ## machine at once, which is only true because nothing anywhere holds a second
 ## list that would have to be kept in step.
-##
-## **An unsigned board holds the van.** `ReadyManager.blocked` is raised while
-## there is no contract, so the crew can go green but the van does not leave
-## with nobody knowing where it is going. It is put down again the moment the
-## host signs — and if the crew was already all ready, that is what takes them
-## down the road (`ReadyManager.blocked` runs the check on its way down).
 
 ## The host signed something. `contract_id` is empty when the board was cleared,
 ## which is what the start of a new shift looks like.
@@ -89,19 +83,6 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
 	contracts = _scan(FOLDER)
-
-	# The van does not leave until something is signed. Raised here rather than
-	# by the clipboard, because the rule belongs to the contract and not to the
-	# furniture: a van with no clipboard in it should still not leave for
-	# nowhere.
-	_update_block()
-
-	# And raised again whenever the signature changes under us. Signing goes
-	# through `_settle`, which does its own, but a shift coming home tears the
-	# contract up on `SessionManager` directly (`PhaseManager._clear_shift`) —
-	# and without this the next van would leave for nowhere on the strength of a
-	# block that was lowered for last night's job.
-	SessionManager.contract_changed.connect(_on_contract_changed)
 
 
 ## How many jobs are on the board.
@@ -452,7 +433,6 @@ func _settle(contract_id: String) -> void:
 		# the house is what turns the change between the two into a reload, and
 		# a reload is a minute of trap-placing in the bin.
 		PhaseManager.set_house(contract.house_scene)
-	_update_block()
 	contract_signed.emit(contract_id)
 
 
@@ -467,18 +447,6 @@ func _settle(contract_id: String) -> void:
 func _settle_hunt_time(value: HuntTime.Type) -> void:
 	SessionManager.set_hunt_time(value)
 	hunt_time_set.emit(value)
-
-
-## Holds the van shut while the board is blank, and lets it go when it is not.
-## The check that follows runs on `ReadyManager` rather than here — putting
-## `blocked` down with the crew already green is what takes them down the road,
-## and that is its own business.
-func _update_block() -> void:
-	ReadyManager.blocked = not is_signed()
-
-
-func _on_contract_changed(_contract_id: String) -> void:
-	_update_block()
 
 # --- Odds and ends ----------------------------------------------------------
 

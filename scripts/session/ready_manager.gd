@@ -54,10 +54,10 @@ signal hold_changed(held: bool)
 ## reason: Godot hands it to the host the moment the wire comes up.
 const HOST_PEER := 1
 
-## What the last man ready is told when the crew is all green and the shift still
-## does not move. There is only one thing that holds it — `blocked`, which
-## `ContractManager` raises while nothing is signed — so the sentence names it
-## rather than saying "something".
+## What the last man ready used to be told when the crew was all green and the
+## shift still did not move, back when `blocked` was raised by an unsigned
+## contract. Nothing sets `blocked` any more — the signing board is gone — so
+## this sits unused until whatever replaces it needs the same hold.
 const REASON_HELD := "No job is signed — the van has nowhere to go."
 
 ## The phases in which saying ready means anything. The hunt ends when the house
@@ -70,10 +70,11 @@ const PHASES: Array[Phase.Type] = [
 	Phase.Type.SURVEY,
 ]
 
-## Whether the shift is allowed to walk on when everybody says so. It is here
-## for the contract card, which has to hold the van until the host has signed
-## something: with this set, the boards still light and the crew still goes
-## green, but the last man ready does not take the van away.
+## Whether the shift is allowed to walk on when everybody says so. Nothing
+## currently sets this — it used to be raised while no contract was signed,
+## until that board was removed — but the mechanism stays: with it set, the
+## boards still light and the crew still goes green, while the last man ready
+## does not take the van away.
 var blocked := false:
 	set(value):
 		if blocked == value:

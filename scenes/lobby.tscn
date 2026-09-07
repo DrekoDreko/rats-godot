@@ -151,7 +151,7 @@ theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 6
 theme_override_font_sizes/font_size = 20
-text = "FIND LOBBY"
+text = "MENU_FIND_LOBBY"
 
 [node name="Close" type="Button" parent="Center/Panel/Margin/Rows/TitleRow"]
 custom_minimum_size = Vector2(30, 26)
@@ -173,7 +173,7 @@ size_flags_horizontal = 3
 theme_override_styles/normal = SubResource("Style_field")
 theme_override_styles/focus = SubResource("Style_field")
 theme_override_styles/read_only = SubResource("Style_field")
-placeholder_text = "LOBBY ID"
+placeholder_text = "LOBBY_CODE_PLACEHOLDER"
 
 [node name="Join" type="Button" parent="Center/Panel/Margin/Rows/JoinRow"]
 custom_minimum_size = Vector2(48, 0)
@@ -182,7 +182,7 @@ theme_override_styles/normal = SubResource("Style_button_normal")
 theme_override_styles/hover = SubResource("Style_button_hover")
 theme_override_styles/pressed = SubResource("Style_button_pressed")
 theme_override_styles/disabled = SubResource("Style_button_disabled")
-text = "JOIN"
+text = "LOBBY_JOIN"
 
 [node name="Refresh" type="Button" parent="Center/Panel/Margin/Rows"]
 layout_mode = 2
@@ -190,7 +190,7 @@ theme_override_styles/normal = SubResource("Style_button_normal")
 theme_override_styles/hover = SubResource("Style_button_hover")
 theme_override_styles/pressed = SubResource("Style_button_pressed")
 theme_override_styles/disabled = SubResource("Style_button_disabled")
-text = "REFRESH LIST"
+text = "LOBBY_REFRESH"
 
 [node name="Lobbies" type="ItemList" parent="Center/Panel/Margin/Rows"]
 custom_minimum_size = Vector2(0, 70)
@@ -205,7 +205,7 @@ theme_override_styles/normal = SubResource("Style_button_normal")
 theme_override_styles/hover = SubResource("Style_button_hover")
 theme_override_styles/pressed = SubResource("Style_button_pressed")
 theme_override_styles/disabled = SubResource("Style_button_disabled")
-text = "LEAVE LOBBY"
+text = "LOBBY_LEAVE"
 
 [node name="Status" type="Label" parent="Center/Panel/Margin/Rows"]
 custom_minimum_size = Vector2(0, 14)

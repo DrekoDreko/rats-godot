@@ -10,10 +10,10 @@ extends Node3D
 ##
 ## **It holds no state.** Every autoload it talks to already owns its own
 ## decision: `LobbyManager` owns the guest list, `ColorManager` the palette,
-## `ReadyManager` the flags, `ContractManager` the board, and `PhaseManager` the
-## move out of here. This file listens to all five and redraws. That is the same
-## split `lobby_screen.gd` was written to, and it is why none of the networking
-## had to change to put a menu in front of it.
+## `ReadyManager` the flags, and `PhaseManager` the move out of here. This file
+## listens to all four and redraws. That is the same split `lobby_screen.gd` was
+## written to, and it is why none of the networking had to change to put a menu
+## in front of it.
 ##
 ## **The lobby opens itself.** A crew that only appears after somebody presses
 ## "create" is a screen with nothing on it, so the menu asks for a lobby the
@@ -31,7 +31,7 @@ const IDLE_COLOR := Color(1, 1, 1, 0.6)
 ## What the host is told when he presses a button that is not his to press yet.
 ## The button is greyed out as well, so this is for the man who got a press in
 ## before the last of his crew went red again.
-const WAITING_ON_CREW := "The crew is not ready yet."
+const WAITING_ON_CREW := "MENU_WAITING_ON_CREW"
 
 ## How high above a man's feet his card floats, in metres. Just over head height
 ## on a crouched body, so the picture sits above him rather than on him.
@@ -51,8 +51,8 @@ const CARD_SCENE := preload("res://scenes/menu_player_card.tscn")
 @onready var _settings: Button = $UI/Center/Settings
 @onready var _status: Label = $UI/Status
 @onready var _color_popup: ColorPopup = $UI/ColorPopup
-@onready var _contracts: ContractPanel = $UI/ContractPanel
 @onready var _modal: Control = $UI/LobbyModal
+@onready var _settings_modal: Control = $UI/SettingsMenu
 
 ## The floating cards, by account, so that a crew that changed by one man does
 ## not rebuild all four.
@@ -65,11 +65,14 @@ func _ready() -> void:
 
 	_play.pressed.connect(_on_play_pressed)
 	_public.pressed.connect(_on_public_pressed)
-	_settings.disabled = true
+	_settings.pressed.connect(_settings_modal.show)
 
 	_modal.hide()
 	if _modal.has_signal("close_requested"):
 		_modal.close_requested.connect(_modal.hide)
+	_settings_modal.hide()
+
+	SettingsManager.streamer_mode_changed.connect(_on_streamer_mode_changed)
 
 	LobbyManager.lobby_entered.connect(_on_lobby_entered)
 	LobbyManager.lobby_left.connect(_on_lobby_left)
@@ -80,7 +83,6 @@ func _ready() -> void:
 
 	ColorManager.request_refused.connect(_on_refused)
 	ReadyManager.request_refused.connect(_on_refused)
-	ContractManager.request_refused.connect(_on_refused)
 	SessionManager.player_changed.connect(_on_player_changed)
 	SessionManager.player_joined.connect(_on_player_changed)
 	SessionManager.player_left.connect(_on_player_changed)
@@ -121,12 +123,12 @@ func _process(_delta: float) -> void:
 ## That is the ordinary state in development and is not worth an error line.
 func _open_a_lobby() -> void:
 	if not SteamManager.is_online:
-		_say("Steam is not running — solo only.", IDLE_COLOR)
+		_say(tr("MENU_STEAM_OFFLINE"), IDLE_COLOR)
 		return
 	if LobbyManager.lobby_id != 0:
 		return
 	if LobbyManager.create_lobby(LobbyManager.MAX_PLAYERS):
-		_say("Opening a lobby...", IDLE_COLOR)
+		_say(tr("MENU_OPENING_LOBBY"), IDLE_COLOR)
 
 
 ## Puts the one man who is here on the crew, when there is no lobby to seat him
@@ -163,7 +165,7 @@ func _seat_the_solo_player() -> void:
 func _on_play_pressed() -> void:
 	if _we_are_the_host():
 		if not _crew_is_ready():
-			_say(WAITING_ON_CREW, ERROR_COLOR)
+			_say(tr(WAITING_ON_CREW), ERROR_COLOR)
 			_refresh_play()
 			return
 		LobbyManager.start_game()
@@ -184,7 +186,6 @@ func _refresh() -> void:
 	_crew.rebuild(crew)
 	_refresh_cards(crew)
 	_refresh_play()
-	_contracts.refresh()
 
 
 ## Who to draw. Over Steam it is the lobby's guest list, which is Valve's and is
@@ -212,7 +213,7 @@ func _crew_on_screen() -> Array[Dictionary]:
 ## Steam has more to say — the local player's name does not change while he is
 ## looking at it.
 func _draw_local_player() -> void:
-	_name.text = LobbyManager.our_name()
+	_name.text = _display_name(LobbyManager.our_steam_id(), LobbyManager.our_name())
 	_photo.texture = SteamAvatars.texture_of(LobbyManager.our_steam_id())
 
 
@@ -231,10 +232,10 @@ func _refresh_cards(crew: Array[Dictionary]) -> void:
 			card = CARD_SCENE.instantiate()
 			_card_of[steam_id] = card
 			_cards.add_child(card)
-			card.setup(steam_id, String(player["name"]))
+			card.setup(steam_id, _display_name(steam_id, String(player["name"])))
 			card.color_pressed.connect(_on_card_color_pressed)
 		else:
-			card.set_player_name(String(player["name"]))
+			card.set_player_name(_display_name(steam_id, String(player["name"])))
 		# Written every time and not only on the way in: which crew entry is ours
 		# is a question whose answer moves when the crew changes shape.
 		card.is_ours = steam_id == LobbyManager.our_crew_id()
@@ -273,12 +274,12 @@ func _place_card(steam_id: int) -> void:
 func _refresh_play() -> void:
 	if _we_are_the_host():
 		var counts := ReadyManager.others_counts(LobbyManager.our_crew_id())
-		_play.text = "PLAY  %d/%d" % [counts[0], counts[1]]
+		_play.text = tr("MENU_PLAY_COUNT") % [counts[0], counts[1]]
 		_play.disabled = not _crew_is_ready()
 		return
 	var ours := LobbyManager.our_crew_id()
 	_play.disabled = false
-	_play.text = "CANCEL" if ReadyManager.is_ready(ours) else "READY"
+	_play.text = tr("MENU_CANCEL") if ReadyManager.is_ready(ours) else tr("MENU_READY")
 
 
 ## Whether the shift may start: everybody but the host has said he is ready. A
@@ -308,7 +309,7 @@ func _on_lobby_entered(_lobby_id: int, is_host: bool) -> void:
 	# out of it. A client's crew still comes off the wire, through `JoinGate`.
 	LobbyManager.seat_the_crew()
 	_draw_local_player()
-	_say("Hosting a lobby." if is_host else "Joined a lobby.", NOTICE_COLOR)
+	_say(tr("MENU_HOSTING_LOBBY") if is_host else tr("MENU_JOINED_LOBBY"), NOTICE_COLOR)
 	_refresh()
 
 
@@ -316,7 +317,7 @@ func _on_lobby_entered(_lobby_id: int, is_host: bool) -> void:
 ## has wiped the crew that went with it by the time this runs, so what is left is
 ## to put ourselves back on the floor alone.
 func _on_lobby_left() -> void:
-	_say("Left the lobby.", IDLE_COLOR)
+	_say(tr("MENU_LEFT_LOBBY"), IDLE_COLOR)
 	_seat_the_solo_player()
 	_refresh()
 
@@ -374,3 +375,18 @@ func _on_refused(reason: String) -> void:
 
 func _on_card_color_pressed() -> void:
 	_color_popup.open()
+
+
+## A player's Steam name, or his crew colour instead of it under Streamer
+## Mode — see `ColorManager.display_name_for`.
+func _display_name(steam_id: int, real_name: String) -> String:
+	if SettingsManager.streamer_mode:
+		return ColorManager.display_name_for(steam_id)
+	return real_name
+
+
+## Streamer Mode flipped. Everything showing a Steam name is redrawn — the
+## corner portrait's name and every floating card.
+func _on_streamer_mode_changed(_enabled: bool) -> void:
+	_draw_local_player()
+	_refresh()

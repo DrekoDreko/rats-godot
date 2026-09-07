@@ -103,6 +103,7 @@ func _ready() -> void:
 	SessionManager.player_joined.connect(_on_crew_added)
 	SessionManager.player_left.connect(_on_crew_removed)
 	SessionManager.player_changed.connect(_on_player_changed)
+	SettingsManager.streamer_mode_changed.connect(func(_enabled: bool) -> void: _rebuild_crew())
 
 	# The shift started before this scene existed — the van is already parked and
 	# the crew is already in it — so what is on screen first is read straight off
@@ -285,8 +286,9 @@ func _repaint(steam_id: int) -> void:
 func _paint_crew_line(label: Label, steam_id: int) -> void:
 	var player := SessionManager.player(steam_id)
 	var is_ready := bool(player.get("ready", false))
-	var player_name := String(player.get("name", "?")).to_upper()
-	label.text = "%s %s" % [READY_MARK if is_ready else WAITING_MARK, player_name]
+	var shown_name := ColorManager.display_name_for(steam_id) if SettingsManager.streamer_mode \
+		else String(player.get("name", "?")).to_upper()
+	label.text = "%s %s" % [READY_MARK if is_ready else WAITING_MARK, shown_name]
 	var color: Color = player.get("color", Color.WHITE)
 	color.a = 1.0 if is_ready else WAITING_ALPHA
 	label.add_theme_color_override("font_color", color)

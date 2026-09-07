@@ -64,13 +64,14 @@ func _ready() -> void:
 	LobbyManager.lobby_left.connect(_on_lobby_left)
 	LobbyManager.lobby_list_updated.connect(_on_lobby_list_updated)
 	LobbyManager.lobby_failed.connect(_on_lobby_failed)
+	SettingsManager.streamer_mode_changed.connect(_on_streamer_mode_changed)
 
 	if SteamManager.is_online:
 		# The player should land on a list, not on an empty box asking to be
 		# told what to do.
 		LobbyManager.refresh_lobbies()
 	else:
-		_say("Steam is not running.", ERROR_COLOR)
+		_say(tr("LOBBY_STEAM_OFFLINE"), ERROR_COLOR)
 
 	_refresh_controls()
 
@@ -79,19 +80,19 @@ func _ready() -> void:
 func _on_join_pressed() -> void:
 	var typed := _code.text.strip_edges()
 	if typed.is_empty():
-		_say("Paste a lobby ID, or pick one from the list.", ERROR_COLOR)
+		_say(tr("LOBBY_PASTE_ID"), ERROR_COLOR)
 		return
 	if typed.to_int() == LobbyManager.lobby_id:
-		_say("That one is yours — you are already in it.", ERROR_COLOR)
+		_say(tr("LOBBY_ALREADY_YOURS"), ERROR_COLOR)
 		return
 	if LobbyManager.join_lobby(typed.to_int()):
 		_we_asked = true
-		_say("Joining...", IDLE_COLOR)
+		_say(tr("LOBBY_JOINING"), IDLE_COLOR)
 
 
 func _on_refresh_pressed() -> void:
 	if LobbyManager.refresh_lobbies():
-		_say("Looking for lobbies...", IDLE_COLOR)
+		_say(tr("LOBBY_LOOKING"), IDLE_COLOR)
 
 
 ## Leaving is the one thing done here that the player watches happen behind the
@@ -119,7 +120,7 @@ func _on_lobby_activated(index: int) -> void:
 ## Joining is the whole point of the window, so a join closes it: the crew the
 ## player has just landed among is drawn on the floor behind here.
 func _on_lobby_entered(lobby_id: int, _is_host: bool) -> void:
-	_code.text = str(lobby_id)
+	_show_own_lobby_id(lobby_id)
 	# Which row is ours has just changed, and the list on screen was drawn
 	# before it did.
 	_draw_lobbies()
@@ -138,9 +139,9 @@ func _on_lobby_list_updated(lobbies: Array[Dictionary]) -> void:
 	_found = lobbies
 	_draw_lobbies()
 	if lobbies.is_empty():
-		_say("No lobbies open.", IDLE_COLOR)
+		_say(tr("LOBBY_NONE_OPEN"), IDLE_COLOR)
 	else:
-		_say("%d lobby(s) open." % lobbies.size(), NOTICE_COLOR)
+		_say(tr("LOBBY_COUNT_OPEN") % lobbies.size(), NOTICE_COLOR)
 
 
 ## Every failure the player is allowed to see comes through here, and it is the
@@ -169,9 +170,11 @@ func _draw_lobbies() -> void:
 	_lobbies.clear()
 	for lobby in _found:
 		var ours: bool = int(lobby["lobby_id"]) == LobbyManager.lobby_id
+		var host_name: String = tr("LOBBY_HOST_HIDDEN") if SettingsManager.streamer_mode \
+			else lobby["host_name"]
 		var index := _lobbies.add_item("%s  (%d/%d)%s" % [
-			lobby["host_name"], lobby["players"], lobby["max_players"],
-			"  - YOURS" if ours else "",
+			host_name, lobby["players"], lobby["max_players"],
+			tr("LOBBY_YOURS") if ours else "",
 		])
 		if ours:
 			_lobbies.set_item_disabled(index, true)
@@ -197,3 +200,18 @@ func _refresh_controls() -> void:
 func _say(message: String, color: Color) -> void:
 	_status.text = message
 	_status.add_theme_color_override("font_color", color)
+
+
+## The ID field, showing whichever lobby we are in — masked under Streamer
+## Mode, since a viewer reading it off the screen could otherwise join
+## uninvited.
+func _show_own_lobby_id(lobby_id: int) -> void:
+	_code.text = tr("LOBBY_ID_HIDDEN") if SettingsManager.streamer_mode else str(lobby_id)
+
+
+## Streamer Mode flipped: the browser list's host names and our own lobby ID,
+## if we are showing one, both need to be redrawn.
+func _on_streamer_mode_changed(_enabled: bool) -> void:
+	_draw_lobbies()
+	if LobbyManager.lobby_id != 0:
+		_show_own_lobby_id(LobbyManager.lobby_id)

@@ -6,8 +6,8 @@
 [ext_resource type="Script" uid="uid://uwxm7mwqg5fm" path="res://scripts/ui/color_popup.gd" id="3_color"]
 [ext_resource type="PackedScene" uid="uid://dq3n7vk8rj5wc" path="res://scenes/ps1_postprocess.tscn" id="3_i6lef"]
 [ext_resource type="Shader" uid="uid://bwmdy542q66bt" path="res://scripts/ps1.gdshader" id="4_70i5f"]
-[ext_resource type="Script" uid="uid://c0najh3gpg2du" path="res://scripts/ui/contract_panel.gd" id="4_contract"]
 [ext_resource type="PackedScene" path="res://scenes/lobby.tscn" id="5_modal"]
+[ext_resource type="PackedScene" path="res://scenes/settings_menu.tscn" id="6_settings"]
 [ext_resource type="PackedScene" uid="uid://r6380qbonva8" path="res://scenes/black_button.tscn" id="7_i6lef"]
 [ext_resource type="Texture2D" uid="uid://d4n0gjqdch0t2" path="res://assets/textures/floor/concrete_floor_atlas.png" id="9_floor_tex"]
 [ext_resource type="PackedScene" uid="uid://dyb2bu6wxtp7m" path="res://models/van_exterior.glb" id="10_van"]
@@ -119,20 +119,6 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="ContractPanel" type="PanelContainer" parent="UI" unique_id=1619612698]
-anchors_preset = 6
-anchor_left = 1.0
-anchor_top = 0.5
-anchor_right = 1.0
-anchor_bottom = 0.5
-offset_left = -168.0
-offset_top = -70.0
-offset_right = -8.0
-offset_bottom = 70.0
-grow_horizontal = 0
-grow_vertical = 2
-script = ExtResource("4_contract")
-
 [node name="Center" type="VBoxContainer" parent="UI" unique_id=1166613313]
 anchors_preset = 7
 anchor_left = 0.5
@@ -150,17 +136,17 @@ theme_override_constants/separation = 4
 [node name="Play" parent="UI/Center" unique_id=1313306122 instance=ExtResource("7_i6lef")]
 layout_mode = 2
 size_flags_horizontal = 1
-text = "PLAY"
+text = "MENU_PLAY"
 
 [node name="PublicLobbies" parent="UI/Center" unique_id=1053931162 instance=ExtResource("7_i6lef")]
 layout_mode = 2
 size_flags_horizontal = 1
-text = "FIND LOBBY"
+text = "MENU_FIND_LOBBY"
 
 [node name="Settings" parent="UI/Center" unique_id=1414672112 instance=ExtResource("7_i6lef")]
 layout_mode = 2
 size_flags_horizontal = 1
-text = "SETTINGS"
+text = "MENU_SETTINGS"
 
 [node name="Status" type="Label" parent="UI" unique_id=523677910]
 anchors_preset = 12
@@ -181,6 +167,9 @@ horizontal_alignment = 1
 autowrap_mode = 2
 
 [node name="LobbyModal" parent="UI" unique_id=954254003 instance=ExtResource("5_modal")]
+visible = false
+
+[node name="SettingsMenu" parent="UI" instance=ExtResource("6_settings")]
 visible = false
 
 [node name="ColorPopup" type="PopupPanel" parent="UI" unique_id=334250369]

@@ -278,6 +278,7 @@ func _ready() -> void:
 	SessionManager.player_changed.connect(_on_player_changed)
 	ColorManager.color_changed.connect(_on_color_changed)
 	PhaseManager.phase_changed.connect(_on_phase_changed)
+	SettingsManager.streamer_mode_changed.connect(func(_enabled: bool) -> void: _refresh_player())
 
 	# Wait one frame so the character is already in the tree. Held onto before
 	# the wait rather than fetched again after it: a phase can end on the frame
@@ -929,7 +930,8 @@ func _refresh_player() -> void:
 	if _model != null:
 		_model.set_tint(color)
 	var entry := SessionManager.player(us)
-	_player_name.text = String(entry.get("name", "PLAYER")).to_upper()
+	_player_name.text = ColorManager.display_name_for(us) if SettingsManager.streamer_mode \
+		else String(entry.get("name", "PLAYER")).to_upper()
 	_player_name.add_theme_color_override("font_color", color)
 
 # --- What is written --------------------------------------------------------

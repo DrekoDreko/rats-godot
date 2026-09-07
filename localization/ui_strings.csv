@@ -1,0 +1,63 @@
+keys,en,pt_BR
+PAUSE_TITLE,PAUSED,PAUSADO
+PAUSE_HINT,The match keeps running for everyone else.,A partida continua para os outros.
+PAUSE_CREW_TITLE,IN THE MATCH,NA PARTIDA
+PAUSE_RESUME,Resume,Continuar
+PAUSE_HOWTO,How to play,Como jogar
+PAUSE_LEAVE,Leave match,Sair da partida
+PAUSE_QUIT,Quit game,Sair do jogo
+PAUSE_SETTINGS,Settings,Configurações
+PAUSE_HOST_MARK, (host), (host)
+HELP_TITLE,HOW TO PLAY,COMO JOGAR
+HELP_CONTROLS,"WASD / arrows — move
+Shift — run
+Space — jump
+Mouse — look around
+Left button — grab the rat
+Left button (holding) — strangle
+1 2 3 — switch weapon
+E — use the computer
+E (holding) — clean a sprung trap ($2 to set it again)
+Esc — release the mouse","WASD / setas — mover
+Shift — correr
+Espaço — pular
+Mouse — olhar ao redor
+Botão esquerdo — pegar o rato
+Botão esquerdo (segurando) — estrangular
+1 2 3 — trocar de arma
+E — usar o computador
+E (segurando) — limpar uma armadilha disparada ($2 para armar de novo)
+Esc — soltar o mouse"
+HELP_BACK,Back,Voltar
+MENU_PLAY,PLAY,JOGAR
+MENU_FIND_LOBBY,FIND LOBBY,PROCURAR LOBBY
+MENU_SETTINGS,SETTINGS,CONFIGURAÇÕES
+MENU_WAITING_ON_CREW,The crew is not ready yet.,A equipe ainda não está pronta.
+MENU_STEAM_OFFLINE,Steam is not running — solo only.,Steam não está rodando — apenas solo.
+MENU_OPENING_LOBBY,Opening a lobby...,Abrindo um lobby...
+MENU_HOSTING_LOBBY,Hosting a lobby.,Hospedando um lobby.
+MENU_JOINED_LOBBY,Joined a lobby.,Entrou em um lobby.
+MENU_LEFT_LOBBY,Left the lobby.,Saiu do lobby.
+MENU_PLAY_COUNT,PLAY  %d/%d,JOGAR  %d/%d
+MENU_CANCEL,CANCEL,CANCELAR
+MENU_READY,READY,PRONTO
+LOBBY_CODE_PLACEHOLDER,LOBBY ID,ID DO LOBBY
+LOBBY_JOIN,JOIN,ENTRAR
+LOBBY_REFRESH,REFRESH LIST,ATUALIZAR LISTA
+LOBBY_LEAVE,LEAVE LOBBY,SAIR DO LOBBY
+LOBBY_STEAM_OFFLINE,Steam is not running.,Steam não está rodando.
+LOBBY_PASTE_ID,"Paste a lobby ID, or pick one from the list.","Cole um ID de lobby, ou escolha um da lista."
+LOBBY_ALREADY_YOURS,That one is yours — you are already in it.,Esse é o seu — você já está nele.
+LOBBY_JOINING,Joining...,Entrando...
+LOBBY_LOOKING,Looking for lobbies...,Procurando lobbies...
+LOBBY_NONE_OPEN,No lobbies open.,Nenhum lobby aberto.
+LOBBY_COUNT_OPEN,%d lobby(s) open.,%d lobby(s) aberto(s).
+LOBBY_YOURS,  - YOURS,  - SEU
+LOBBY_HOST_HIDDEN,HOST,ANFITRIÃO
+LOBBY_ID_HIDDEN,HIDDEN,OCULTO
+SETTINGS_FULLSCREEN,Fullscreen,Tela cheia
+SETTINGS_SOUND_VOLUME,Sound Volume,Volume do Som
+SETTINGS_MUSIC_VOLUME,Music Volume,Volume da Música
+SETTINGS_VOICE_VOLUME,Voice Volume,Volume da Voz
+SETTINGS_STREAMER_MODE,Streamer Mode,Modo Streamer
+SETTINGS_LANGUAGE,Language,Idioma

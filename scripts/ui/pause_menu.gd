@@ -61,9 +61,9 @@ const CREW_REFRESH := 0.5
 ## is the one glyph that reads as a colour swatch at eight points.
 const CREW_SWATCH := "●"
 
-## What marks the host in the list. It goes after the name rather than before,
-## so that the names still line up under each other.
-const CREW_HOST_MARK := " (host)"
+## What marks the host in the list, as a translation key. It goes after the
+## name rather than before, so that the names still line up under each other.
+const CREW_HOST_MARK := "PAUSE_HOST_MARK"
 
 ## What a row says where a ping would go when there is none to show — solo, or a
 ## peer who has not answered his first probe. An em dash and not "0 ms", which
@@ -84,6 +84,8 @@ const CREW_FONT_SIZE := 8
 @onready var _crew_title: Label = $Center/Panel/Margin/Rows/CrewTitle
 @onready var _crew_separator: HSeparator = $Center/Panel/Margin/Rows/CrewSeparator
 @onready var _how_to: Button = $Center/Panel/Margin/Rows/HowTo
+@onready var _settings: Button = $Center/Panel/Margin/Rows/Settings
+@onready var _settings_modal: Control = $SettingsMenu
 ## The controls page. It lives beside the buttons rather than on top of them, so
 ## the panel takes the size of whichever of the two is showing and the menu never
 ## has a page floating over a set of buttons that are still there underneath.
@@ -116,6 +118,7 @@ func _ready() -> void:
 
 	_resume.pressed.connect(close)
 	_how_to.pressed.connect(_show_help)
+	_settings.pressed.connect(_settings_modal.show)
 	_help_back.pressed.connect(_show_menu)
 	_leave.pressed.connect(_leave_match)
 	_quit.pressed.connect(_quit_game)
@@ -358,9 +361,12 @@ func _crew_row(steam_id: int) -> HBoxContainer:
 
 	var player := SessionManager.player(steam_id)
 	var name_label := Label.new()
-	name_label.text = String(player.get("name", "..."))
+	var shown_name := String(player.get("name", "..."))
+	if SettingsManager.streamer_mode:
+		shown_name = ColorManager.display_name_for(steam_id)
+	name_label.text = shown_name
 	if bool(player.get("is_host", false)):
-		name_label.text += CREW_HOST_MARK
+		name_label.text += tr(CREW_HOST_MARK)
 	name_label.add_theme_font_size_override("font_size", CREW_FONT_SIZE)
 	name_label.add_theme_color_override("font_color", Color.WHITE)
 	name_label.add_theme_color_override("font_outline_color", Color.BLACK)

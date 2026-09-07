@@ -44,6 +44,14 @@ signal request_refused(reason: String)
 ## yet.
 const HOST_PEER := 1
 
+## The name behind each swatch in `SessionManager.COLORS`, same order. Used by
+## `display_name_for` to stand in for a Steam name under Streamer Mode — a
+## colour a viewer can already see on the body is not a fact worth hiding, and
+## it still tells one player from another.
+const COLOR_NAMES: Array[String] = [
+	"RED", "BLUE", "GREEN", "YELLOW", "ORANGE", "PURPLE", "CYAN", "PINK",
+]
+
 
 func _ready() -> void:
 	# A colour can be settled while the game is paused — the panel is in the van
@@ -293,6 +301,17 @@ func _first_color_outside(settled: Array[Color]) -> Color:
 func _name_of(steam_id: int) -> String:
 	var found: String = SessionManager.player(steam_id).get("name", "")
 	return found if not found.is_empty() else "Somebody else"
+
+
+## What Streamer Mode shows in place of a Steam name: the colour the crew
+## already has him wearing, e.g. "RED". Falls back to his real name for a
+## player with no crew colour yet (not seated), since there is nothing else to
+## call him.
+func display_name_for(steam_id: int) -> String:
+	var index := index_of(SessionManager.color(steam_id))
+	if index < 0 or index >= COLOR_NAMES.size():
+		return _name_of(steam_id)
+	return COLOR_NAMES[index]
 
 
 ## Our own id on the wire, or zero when there is no wire to have one on — asking

@@ -158,6 +158,7 @@ var steam_id := 0:
 	set(value):
 		steam_id = value
 		_repaint()
+		_update_tag()
 
 ## The name floating over the capsule. Safe to set before the node is in the
 ## tree — the label picks it up on the way in — because whoever puts one of
@@ -165,8 +166,7 @@ var steam_id := 0:
 var player_name := "":
 	set(value):
 		player_name = value
-		if _tag != null:
-			_tag.text = value
+		_update_tag()
 
 # --- What crosses the wire --------------------------------------------------
 # Written by whoever owns this avatar, read by everybody else. They are plain
@@ -244,7 +244,10 @@ var _sync_age := 0.0
 
 
 func _ready() -> void:
-	_tag.text = player_name
+	_update_tag()
+	var settings := _autoload("SettingsManager")
+	if settings != null:
+		settings.streamer_mode_changed.connect(_on_streamer_mode_changed)
 	# The colour is read from `SessionManager` and never kept here, so that a
 	# body is wearing what the crew says he is wearing rather than what he was
 	# wearing when this node went up. What changes it is the host, and this
@@ -462,6 +465,24 @@ func _repaint() -> void:
 			or not session.has_player(steam_id):
 		return
 	_model.set_tint(session.color(steam_id))
+
+
+## The nametag's text: the real Steam name, or the crew colour instead of it
+## under Streamer Mode — a viewer can already see that colour on the body, so
+## it costs nothing to tell players apart and reveals nothing to hide.
+func _update_tag() -> void:
+	if _tag == null:
+		return
+	var settings := _autoload("SettingsManager")
+	if settings != null and settings.streamer_mode:
+		var colors := _autoload("ColorManager")
+		_tag.text = colors.display_name_for(steam_id) if colors != null else player_name
+		return
+	_tag.text = player_name
+
+
+func _on_streamer_mode_changed(_enabled: bool) -> void:
+	_update_tag()
 
 
 ## An autoload, reached without going through our own position in the tree.

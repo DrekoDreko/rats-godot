@@ -1,6 +1,7 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/pause_menu.gd" id="1_pause"]
+[ext_resource type="PackedScene" path="res://scenes/settings_menu.tscn" id="2_settings"]
 
 [sub_resource type="StyleBoxFlat" id="Style_pause_panel"]
 bg_color = Color(0, 0, 0, 0.75)
@@ -52,7 +53,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
-text = "PAUSED"
+text = "PAUSE_TITLE"
 label_settings = SubResource("Label_pause_title")
 horizontal_alignment = 1
 
@@ -62,7 +63,7 @@ theme_override_colors/font_color = Color(0.72, 0.72, 0.72, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 8
-text = "The match keeps running for everyone else."
+text = "PAUSE_HINT"
 horizontal_alignment = 1
 
 [node name="CrewSeparator" type="HSeparator" parent="Center/Panel/Margin/Rows"]
@@ -74,7 +75,7 @@ theme_override_colors/font_color = Color(0.72, 0.72, 0.72, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 8
-text = "NA PARTIDA"
+text = "PAUSE_CREW_TITLE"
 horizontal_alignment = 1
 
 [node name="Crew" type="VBoxContainer" parent="Center/Panel/Margin/Rows"]
@@ -87,22 +88,27 @@ layout_mode = 2
 [node name="Resume" type="Button" parent="Center/Panel/Margin/Rows"]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
-text = "Continuar"
+text = "PAUSE_RESUME"
 
 [node name="HowTo" type="Button" parent="Center/Panel/Margin/Rows"]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
-text = "Como jogar"
+text = "PAUSE_HOWTO"
+
+[node name="Settings" type="Button" parent="Center/Panel/Margin/Rows"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+text = "PAUSE_SETTINGS"
 
 [node name="Leave" type="Button" parent="Center/Panel/Margin/Rows"]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
-text = "Sair da partida"
+text = "PAUSE_LEAVE"
 
 [node name="Quit" type="Button" parent="Center/Panel/Margin/Rows"]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
-text = "Sair do jogo"
+text = "PAUSE_QUIT"
 
 [node name="Help" type="VBoxContainer" parent="Center/Panel/Margin"]
 visible = false
@@ -114,7 +120,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
-text = "COMO JOGAR"
+text = "HELP_TITLE"
 label_settings = SubResource("Label_pause_title")
 horizontal_alignment = 1
 
@@ -127,16 +133,7 @@ theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 8
-text = "WASD / arrows — move
-Shift — run
-Space — jump
-Mouse — look around
-Left button — grab the rat
-Left button (holding) — strangle
-1 2 3 — switch weapon
-E — use the computer
-E (holding) — clean a sprung trap ($2 to set it again)
-Esc — release the mouse"
+text = "HELP_CONTROLS"
 
 [node name="BackSeparator" type="HSeparator" parent="Center/Panel/Margin/Help"]
 layout_mode = 2
@@ -144,4 +141,7 @@ layout_mode = 2
 [node name="Back" type="Button" parent="Center/Panel/Margin/Help"]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
-text = "Voltar"
+text = "HELP_BACK"
+
+[node name="SettingsMenu" parent="." instance=ExtResource("2_settings")]
+visible = false

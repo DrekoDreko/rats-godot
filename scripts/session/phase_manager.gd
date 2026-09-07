@@ -376,10 +376,8 @@ func _clear_job() -> void:
 	# for the same reason, and a crew that never passes through it on its way to
 	# the next house would otherwise keep last job's count running.
 	TrapManager.reset()
-	# The van is held shut again by this, and not by a line here putting
-	# `ReadyManager.blocked` up: that flag has one owner (`ContractManager`),
-	# which watches the signature and raises it the moment there is not one. Two
-	# places writing it is how it ends up stuck in a state neither of them meant.
+	# Only the signed job itself is cleared here. `ReadyManager.blocked` is no
+	# longer tied to it — that gate belonged to the signing board, which is gone.
 	SessionManager.set_contract("")
 
 
