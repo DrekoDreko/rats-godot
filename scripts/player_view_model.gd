@@ -223,7 +223,7 @@ const CROUCH_PULL := Vector3(0.0, 0.05, 0.09)
 ## and in front of it, because a fist round a neck is nearer the camera than the
 ## body hanging behind it. At `Hands.hands_distance` that lands the palm about
 ## twenty centimetres from the middle of the held body and a little above the
-## centre of the picture, which `_test_grip.gd` measures.
+## centre of the picture, which the grip measurements cover.
 ##
 ## The palm is put *in front of* the animal rather than level with it, and that
 ## is the difference between a hand on a rat and a hand behind one. Level, the
@@ -247,8 +247,8 @@ const CROUCH_PULL := Vector3(0.0, 0.05, 0.09)
 ## The obvious repair is to push the hand forward until it clears, and it is a
 ## trap. It does clear — and what it buys is a fist planted square in front of
 ## the animal, hiding a fifth of it, with the player strangling something he can
-## barely see. That reads worse than the bug it fixes, and every check in the
-## bench passed it.
+## barely see. That reads worse than the bug it fixes, and the visual checks
+## passed it.
 ##
 ## The real constraint is that the hand cannot close. `hazmat_hand.glb` is a
 ## rigid block with no fingers, so it can be in front of the animal or behind it
@@ -260,9 +260,9 @@ const CROUCH_PULL := Vector3(0.0, 0.05, 0.09)
 ## of the rat rather than twenty.
 ##
 ## So both halves are measured now, and they pull against each other:
-## `_test_grip.gd: MAX_BEHIND` says the hand must not be drawn behind the animal,
-## `MAX_HIDDEN` says it must not be drawn over it either, and each of them
-## rejects the pose the other one would drift towards.
+## `MAX_BEHIND` says the hand must not be drawn behind the animal, `MAX_HIDDEN`
+## says it must not be drawn over it either, and each of them rejects the pose
+## the other one would drift towards.
 ##
 ## Moving the *rat* forward instead was tried and is the wrong way round: it
 ## makes the animal larger and nearer, so it overlaps more of the sleeve and by a
@@ -285,7 +285,7 @@ const CROUCH_PULL := Vector3(0.0, 0.05, 0.09)
 ## runs from the fist back past the lens, nearly end-on, and swinging that line up
 ## drags a longer stretch of it across the animal. The overlap went half again as
 ## large and the rat came through the glove on four to six per cent of it, from
-## three (`_test_grip.gd: MAX_BEHIND`), which is the failure this pose exists to
+## three (`MAX_BEHIND`), which is the failure this pose exists to
 ## prevent creeping back.
 ##
 ## So `z` came in from 0.395 to here — two and a half centimetres nearer the lens
@@ -318,8 +318,8 @@ const CROUCH_PULL := Vector3(0.0, 0.05, 0.09)
 ##
 ## It also buys the elbow: across the view it lands about 36 centimetres out,
 ## past the depth where the foreshortening stops mattering
-## (`_test_grip.gd: ELBOW_DEPTH`), where a forearm crossing a corner is simply a
-## forearm. Reaching straight ahead put it at 18 and inside the picture.
+## (`ELBOW_DEPTH`), where a forearm crossing a corner is simply a forearm.
+## Reaching straight ahead put it at 18 and inside the picture.
 ##
 ## Photographed rather than calculated, like `scale_factor` and for the same
 ## reason: the arithmetic said both poses put the hand on the rat, and only the
@@ -342,8 +342,8 @@ const CROUCH_PULL := Vector3(0.0, 0.05, 0.09)
 ##
 ## Measured against the animal rather than picked, and it is a ceiling as much as
 ## a floor. Too small and the glove comes out narrower than the rat is wide,
-## which reads as a hand behind the animal — `_test_grip.gd: MIN_GLOVE_WIDTH`
-## refuses that. Too large and the fist simply covers the thing it is holding,
+## which reads as a hand behind the animal — `MIN_GLOVE_WIDTH` refuses that.
+## Too large and the fist simply covers the thing it is holding,
 ## which `MAX_HIDDEN` refuses. Between them there is not much room: at this the
 ## glove is about half again the rat's width and hides an eighth of it.
 ##
@@ -383,7 +383,7 @@ const CROUCH_PULL := Vector3(0.0, 0.05, 0.09)
 ## holding it in one fist that happens to have two sleeves.
 ##
 ## Photographed rather than solved, like every other number in this pose, and it
-## is the one that trades against `_test_grip.gd: MAX_HIDDEN` — two gloves cover
+## is the one that trades against `MAX_HIDDEN` — two gloves cover
 ## more of the animal than one, and moving them apart is what buys that back.
 @export_range(0.0, 0.2, 0.005) var grip_spread := 0.065:
 	set(value):
@@ -440,7 +440,7 @@ const CROUCH_PULL := Vector3(0.0, 0.05, 0.09)
 ## grip has left the hand — it hangs in the air beside a fist holding nothing.
 ## Measured rather than argued: 55 centimetres down the arm put the bat where it
 ## needed to be on screen and left the handle 32 centimetres from the glove, and
-## the bench is what said so (`_test_bat.gd: HELD_REACH`). Turning it instead
+## the measured reach said so (`HELD_REACH`). Turning it instead
 ## costs nothing, because a rotation pivots about the grip and the grip is
 ## already in the hand.
 @export var hold_offset := Vector3(-0.04, 0.0, 0.26):
@@ -1281,7 +1281,7 @@ func _apply() -> void:
 	# it comes through the glove — and pushing it out to make room for its
 	# partner takes it off the rat: measured, a few centimetres of it cost a
 	# third of the overlap and took what the animal is drawn through from well
-	# under one per cent of it to six (`_test_grip.gd: MAX_BEHIND`). The second
+	# under one per cent of it to six (`MAX_BEHIND`). The second
 	# hand is free to move because nothing was ever solved for it.
 	#
 	# The closing rides `_punch` rather than a clock of its own, so the thrust

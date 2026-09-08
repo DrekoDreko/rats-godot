@@ -470,37 +470,6 @@ accounts on two machines, both with the game open:
 8. Closing one game takes that capsule off the other's screen, and stops the
    others waiting on the name that has gone.
 
-`_test_lobby.gd` covers everything one account can reach on its own — the lobby
-opening, the stamp landing, coming out of it as peer 1 with the authority, the
-screen drawing the name, the browser finding it through the filter, and the three
-ways of getting it wrong. It needs the Steam client signed in:
-
-```
-godot --headless --script _test_lobby.gd
-```
-
-`_test_sync.gd` covers the half that comes after — the bodies in the map and
-everything that crosses the wire to move them — and needs no Steam and no second
-machine. It runs the thing one layer down: two `SceneMultiplayer`s over ENet on
-the loopback, each rooted at its own subtree, which is as close to two clients as
-one process gets. Steam is only ever the transport underneath, and the
-replication on top of it is the same either way.
-
-It checks that both sides put up one capsule per player under the same name and
-with the authority on the peer it stands for, that your own is never drawn and
-somebody else's is not drawn until the first packet lands, that a player walking
-on one side is a body walking — *following*, never teleporting, and catching up
-when he stops — on the other, that the state crosses and is played, that one
-click crosses as exactly one arm going out, that a late name lands on the capsule
-already standing there, and that somebody closing their game takes their capsule
-away. The last two steps drop the wire entirely and open the real map to check
-the solo case: nobody standing about, and the real character answering for
-himself.
-
-```
-godot --headless --script _test_sync.gd
-```
-
 ### Two windows on one machine
 
 Steam serves one account per computer, so two copies of the game opened side by
@@ -564,13 +533,6 @@ is what turns the lamp green on every screen at once. A player who drops out
 stops being somebody the others are waiting on, and no flag survives into the
 next phase.
 
-```
-godot --headless --script _test_phase.gd
-godot --headless --script _test_ready.gd
-godot --headless --script _test_session.gd
-godot --headless --script _test_hud_phase.gd
-```
-
 ## The van
 
 `PLAY` puts the crew in the back of a parked pest-control truck, and that is the
@@ -611,10 +573,6 @@ ramp and no further.
 weapons being taken off the player, because the same player walks into the house
 two phases later with everything he bought. The lock is read off the phase and
 re-read on every change, so the road gives the belt back.
-
-```
-godot --headless --script _test_menu.gd
-```
 
 ## The store on the road
 
@@ -671,12 +629,6 @@ the slots and the body stops answering to anything (`set_ui_open` in
 that grabs a rat. And `E` only means the store when he is not already looking at
 a station: the map table and the ready board take the key back for themselves.
 
-```
-godot --headless --script _test_van_shop.gd
-godot --headless --script _test_travel.gd
-```
-
-
 ## The contract on the wall
 
 A sheet is pinned to the right-hand wall of the van, and it is read at two
@@ -705,11 +657,6 @@ still be signed on the road — the drive is exactly when somebody reads the sma
 print and argues about it — but the hunt time cannot be moved once the van has
 pulled off, because that is the wager the crew shopped and bought traps against
 (`ContractManager.OPEN_PHASES` against `OPEN_TIME_PHASES`).
-
-```
-godot --headless --script _test_contract.gd
-godot --headless --script _test_contract_sign.gd
-```
 
 ## Joining a shift
 
@@ -765,14 +712,7 @@ removing; a client noticing a dropped peer waits to be told, because two machine
 removing on their own timing is two machines disagreeing about who is still owed
 a flag.
 
-```
-godot --headless --script _test_join.gd
-```
-
-That bench covers everything one machine can reach: the rules at the door, the
-packet a newcomer is handed, what a machine does with one when it lands, and the
-clean-up after somebody leaves. The card's own acceptance test needs two Steam
-accounts and is done by hand:
+The acceptance test needs two Steam accounts and is done by hand:
 
 1. Both run the game. One presses **CREATE LOBBY**, then **PLAY**, and lands in
    the van.

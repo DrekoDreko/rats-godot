@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/steam/lobby_screen.gd" id="1_lobby"]
 [ext_resource type="FontFile" uid="uid://b3vvnk0rcn80q" path="res://assets/fonts/matchup.ttf" id="2_font"]
+[ext_resource type="PackedScene" uid="uid://b4wetum1hnqtu" path="res://scenes/big_font_outlined_label.tscn" id="3_big_font"]
 
 [sub_resource type="FontVariation" id="FontVariation_lobby"]
 base_font = ExtResource("2_font")
@@ -143,14 +144,13 @@ theme_override_constants/separation = 6
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="Title" type="Label" parent="Center/Panel/Margin/Rows/TitleRow"]
+[node name="Title" parent="Center/Panel/Margin/Rows/TitleRow" instance=ExtResource("3_big_font")]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 1
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 6
-theme_override_font_sizes/font_size = 20
+font_size = 16
 text = "MENU_FIND_LOBBY"
 
 [node name="Close" type="Button" parent="Center/Panel/Margin/Rows/TitleRow"]
@@ -207,11 +207,10 @@ theme_override_styles/pressed = SubResource("Style_button_pressed")
 theme_override_styles/disabled = SubResource("Style_button_disabled")
 text = "LOBBY_LEAVE"
 
-[node name="Status" type="Label" parent="Center/Panel/Margin/Rows"]
+[node name="Status" parent="Center/Panel/Margin/Rows" instance=ExtResource("3_big_font")]
 custom_minimum_size = Vector2(0, 14)
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 0.6)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 5
-theme_override_font_sizes/font_size = 16
+font_size = 16
 autowrap_mode = 2

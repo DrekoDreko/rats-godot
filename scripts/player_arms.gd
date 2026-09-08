@@ -132,8 +132,7 @@ const LIFT := 0.00
 ## The forearm is *aimed* at this point rather than solved onto it, so a hand
 ## whose elbow is nearer than the bone is long carries past it — the two fists
 ## end up about a rat's width apart from a target half that. The animal is
-## between them, which is what the number is for; see `_test_arms.gd:
-## GRIP_REACH`.
+## between them, which is what the number is for.
 const SPREAD := 0.13
 
 ## Which way the elbow is sent, as an offset from the shoulder in arm lengths.

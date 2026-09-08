@@ -1,2 +1,0 @@
-- Ao gerar código, procure sempre manter tudo em inglês.
-- Siga as melhores práticas de código GDScript.

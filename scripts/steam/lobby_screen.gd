@@ -36,7 +36,7 @@ const IDLE_COLOR := Color(1, 1, 1, 0.6)
 @onready var _refresh: Button = _rows.get_node("Refresh")
 @onready var _lobbies: ItemList = _rows.get_node("Lobbies")
 @onready var _leave: Button = _rows.get_node("Leave")
-@onready var _status: Label = _rows.get_node("Status")
+@onready var _status: BigFontOutlinedLabel = _rows.get_node("Status")
 
 ## The lobbies the last search turned up, in the order the list shows them, so a
 ## clicked row can be turned back into an ID.

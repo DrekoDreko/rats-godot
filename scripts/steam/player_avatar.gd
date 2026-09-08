@@ -254,11 +254,10 @@ func _ready() -> void:
 	# hears about it the same way every other panel in the game does.
 	#
 	# Reached through the tree rather than by its global name, and that is not
-	# fussiness: a bench run with `--script` compiles this file before the
-	# autoloads are in the tree, so the global name is not a name yet and the
-	# whole class fails to compile — which shows up not as a missing colour but
-	# as every avatar instantiating as a plain `Node3D` with no script on it.
-	# `_test_color.gd` says the same thing at its top, and takes the same road.
+	# fussiness: a standalone run can compile this file before the autoloads are
+	# in the tree, so the global name is not a name yet and the whole class fails
+	# to compile — which shows up not as a missing colour but as every avatar
+	# instantiating as a plain `Node3D` with no script on it.
 	var colors := _autoload("ColorManager")
 	if colors != null:
 		colors.color_changed.connect(_on_color_changed)
@@ -418,7 +417,7 @@ func _on_synchronized() -> void:
 ## its own — the `distance_fade_*` properties belong to `BaseMaterial3D`, and
 ## writing them into the `.tscn` is the worst kind of wrong: the scene loads, no
 ## error is printed, and the name simply never fades. That is not a guess; it was
-## written that way first and `_test_nametag.gd` is what caught it.
+## written that way first and a distance-fade check caught it.
 ##
 ## Only ever run on somebody else's avatar. Ours is never drawn at all, and
 ## `_process` is switched off on it.

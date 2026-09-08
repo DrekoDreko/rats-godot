@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/ui/settings_menu.gd" id="1_settings"]
 [ext_resource type="FontFile" uid="uid://b3vvnk0rcn80q" path="res://assets/fonts/matchup.ttf" id="2_font"]
+[ext_resource type="PackedScene" uid="uid://b4wetum1hnqtu" path="res://scenes/big_font_outlined_label.tscn" id="3_big_font"]
 
 [sub_resource type="FontVariation" id="FontVariation_settings"]
 base_font = ExtResource("2_font")
@@ -90,14 +91,13 @@ theme_override_constants/separation = 6
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="Title" type="Label" parent="Center/Panel/Margin/Rows/TitleRow"]
+[node name="Title" parent="Center/Panel/Margin/Rows/TitleRow" instance=ExtResource("3_big_font")]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 1
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 5
-theme_override_font_sizes/font_size = 16
+font_size = 16
 text = "MENU_SETTINGS"
 
 [node name="Close" type="Button" parent="Center/Panel/Margin/Rows/TitleRow"]
@@ -117,13 +117,12 @@ layout_mode = 2
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Label" type="Label" parent="Center/Panel/Margin/Rows/FullscreenRow"]
+[node name="Label" parent="Center/Panel/Margin/Rows/FullscreenRow" instance=ExtResource("3_big_font")]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 8
+font_size = 16
 text = "SETTINGS_FULLSCREEN"
 
 [node name="Fullscreen" type="CheckButton" parent="Center/Panel/Margin/Rows/FullscreenRow"]
@@ -133,13 +132,12 @@ layout_mode = 2
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Label" type="Label" parent="Center/Panel/Margin/Rows/SoundRow"]
+[node name="Label" parent="Center/Panel/Margin/Rows/SoundRow" instance=ExtResource("3_big_font")]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 8
+font_size = 16
 text = "SETTINGS_SOUND_VOLUME"
 
 [node name="Sound" type="HSlider" parent="Center/Panel/Margin/Rows/SoundRow"]
@@ -153,13 +151,12 @@ value = 1.0
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Label" type="Label" parent="Center/Panel/Margin/Rows/MusicRow"]
+[node name="Label" parent="Center/Panel/Margin/Rows/MusicRow" instance=ExtResource("3_big_font")]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 8
+font_size = 16
 text = "SETTINGS_MUSIC_VOLUME"
 
 [node name="Music" type="HSlider" parent="Center/Panel/Margin/Rows/MusicRow"]
@@ -173,13 +170,12 @@ value = 1.0
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Label" type="Label" parent="Center/Panel/Margin/Rows/VoiceRow"]
+[node name="Label" parent="Center/Panel/Margin/Rows/VoiceRow" instance=ExtResource("3_big_font")]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 8
+font_size = 16
 text = "SETTINGS_VOICE_VOLUME"
 
 [node name="Voice" type="HSlider" parent="Center/Panel/Margin/Rows/VoiceRow"]
@@ -196,13 +192,12 @@ layout_mode = 2
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Label" type="Label" parent="Center/Panel/Margin/Rows/StreamerRow"]
+[node name="Label" parent="Center/Panel/Margin/Rows/StreamerRow" instance=ExtResource("3_big_font")]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 8
+font_size = 16
 text = "SETTINGS_STREAMER_MODE"
 
 [node name="Streamer" type="CheckButton" parent="Center/Panel/Margin/Rows/StreamerRow"]
@@ -212,13 +207,12 @@ layout_mode = 2
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Label" type="Label" parent="Center/Panel/Margin/Rows/LanguageRow"]
+[node name="Label" parent="Center/Panel/Margin/Rows/LanguageRow" instance=ExtResource("3_big_font")]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 8
+font_size = 16
 text = "SETTINGS_LANGUAGE"
 
 [node name="Language" type="OptionButton" parent="Center/Panel/Margin/Rows/LanguageRow"]

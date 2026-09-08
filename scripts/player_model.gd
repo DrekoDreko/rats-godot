@@ -157,9 +157,9 @@ func grip_point() -> Vector3:
 	return _arms.get_skeleton().global_transform * _arms.grip_point()
 
 
-## The animation now running, by name. It exists for the benches
-## (`_test_sync.gd`), which need to see that a state crossed the wire and became
-## the right movement — a stronger thing to assert than that something moved.
+## The animation now running, by name. It is exposed so replicated movement can
+## confirm that a state crossed the wire and became the right movement — a
+## stronger thing to assert than that something moved.
 func current_animation() -> StringName:
 	return _animation.current_animation
 
