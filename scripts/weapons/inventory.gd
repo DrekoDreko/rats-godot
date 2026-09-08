@@ -87,9 +87,8 @@ const HANDS_INDEX := -1
 ## not belong here — they are not on the belt.
 ##
 ## It is filled at runtime off the bag (`_take_stock`) and not in the editor: a
-## loop belongs to whatever was bought for it. It is left public because a bench
-## sometimes hangs a weapon on the belt by hand, without any shop to buy it from
-## (`_test_survey_house.gd`).
+## loop belongs to whatever was bought for it. It is left public because setup
+## code may hang a weapon on the belt by hand, without any shop to buy it from.
 var slots: Array[NodePath] = []
 ## The hands: the weapon `Q` always brings back, and the one the shift starts
 ## with. An empty path is a player who has none, and `Q` then does nothing.

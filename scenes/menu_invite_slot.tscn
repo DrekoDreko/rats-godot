@@ -1,0 +1,65 @@
+[gd_scene format=3 uid="uid://ck2xr8m4vnq7b"]
+
+[ext_resource type="Script" uid="uid://bqn5vt3wxk8pd" path="res://scripts/ui/menu_invite_slot.gd" id="1_slot"]
+[ext_resource type="PackedScene" uid="uid://b4wetum1hnqtu" path="res://scenes/big_font_outlined_label.tscn" id="2_plus"]
+
+[sub_resource type="StyleBoxFlat" id="Style_slot_normal"]
+bg_color = Color(0, 0, 0, 0.39215687)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.8, 0.8, 0.8, 0.45)
+
+[sub_resource type="StyleBoxFlat" id="Style_slot_hover"]
+bg_color = Color(0, 0, 0, 0.5882353)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.85)
+
+[sub_resource type="StyleBoxFlat" id="Style_slot_pressed"]
+bg_color = Color(0, 0, 0, 0.70588235)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 1, 1, 0.85)
+
+[sub_resource type="StyleBoxFlat" id="Style_slot_disabled"]
+bg_color = Color(0, 0, 0, 0.19607843)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.55, 0.55, 0.55, 0.3)
+
+[node name="MenuInviteSlot" type="VBoxContainer" unique_id=1299477860]
+custom_minimum_size = Vector2(72, 0)
+theme_override_constants/separation = 3
+alignment = 1
+script = ExtResource("1_slot")
+
+[node name="Invite" type="Button" parent="." unique_id=298816404]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+size_flags_horizontal = 4
+tooltip_text = "MENU_INVITE_TOOLTIP"
+theme_override_styles/normal = SubResource("Style_slot_normal")
+theme_override_styles/hover = SubResource("Style_slot_hover")
+theme_override_styles/pressed = SubResource("Style_slot_pressed")
+theme_override_styles/disabled = SubResource("Style_slot_disabled")
+
+[node name="Plus" parent="Invite" unique_id=776359100 instance=ExtResource("2_plus")]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+font_size = 32
+text = "+"

@@ -31,8 +31,8 @@ extends Interactable
 ## always did.
 
 ## What the prompt reads at the machine, and what it reads with the racks up.
-const PROMPT_USE := "use the terminal"
-const PROMPT_LEAVE := "step back from the terminal"
+const PROMPT_USE := "PROMPT_USE_TERMINAL"
+const PROMPT_LEAVE := "PROMPT_STEP_BACK_TERMINAL"
 
 ## How long the camera takes to cross the van, each way. Long enough to read as
 ## walking up to the thing, short enough that a man buying three traps is not

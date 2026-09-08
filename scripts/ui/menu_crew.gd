@@ -95,6 +95,29 @@ func seat_of(steam_id: int) -> Node3D:
 	return _seats_taken.get(steam_id)
 
 
+## The seats with nobody in them, in the order they would be filled. What the
+## menu hangs its invite buttons over.
+##
+## It is asked of this node rather than worked out by the screen from a headcount
+## because the seats are nodes here and numbers nowhere: a fifth marker dragged
+## into `Seats` in the editor becomes a fifth seat and a fifth `+` without a line
+## changing, which is the whole reason they were made nodes.
+##
+## Read off the seats actually taken rather than off `players.size()`, so that a
+## crew entry this node skipped — an account of zero, a seat that would not cast
+## — leaves its seat showing a `+` instead of showing nothing at all.
+func empty_seats() -> Array[Node3D]:
+	var empty: Array[Node3D] = []
+	if _seats == null:
+		return empty
+	var taken := _seats_taken.values()
+	for child in _seats.get_children():
+		var seat := child as Node3D
+		if seat != null and not taken.has(seat):
+			empty.append(seat)
+	return empty
+
+
 ## How many bodies are up. For the benches, which need to see that a crew of four
 ## became four hazmats and not three.
 func count() -> int:

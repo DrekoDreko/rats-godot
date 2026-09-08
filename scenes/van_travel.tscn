@@ -9,11 +9,12 @@
 [ext_resource type="Script" uid="uid://b5fi6sleuhdk1" path="res://scripts/session/van_spawns.gd" id="6_spawns"]
 [ext_resource type="Script" uid="uid://bv088710brpjr" path="res://scripts/steam/player_avatars.gd" id="8_avatars"]
 [ext_resource type="Script" uid="uid://bgxxpnjqmrumj" path="res://scripts/hud_prompt.gd" id="9_prompt"]
+[ext_resource type="Script" uid="uid://m4hmg2xirspk" path="res://scripts/hud_hotbar.gd" id="10_hotbar"]
+[ext_resource type="PackedScene" uid="uid://b4wetum1hnqtu" path="res://scenes/big_font_outlined_label.tscn" id="20_big_font"]
 [ext_resource type="Script" uid="uid://2oqprgfxqio5" path="res://scripts/travel/van_travel.gd" id="11_travel"]
 [ext_resource type="Script" uid="uid://cxsl2rfdn2bvs" path="res://scripts/travel/road_scroll.gd" id="12_road"]
 [ext_resource type="Script" uid="uid://bsgt4sowfdofs" path="res://scripts/travel/cabin_shake.gd" id="13_shake"]
 [ext_resource type="Script" uid="uid://ddlqj8ges01dg" path="res://scripts/map/map_table.gd" id="15_table"]
-[ext_resource type="PackedScene" uid="uid://dq3n7vk8rj5wc" path="res://scenes/ps1_postprocess.tscn" id="16_ps1post"]
 [ext_resource type="PackedScene" path="res://scenes/store_screen.tscn" id="17_store"]
 [ext_resource type="PackedScene" uid="uid://dmio8uviym8en" path="res://models/totem.glb" id="18_totem"]
 [ext_resource type="Script" uid="uid://bcvx5d4kfjqk1" path="res://scripts/session/store_terminal.gd" id="19_terminal"]
@@ -428,9 +429,6 @@ script = ExtResource("11_travel")
 
 [node name="PS1" parent="." unique_id=1530841715 instance=ExtResource("2_ps1")]
 
-[node name="PS1PostProcess" parent="." unique_id=1974091816 instance=ExtResource("16_ps1post")]
-surface_material_override/0 = SubResource("ShaderMaterial_d5yb3")
-
 [node name="Road" type="Node3D" parent="." unique_id=1798449357]
 script = ExtResource("12_road")
 
@@ -598,7 +596,7 @@ collision_layer = 8
 collision_mask = 0
 monitoring = false
 script = ExtResource("15_table")
-prompt = "study the plan"
+prompt = "PROMPT_STUDY_PLAN"
 
 [node name="Reach" type="CollisionShape3D" parent="Stations/MapTable" unique_id=839534879]
 shape = SubResource("Shape_reach_contract")
@@ -622,7 +620,7 @@ collision_layer = 8
 collision_mask = 0
 monitoring = false
 script = ExtResource("19_terminal")
-prompt = "use the terminal"
+prompt = "PROMPT_USE_TERMINAL"
 
 [node name="Reach" type="CollisionShape3D" parent="Stations/StoreTerminal" unique_id=1525966248]
 shape = SubResource("Shape_reach_terminal")
@@ -664,7 +662,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.75, 0.65, 0.35)
 [node name="Player" parent="." unique_id=1655955847 instance=ExtResource("3_player")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.75, 0.65, 2.45)
 
-[node name="Players" type="Node3D" parent="." unique_id=1277322443]
+[node name="Players" type="Node3D" parent="." unique_id=1277322443 groups=["player_avatars_root"]]
 script = ExtResource("8_avatars")
 spawn_radius = 0.9
 
@@ -672,7 +670,117 @@ spawn_radius = 0.9
 
 [node name="HUD" type="CanvasLayer" parent="." unique_id=736597895]
 
-[node name="Prompt" type="Label" parent="HUD" unique_id=4361138]
+[node name="Hotbar" type="HBoxContainer" parent="HUD" unique_id=118028221]
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -60.0
+offset_top = -42.0
+offset_right = 60.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_constants/separation = 2
+alignment = 1
+script = ExtResource("10_hotbar")
+
+[node name="Slot1" type="PanelContainer" parent="HUD/Hotbar" unique_id=118028222]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Icon" type="TextureRect" parent="HUD/Hotbar/Slot1" unique_id=118028223]
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Name" parent="HUD/Hotbar/Slot1" unique_id=118028224 instance=ExtResource("20_big_font")]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+font_size = 16
+horizontal_alignment = 1
+vertical_alignment = 1
+text_overrun_behavior = 3
+
+[node name="Count" parent="HUD/Hotbar/Slot1" unique_id=118028225 instance=ExtResource("20_big_font")]
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+font_size = 16
+horizontal_alignment = 2
+vertical_alignment = 2
+
+[node name="Slot2" type="PanelContainer" parent="HUD/Hotbar" unique_id=118028226]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Icon" type="TextureRect" parent="HUD/Hotbar/Slot2" unique_id=118028227]
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Name" parent="HUD/Hotbar/Slot2" unique_id=118028228 instance=ExtResource("20_big_font")]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+font_size = 16
+horizontal_alignment = 1
+vertical_alignment = 1
+text_overrun_behavior = 3
+
+[node name="Count" parent="HUD/Hotbar/Slot2" unique_id=118028229 instance=ExtResource("20_big_font")]
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+font_size = 16
+horizontal_alignment = 2
+vertical_alignment = 2
+
+[node name="Slot3" type="PanelContainer" parent="HUD/Hotbar" unique_id=118028230]
+custom_minimum_size = Vector2(32, 32)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Icon" type="TextureRect" parent="HUD/Hotbar/Slot3" unique_id=118028231]
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Name" parent="HUD/Hotbar/Slot3" unique_id=118028232 instance=ExtResource("20_big_font")]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+font_size = 16
+horizontal_alignment = 1
+vertical_alignment = 1
+text_overrun_behavior = 3
+
+[node name="Count" parent="HUD/Hotbar/Slot3" unique_id=118028233 instance=ExtResource("20_big_font")]
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+font_size = 16
+horizontal_alignment = 2
+vertical_alignment = 2
+
+[node name="Prompt" parent="HUD" unique_id=4361138 instance=ExtResource("20_big_font")]
 anchors_preset = 7
 anchor_left = 0.5
 anchor_top = 1.0
@@ -687,11 +795,11 @@ grow_vertical = 0
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
-theme_override_font_sizes/font_size = 8
+font_size = 16
 horizontal_alignment = 1
 script = ExtResource("9_prompt")
 
-[node name="Crosshair" type="Label" parent="HUD" unique_id=2146252398]
+[node name="Crosshair" parent="HUD" unique_id=2146252398 instance=ExtResource("20_big_font")]
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
@@ -706,7 +814,7 @@ grow_vertical = 2
 theme_override_colors/font_color = Color(1, 1, 1, 0.75)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 8
+font_size = 16
 text = "+"
 horizontal_alignment = 1
 vertical_alignment = 1

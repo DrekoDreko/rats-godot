@@ -17,7 +17,7 @@ extends Control
 ## node only wires itself up in a scene saved by the editor.
 @export var prompt_path := NodePath("../Prompt")
 
-@onready var label: Label = $VBoxContainer/Label
+@onready var label: BigFontOutlinedLabel = $VBoxContainer/Label
 @onready var bar: ProgressBar = $VBoxContainer/Bar
 @onready var prompt: Control = get_node_or_null(prompt_path)
 
@@ -45,7 +45,7 @@ func _ready() -> void:
 	player.hold_finished.connect(_on_finished)
 
 func _on_started(interactable: Interactable) -> void:
-	label.text = interactable.prompt
+	label.text = tr(interactable.prompt)
 	bar.value = 0.0
 	show()
 	if prompt != null:

@@ -124,7 +124,8 @@ func _process(_delta: float) -> void:
 ## The phase's own name and the show of hands beside it. Both change on the same
 ## occasions, so they are drawn together.
 func _draw_phase() -> void:
-	_phase_label.text = Phase.name_of(PhaseManager.current()).to_upper()
+	var phase_key := "PHASE_" + Phase.name_of(PhaseManager.current()).to_upper()
+	_phase_label.text = tr(phase_key)
 	_draw_wager()
 	_draw_ready()
 
@@ -143,7 +144,7 @@ func _draw_wager() -> void:
 	if PhaseManager.current() != Phase.Type.HUNT or HuntTime.multiplier(booked) <= 1.0:
 		_wager_label.hide()
 		return
-	_wager_label.text = "x%d PAY" % int(HuntTime.multiplier(booked))
+	_wager_label.text = tr("HUD_WAGER") % int(HuntTime.multiplier(booked))
 	_wager_label.add_theme_color_override("font_color",
 		WAGER_COLOR.get(booked, NORMAL_COLOR))
 	_wager_label.show()
@@ -160,7 +161,7 @@ func _draw_ready() -> void:
 		_ready_label.hide()
 		return
 	var counts := ReadyManager.counts()
-	_ready_label.text = "%d/%d READY" % [counts[0], counts[1]]
+	_ready_label.text = tr("HUD_READY") % [counts[0], counts[1]]
 	_ready_label.show()
 
 

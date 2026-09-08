@@ -246,7 +246,11 @@ func _leave_match() -> void:
 		MapManager.clear_all_pins()
 		ReadyManager.blocked = false
 		JoinGate.admitted = false
-		tree.change_scene_to_file(LOBBY_SCENE)
+		var wrapper := tree.current_scene as GamePostProcessWrapper
+		if wrapper != null:
+			wrapper.change_scene_to_file(LOBBY_SCENE)
+		else:
+			tree.change_scene_to_file(LOBBY_SCENE)
 
 
 ## Out of the game altogether. The lobby is left on the way out rather than being

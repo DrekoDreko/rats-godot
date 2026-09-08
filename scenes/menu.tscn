@@ -4,24 +4,13 @@
 [ext_resource type="PackedScene" uid="uid://bgordf5uoxh7c" path="res://scenes/ps1.tscn" id="2_13sgg"]
 [ext_resource type="Script" uid="uid://3wh3h00cllfg" path="res://scripts/ui/menu_crew.gd" id="2_crew"]
 [ext_resource type="Script" uid="uid://uwxm7mwqg5fm" path="res://scripts/ui/color_popup.gd" id="3_color"]
-[ext_resource type="PackedScene" uid="uid://dq3n7vk8rj5wc" path="res://scenes/ps1_postprocess.tscn" id="3_i6lef"]
 [ext_resource type="Shader" uid="uid://bwmdy542q66bt" path="res://scripts/ps1.gdshader" id="4_70i5f"]
-[ext_resource type="PackedScene" path="res://scenes/lobby.tscn" id="5_modal"]
-[ext_resource type="PackedScene" path="res://scenes/settings_menu.tscn" id="6_settings"]
+[ext_resource type="PackedScene" uid="uid://cbaw6ypunj51i" path="res://scenes/lobby.tscn" id="5_modal"]
+[ext_resource type="PackedScene" uid="uid://k6hnry2avdc" path="res://scenes/settings_menu.tscn" id="6_settings"]
 [ext_resource type="PackedScene" uid="uid://r6380qbonva8" path="res://scenes/black_button.tscn" id="7_i6lef"]
+[ext_resource type="PackedScene" uid="uid://b4wetum1hnqtu" path="res://scenes/big_font_outlined_label.tscn" id="8_ufwb2"]
 [ext_resource type="Texture2D" uid="uid://d4n0gjqdch0t2" path="res://assets/textures/floor/concrete_floor_atlas.png" id="9_floor_tex"]
 [ext_resource type="PackedScene" uid="uid://dyb2bu6wxtp7m" path="res://models/van_exterior.glb" id="10_van"]
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_70i5f"]
-render_priority = 0
-shader = ExtResource("4_70i5f")
-shader_parameter/albedo_color = Color(1, 1, 1, 1)
-shader_parameter/alpha_scissor = 0.5
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
 
 [sub_resource type="StandardMaterial3D" id="Mat_floor"]
 albedo_texture = ExtResource("9_floor_tex")
@@ -39,7 +28,12 @@ shader = ExtResource("4_70i5f")
 shader_parameter/albedo = ExtResource("9_floor_tex")
 shader_parameter/albedo_color = Color(1, 1, 1, 1)
 shader_parameter/uv_scale = Vector2(5, 10)
-shader_parameter/alpha_scissor = 0.5
+shader_parameter/jitter = 0.50000002375
+shader_parameter/jitter_grid = 0.0
+shader_parameter/jitter_z_coordinate = true
+shader_parameter/jitter_depth_independent = true
+shader_parameter/affine_strength = 0.0
+shader_parameter/alpha_scissor = 1.0
 shader_parameter/recolor_target = Color(1, 1, 1, 1)
 shader_parameter/recolor_strength = 0.0
 shader_parameter/recolor_hue = 0.1406
@@ -50,11 +44,6 @@ shader_parameter/recolor_min_saturation = 0.25
 script = ExtResource("1_menu")
 
 [node name="PS1" parent="." unique_id=1777166207 instance=ExtResource("2_13sgg")]
-jitter_grid = null
-
-[node name="PS1PostProcess" parent="." unique_id=667602802 instance=ExtResource("3_i6lef")]
-transform = Transform3D(0.99994415, 0, -0.0105678635, 0, 1, 0, 0.0105678635, 0, 0.99994415, 0, 0, 0)
-surface_material_override/0 = SubResource("ShaderMaterial_70i5f")
 
 [node name="Floor" type="MeshInstance3D" parent="." unique_id=564645654]
 transform = Transform3D(0.99996746, 0, 0.00806902, 0, 1, 0, -0.00806902, 0, 0.99996746, -0.0012350082, -2.3841858e-07, 0.009379387)
@@ -87,28 +76,70 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.35, 0, 0)
 
 [node name="UI" type="CanvasLayer" parent="." unique_id=1279202548]
 
-[node name="LocalPlayer" type="HBoxContainer" parent="UI" unique_id=735532409]
-offset_left = 8.0
-offset_top = 8.0
-offset_right = 148.0
-offset_bottom = 40.0
+[node name="MarginContainer" type="MarginContainer" parent="UI" unique_id=1451186264]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="LocalPlayer" type="HBoxContainer" parent="UI/MarginContainer" unique_id=735532409]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
 theme_override_constants/separation = 6
 alignment = 1
 
-[node name="Photo" type="TextureRect" parent="UI/LocalPlayer" unique_id=773197327]
+[node name="Photo" type="TextureRect" parent="UI/MarginContainer/LocalPlayer" unique_id=773197327]
 texture_filter = 1
 custom_minimum_size = Vector2(32, 32)
 layout_mode = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Name" type="Label" parent="UI/LocalPlayer" unique_id=1208256218]
+[node name="Name" parent="UI/MarginContainer/LocalPlayer" unique_id=776359099 instance=ExtResource("8_ufwb2")]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 5
-theme_override_font_sizes/font_size = 8
-vertical_alignment = 1
+text = "PLAYER_NAME"
+horizontal_alignment = null
+vertical_alignment = null
+text_overrun_behavior = null
+
+[node name="Center" type="VBoxContainer" parent="UI/MarginContainer" unique_id=1166613313]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 8
+theme_override_constants/separation = 4
+
+[node name="Play" parent="UI/MarginContainer/Center" unique_id=1313306122 instance=ExtResource("7_i6lef")]
+layout_mode = 2
+size_flags_horizontal = 1
+text = "MENU_PLAY"
+
+[node name="PublicLobbies" parent="UI/MarginContainer/Center" unique_id=1053931162 instance=ExtResource("7_i6lef")]
+layout_mode = 2
+size_flags_horizontal = 1
+text = "MENU_FIND_LOBBY"
+
+[node name="Settings" parent="UI/MarginContainer/Center" unique_id=1414672112 instance=ExtResource("7_i6lef")]
+layout_mode = 2
+size_flags_horizontal = 1
+text = "MENU_SETTINGS"
+
+[node name="Empty" type="Control" parent="UI/MarginContainer/Center" unique_id=889182707]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+
+[node name="StatusLabel" parent="UI/MarginContainer/Center" unique_id=207522613 instance=ExtResource("8_ufwb2")]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "STATUS"
+horizontal_alignment = null
+vertical_alignment = null
+text_overrun_behavior = null
 
 [node name="Cards" type="Control" parent="UI" unique_id=650969528]
 layout_mode = 3
@@ -119,57 +150,10 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Center" type="VBoxContainer" parent="UI" unique_id=1166613313]
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -70.0
-offset_top = -112.0
-offset_right = 70.0
-offset_bottom = -20.0
-grow_horizontal = 2
-grow_vertical = 0
-theme_override_constants/separation = 4
-
-[node name="Play" parent="UI/Center" unique_id=1313306122 instance=ExtResource("7_i6lef")]
-layout_mode = 2
-size_flags_horizontal = 1
-text = "MENU_PLAY"
-
-[node name="PublicLobbies" parent="UI/Center" unique_id=1053931162 instance=ExtResource("7_i6lef")]
-layout_mode = 2
-size_flags_horizontal = 1
-text = "MENU_FIND_LOBBY"
-
-[node name="Settings" parent="UI/Center" unique_id=1414672112 instance=ExtResource("7_i6lef")]
-layout_mode = 2
-size_flags_horizontal = 1
-text = "MENU_SETTINGS"
-
-[node name="Status" type="Label" parent="UI" unique_id=523677910]
-anchors_preset = 12
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 8.0
-offset_top = -16.0
-offset_right = -8.0
-offset_bottom = -4.0
-grow_horizontal = 2
-grow_vertical = 0
-theme_override_colors/font_color = Color(1, 1, 1, 0.6)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 5
-theme_override_font_sizes/font_size = 8
-horizontal_alignment = 1
-autowrap_mode = 2
-
 [node name="LobbyModal" parent="UI" unique_id=954254003 instance=ExtResource("5_modal")]
 visible = false
 
-[node name="SettingsMenu" parent="UI" instance=ExtResource("6_settings")]
+[node name="SettingsMenu" parent="UI" unique_id=79831428 instance=ExtResource("6_settings")]
 visible = false
 
 [node name="ColorPopup" type="PopupPanel" parent="UI" unique_id=334250369]

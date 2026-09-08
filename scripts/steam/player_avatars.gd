@@ -147,6 +147,18 @@ func avatar_of(peer_id: int) -> PlayerAvatar:
 	return _avatars.get(peer_id)
 
 
+## The avatar standing for a Steam account, or null until that peer has finished
+## the standing handshake. UI that draws everybody by Steam ID uses this rather
+## than reaching into the peer-keyed dictionary.
+func avatar_for_steam_id(steam_id: int) -> PlayerAvatar:
+	if steam_id == 0:
+		return null
+	for avatar in _avatars.values():
+		if avatar.steam_id == steam_id:
+			return avatar
+	return null
+
+
 ## Our own, the invisible one the wire reads us off. Null in a solo hunt.
 func local_avatar() -> PlayerAvatar:
 	return avatar_of(multiplayer.get_unique_id())
@@ -299,6 +311,24 @@ func _add(peer_id: int) -> void:
 				% player_path)
 	_avatars[peer_id] = avatar
 	add_child(avatar)
+	# The matching node is now in this tree. Until we tell its owner, that
+	# avatar's synchronizer remains private, so no sync frame can arrive at a
+	# path that is still being built during a join or scene transition.
+	if peer_id != multiplayer.get_unique_id():
+		_sync_ready.rpc_id(peer_id)
+
+
+## A peer has created the avatar that represents us, so it is safe to send our
+## synchronized pose to that peer. The sender id is the only visibility we
+## grant: another peer cannot make us publish to anyone else.
+@rpc("any_peer", "reliable")
+func _sync_ready() -> void:
+	var peer_id := multiplayer.get_remote_sender_id()
+	if peer_id == 0:
+		return
+	var avatar := local_avatar()
+	if avatar != null:
+		avatar.allow_sync_to(peer_id)
 
 
 func _remove(peer_id: int) -> void:

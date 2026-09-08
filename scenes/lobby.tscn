@@ -1,7 +1,8 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene format=3 uid="uid://cbaw6ypunj51i"]
 
-[ext_resource type="Script" path="res://scripts/steam/lobby_screen.gd" id="1_lobby"]
+[ext_resource type="Script" uid="uid://dv7ft2urn67w2" path="res://scripts/steam/lobby_screen.gd" id="1_lobby"]
 [ext_resource type="FontFile" uid="uid://b3vvnk0rcn80q" path="res://assets/fonts/matchup.ttf" id="2_font"]
+[ext_resource type="PackedScene" uid="uid://b4wetum1hnqtu" path="res://scenes/big_font_outlined_label.tscn" id="3_big_font"]
 
 [sub_resource type="FontVariation" id="FontVariation_lobby"]
 base_font = ExtResource("2_font")
@@ -32,24 +33,24 @@ border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.55, 0.55, 0.55, 0.45)
 
-[sub_resource type="StyleBoxFlat" id="Style_button_hover"]
-content_margin_left = 8.0
-content_margin_top = 6.0
-content_margin_right = 8.0
-content_margin_bottom = 6.0
-bg_color = Color(0, 0, 0, 0.47058824)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.55, 0.55, 0.55, 0.45)
-
 [sub_resource type="StyleBoxFlat" id="Style_button_pressed"]
 content_margin_left = 8.0
 content_margin_top = 6.0
 content_margin_right = 8.0
 content_margin_bottom = 6.0
 bg_color = Color(0, 0, 0, 0.5882353)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.55, 0.55, 0.55, 0.45)
+
+[sub_resource type="StyleBoxFlat" id="Style_button_hover"]
+content_margin_left = 8.0
+content_margin_top = 6.0
+content_margin_right = 8.0
+content_margin_bottom = 6.0
+bg_color = Color(0, 0, 0, 0.47058824)
 border_width_left = 1
 border_width_top = 1
 border_width_right = 1
@@ -88,7 +89,7 @@ border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.55, 0.55, 0.55, 0.5)
 
-[node name="Lobby" type="Control"]
+[node name="Lobby" type="Control" unique_id=1440061532]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -98,7 +99,7 @@ grow_vertical = 2
 theme = SubResource("Theme_lobby")
 script = ExtResource("1_lobby")
 
-[node name="Dim" type="ColorRect" parent="."]
+[node name="Dim" type="ColorRect" parent="." unique_id=2137025512]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -107,7 +108,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.35)
 
-[node name="Center" type="Control" parent="."]
+[node name="Center" type="Control" parent="." unique_id=1535441712]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -116,7 +117,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Panel" type="PanelContainer" parent="Center"]
+[node name="Panel" type="PanelContainer" parent="Center" unique_id=1510529361]
 layout_mode = 1
 anchors_preset = 4
 anchor_top = 0.5
@@ -128,90 +129,82 @@ offset_bottom = 110.0
 grow_vertical = 2
 theme_override_styles/panel = SubResource("Style_lobby_panel")
 
-[node name="Margin" type="MarginContainer" parent="Center/Panel"]
+[node name="Margin" type="MarginContainer" parent="Center/Panel" unique_id=1422415690]
 layout_mode = 2
 theme_override_constants/margin_left = 10
 theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 8
 
-[node name="Rows" type="VBoxContainer" parent="Center/Panel/Margin"]
+[node name="Rows" type="VBoxContainer" parent="Center/Panel/Margin" unique_id=1383071040]
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="TitleRow" type="HBoxContainer" parent="Center/Panel/Margin/Rows"]
+[node name="TitleRow" type="HBoxContainer" parent="Center/Panel/Margin/Rows" unique_id=1081735381]
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="Title" type="Label" parent="Center/Panel/Margin/Rows/TitleRow"]
+[node name="Title" parent="Center/Panel/Margin/Rows/TitleRow" unique_id=2026019936 instance=ExtResource("3_big_font")]
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_vertical = 1
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 6
-theme_override_font_sizes/font_size = 20
+font_size = 32
 text = "MENU_FIND_LOBBY"
 
-[node name="Close" type="Button" parent="Center/Panel/Margin/Rows/TitleRow"]
+[node name="Close" type="Button" parent="Center/Panel/Margin/Rows/TitleRow" unique_id=1400363772]
 custom_minimum_size = Vector2(30, 26)
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_styles/normal = SubResource("Style_button_normal")
-theme_override_styles/hover = SubResource("Style_button_hover")
 theme_override_styles/pressed = SubResource("Style_button_pressed")
+theme_override_styles/hover = SubResource("Style_button_hover")
 theme_override_styles/disabled = SubResource("Style_button_disabled")
 text = "X"
 
-[node name="JoinRow" type="HBoxContainer" parent="Center/Panel/Margin/Rows"]
+[node name="JoinRow" type="HBoxContainer" parent="Center/Panel/Margin/Rows" unique_id=1698286975]
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="Code" type="LineEdit" parent="Center/Panel/Margin/Rows/JoinRow"]
+[node name="Code" type="LineEdit" parent="Center/Panel/Margin/Rows/JoinRow" unique_id=1812545744]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/normal = SubResource("Style_field")
-theme_override_styles/focus = SubResource("Style_field")
 theme_override_styles/read_only = SubResource("Style_field")
+theme_override_styles/focus = SubResource("Style_field")
 placeholder_text = "LOBBY_CODE_PLACEHOLDER"
 
-[node name="Join" type="Button" parent="Center/Panel/Margin/Rows/JoinRow"]
+[node name="Join" type="Button" parent="Center/Panel/Margin/Rows/JoinRow" unique_id=120588383]
 custom_minimum_size = Vector2(48, 0)
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_button_normal")
-theme_override_styles/hover = SubResource("Style_button_hover")
 theme_override_styles/pressed = SubResource("Style_button_pressed")
+theme_override_styles/hover = SubResource("Style_button_hover")
 theme_override_styles/disabled = SubResource("Style_button_disabled")
 text = "LOBBY_JOIN"
 
-[node name="Refresh" type="Button" parent="Center/Panel/Margin/Rows"]
+[node name="Refresh" type="Button" parent="Center/Panel/Margin/Rows" unique_id=781137450]
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_button_normal")
-theme_override_styles/hover = SubResource("Style_button_hover")
 theme_override_styles/pressed = SubResource("Style_button_pressed")
+theme_override_styles/hover = SubResource("Style_button_hover")
 theme_override_styles/disabled = SubResource("Style_button_disabled")
 text = "LOBBY_REFRESH"
 
-[node name="Lobbies" type="ItemList" parent="Center/Panel/Margin/Rows"]
+[node name="Lobbies" type="ItemList" parent="Center/Panel/Margin/Rows" unique_id=157212441]
 custom_minimum_size = Vector2(0, 70)
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_styles/panel = SubResource("Style_list")
 allow_reselect = true
 
-[node name="Leave" type="Button" parent="Center/Panel/Margin/Rows"]
+[node name="Leave" type="Button" parent="Center/Panel/Margin/Rows" unique_id=622420384]
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_button_normal")
-theme_override_styles/hover = SubResource("Style_button_hover")
 theme_override_styles/pressed = SubResource("Style_button_pressed")
+theme_override_styles/hover = SubResource("Style_button_hover")
 theme_override_styles/disabled = SubResource("Style_button_disabled")
 text = "LOBBY_LEAVE"
 
-[node name="Status" type="Label" parent="Center/Panel/Margin/Rows"]
+[node name="Status" parent="Center/Panel/Margin/Rows" unique_id=254418973 instance=ExtResource("3_big_font")]
 custom_minimum_size = Vector2(0, 14)
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 0.6)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 5
-theme_override_font_sizes/font_size = 16
 autowrap_mode = 2

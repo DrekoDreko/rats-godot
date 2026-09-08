@@ -59,10 +59,10 @@ extends Weapon
 ## what runs out first: at 0.46 the rat was drawn through the glove on a twentieth
 ## of their overlap and the reading swung by four points between runs, where here
 ## it stays under one per cent of it and only a hard kick moves it
-## (`_test_grip.gd: MAX_BEHIND`).
+## (`MAX_BEHIND`).
 ##
 ## Bound to `PlayerViewModel.grip_offset`, `grip_rotation` and `grip_scale`: the
-## four were solved together, and `_test_grip.gd` is what says the fist is still
+## four were solved together, and the grip measurements say the fist is still
 ## on the animal after any of them moves.
 ##
 ## ## Why it came in past the fist anyway
@@ -79,7 +79,7 @@ extends Weapon
 ## rather than in `grip_scale`: the glove's own pose is what the arithmetic above
 ## solved and it is left where it was.
 ##
-## This inverts what `_test_grip.gd` measures. `MAX_BEHIND` and `MAX_HIDDEN` both
+## This inverts the grip measurements. `MAX_BEHIND` and `MAX_HIDDEN` both
 ## read *hand in front of rat* as the correct picture, so the bench now reports
 ## the intended pose as three failures — the resting hand having no distance to
 ## travel, the fist being behind the animal, and the animal covering the whole of
@@ -105,7 +105,7 @@ extends Weapon
 ## `hands_distance`, so the same distance on screen is a shorter one in metres
 ## for whichever of the two is nearer. What has to be held constant is the gap
 ## between them *on screen* — the fist about a tenth of a frame above the held
-## point, which is where a neck is — and `_test_grip.gd` prints both readings
+## point, which is where a neck is — and the grip measurements print both readings
 ## every run.
 ##
 ## It came up from -0.04 when the animal came in past the fist: nearer the lens,

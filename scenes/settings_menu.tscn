@@ -1,7 +1,8 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene format=3 uid="uid://k6hnry2avdc"]
 
-[ext_resource type="Script" path="res://scripts/ui/settings_menu.gd" id="1_settings"]
+[ext_resource type="Script" uid="uid://bejyxywva23pg" path="res://scripts/ui/settings_menu.gd" id="1_settings"]
 [ext_resource type="FontFile" uid="uid://b3vvnk0rcn80q" path="res://assets/fonts/matchup.ttf" id="2_font"]
+[ext_resource type="PackedScene" uid="uid://b4wetum1hnqtu" path="res://scenes/big_font_outlined_label.tscn" id="3_big_font"]
 
 [sub_resource type="FontVariation" id="FontVariation_settings"]
 base_font = ExtResource("2_font")
@@ -44,7 +45,7 @@ border_width_right = 1
 border_width_bottom = 1
 border_color = Color(0.55, 0.55, 0.55, 0.45)
 
-[node name="SettingsMenu" type="Control"]
+[node name="SettingsMenu" type="Control" unique_id=1272696249]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -54,7 +55,7 @@ grow_vertical = 2
 theme = SubResource("Theme_settings")
 script = ExtResource("1_settings")
 
-[node name="Dim" type="ColorRect" parent="."]
+[node name="Dim" type="ColorRect" parent="." unique_id=302719338]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -63,7 +64,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.5)
 
-[node name="Center" type="CenterContainer" parent="."]
+[node name="Center" type="CenterContainer" parent="." unique_id=1061946753]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -71,156 +72,128 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Panel" type="PanelContainer" parent="Center"]
+[node name="Panel" type="PanelContainer" parent="Center" unique_id=1883028318]
 layout_mode = 2
 theme_override_styles/panel = SubResource("Style_settings_panel")
 
-[node name="Margin" type="MarginContainer" parent="Center/Panel"]
+[node name="Margin" type="MarginContainer" parent="Center/Panel" unique_id=684041824]
 layout_mode = 2
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 12
 
-[node name="Rows" type="VBoxContainer" parent="Center/Panel/Margin"]
+[node name="Rows" type="VBoxContainer" parent="Center/Panel/Margin" unique_id=1076204877]
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="TitleRow" type="HBoxContainer" parent="Center/Panel/Margin/Rows"]
+[node name="TitleRow" type="HBoxContainer" parent="Center/Panel/Margin/Rows" unique_id=1370584833]
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="Title" type="Label" parent="Center/Panel/Margin/Rows/TitleRow"]
+[node name="Title" parent="Center/Panel/Margin/Rows/TitleRow" unique_id=1677755568 instance=ExtResource("3_big_font")]
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_vertical = 1
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 5
-theme_override_font_sizes/font_size = 16
+font_size = 32
 text = "MENU_SETTINGS"
 
-[node name="Close" type="Button" parent="Center/Panel/Margin/Rows/TitleRow"]
+[node name="Close" type="Button" parent="Center/Panel/Margin/Rows/TitleRow" unique_id=463589953]
 custom_minimum_size = Vector2(30, 26)
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_styles/normal = SubResource("Style_button_normal")
-theme_override_styles/hover = SubResource("Style_button_hover")
 theme_override_styles/pressed = SubResource("Style_button_hover")
+theme_override_styles/hover = SubResource("Style_button_hover")
 theme_override_styles/disabled = SubResource("Style_button_normal")
 text = "X"
 
-[node name="Separator1" type="HSeparator" parent="Center/Panel/Margin/Rows"]
+[node name="Separator1" type="HSeparator" parent="Center/Panel/Margin/Rows" unique_id=1318914151]
 layout_mode = 2
 
-[node name="FullscreenRow" type="HBoxContainer" parent="Center/Panel/Margin/Rows"]
+[node name="FullscreenRow" type="HBoxContainer" parent="Center/Panel/Margin/Rows" unique_id=1719958304]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Label" type="Label" parent="Center/Panel/Margin/Rows/FullscreenRow"]
+[node name="Label" parent="Center/Panel/Margin/Rows/FullscreenRow" unique_id=1663265184 instance=ExtResource("3_big_font")]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 8
 text = "SETTINGS_FULLSCREEN"
 
-[node name="Fullscreen" type="CheckButton" parent="Center/Panel/Margin/Rows/FullscreenRow"]
+[node name="Fullscreen" type="CheckButton" parent="Center/Panel/Margin/Rows/FullscreenRow" unique_id=627259713]
 layout_mode = 2
 
-[node name="SoundRow" type="HBoxContainer" parent="Center/Panel/Margin/Rows"]
+[node name="SoundRow" type="HBoxContainer" parent="Center/Panel/Margin/Rows" unique_id=1224038018]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Label" type="Label" parent="Center/Panel/Margin/Rows/SoundRow"]
+[node name="Label" parent="Center/Panel/Margin/Rows/SoundRow" unique_id=108101542 instance=ExtResource("3_big_font")]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 8
 text = "SETTINGS_SOUND_VOLUME"
 
-[node name="Sound" type="HSlider" parent="Center/Panel/Margin/Rows/SoundRow"]
+[node name="Sound" type="HSlider" parent="Center/Panel/Margin/Rows/SoundRow" unique_id=1288235856]
 custom_minimum_size = Vector2(110, 0)
 layout_mode = 2
 max_value = 1.0
 step = 0.01
 value = 1.0
 
-[node name="MusicRow" type="HBoxContainer" parent="Center/Panel/Margin/Rows"]
+[node name="MusicRow" type="HBoxContainer" parent="Center/Panel/Margin/Rows" unique_id=1372509549]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Label" type="Label" parent="Center/Panel/Margin/Rows/MusicRow"]
+[node name="Label" parent="Center/Panel/Margin/Rows/MusicRow" unique_id=1902372286 instance=ExtResource("3_big_font")]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 8
 text = "SETTINGS_MUSIC_VOLUME"
 
-[node name="Music" type="HSlider" parent="Center/Panel/Margin/Rows/MusicRow"]
+[node name="Music" type="HSlider" parent="Center/Panel/Margin/Rows/MusicRow" unique_id=1636371650]
 custom_minimum_size = Vector2(110, 0)
 layout_mode = 2
 max_value = 1.0
 step = 0.01
 value = 1.0
 
-[node name="VoiceRow" type="HBoxContainer" parent="Center/Panel/Margin/Rows"]
+[node name="VoiceRow" type="HBoxContainer" parent="Center/Panel/Margin/Rows" unique_id=1740571788]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Label" type="Label" parent="Center/Panel/Margin/Rows/VoiceRow"]
+[node name="Label" parent="Center/Panel/Margin/Rows/VoiceRow" unique_id=1504742600 instance=ExtResource("3_big_font")]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 8
 text = "SETTINGS_VOICE_VOLUME"
 
-[node name="Voice" type="HSlider" parent="Center/Panel/Margin/Rows/VoiceRow"]
+[node name="Voice" type="HSlider" parent="Center/Panel/Margin/Rows/VoiceRow" unique_id=950408917]
 custom_minimum_size = Vector2(110, 0)
 layout_mode = 2
 max_value = 1.0
 step = 0.01
 value = 1.0
 
-[node name="Separator2" type="HSeparator" parent="Center/Panel/Margin/Rows"]
+[node name="Separator2" type="HSeparator" parent="Center/Panel/Margin/Rows" unique_id=983679153]
 layout_mode = 2
 
-[node name="StreamerRow" type="HBoxContainer" parent="Center/Panel/Margin/Rows"]
+[node name="StreamerRow" type="HBoxContainer" parent="Center/Panel/Margin/Rows" unique_id=2139669479]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Label" type="Label" parent="Center/Panel/Margin/Rows/StreamerRow"]
+[node name="Label" parent="Center/Panel/Margin/Rows/StreamerRow" unique_id=380865980 instance=ExtResource("3_big_font")]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 8
 text = "SETTINGS_STREAMER_MODE"
 
-[node name="Streamer" type="CheckButton" parent="Center/Panel/Margin/Rows/StreamerRow"]
+[node name="Streamer" type="CheckButton" parent="Center/Panel/Margin/Rows/StreamerRow" unique_id=568019007]
 layout_mode = 2
 
-[node name="LanguageRow" type="HBoxContainer" parent="Center/Panel/Margin/Rows"]
+[node name="LanguageRow" type="HBoxContainer" parent="Center/Panel/Margin/Rows" unique_id=1902069575]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="Label" type="Label" parent="Center/Panel/Margin/Rows/LanguageRow"]
+[node name="Label" parent="Center/Panel/Margin/Rows/LanguageRow" unique_id=910790714 instance=ExtResource("3_big_font")]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 8
 text = "SETTINGS_LANGUAGE"
 
-[node name="Language" type="OptionButton" parent="Center/Panel/Margin/Rows/LanguageRow"]
+[node name="Language" type="OptionButton" parent="Center/Panel/Margin/Rows/LanguageRow" unique_id=915172606]
 custom_minimum_size = Vector2(120, 0)
 layout_mode = 2

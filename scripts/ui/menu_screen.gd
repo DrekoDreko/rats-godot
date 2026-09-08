@@ -25,7 +25,6 @@ extends Node3D
 ## The colours the status line reads in, matching `lobby_screen.gd` so that the
 ## same kind of news is the same colour on both screens.
 const ERROR_COLOR := Color(0.95, 0.32, 0.28)
-const NOTICE_COLOR := Color(0.55, 0.85, 0.45)
 const IDLE_COLOR := Color(1, 1, 1, 0.6)
 
 ## What the host is told when he presses a button that is not his to press yet.
@@ -41,15 +40,18 @@ const CARD_HEIGHT := 1.62
 ## where they can be seen.
 const CARD_SCENE := preload("res://scenes/menu_player_card.tscn")
 
+## The `+` that hangs over a seat nobody is in.
+const INVITE_SLOT_SCENE := preload("res://scenes/menu_invite_slot.tscn")
+
 @onready var _crew: MenuCrew = $Crew
 @onready var _camera: Camera3D = $Camera
 @onready var _cards: Control = $UI/Cards
-@onready var _photo: TextureRect = $UI/LocalPlayer/Photo
-@onready var _name: Label = $UI/LocalPlayer/Name
-@onready var _play: Button = $UI/Center/Play
-@onready var _public: Button = $UI/Center/PublicLobbies
-@onready var _settings: Button = $UI/Center/Settings
-@onready var _status: Label = $UI/Status
+@onready var _photo: TextureRect = $UI/MarginContainer/LocalPlayer/Photo
+@onready var _name: BigFontOutlinedLabel = $UI/MarginContainer/LocalPlayer/Name
+@onready var _play: Button = $UI/MarginContainer/Center/Play
+@onready var _public: Button = $UI/MarginContainer/Center/PublicLobbies
+@onready var _settings: Button = $UI/MarginContainer/Center/Settings
+@onready var _status: BigFontOutlinedLabel = $UI/MarginContainer/Center/StatusLabel
 @onready var _color_popup: ColorPopup = $UI/ColorPopup
 @onready var _modal: Control = $UI/LobbyModal
 @onready var _settings_modal: Control = $UI/SettingsMenu
@@ -57,6 +59,12 @@ const CARD_SCENE := preload("res://scenes/menu_player_card.tscn")
 ## The floating cards, by account, so that a crew that changed by one man does
 ## not rebuild all four.
 var _card_of: Dictionary[int, MenuPlayerCard] = {}
+
+## The `+` over each empty seat, by the seat it hangs over. Keyed by the seat and
+## not by an index because the seat is what it is pinned to, and an index would
+## have to be kept in step with a list that changes shape whenever somebody
+## joins or leaves.
+var _slot_of: Dictionary[Node3D, MenuInviteSlot] = {}
 
 
 func _ready() -> void:
@@ -108,6 +116,8 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	for steam_id in _card_of:
 		_place_card(steam_id)
+	for seat in _slot_of:
+		_place_over_seat(_slot_of[seat], seat)
 
 # --- The lobby --------------------------------------------------------------
 
@@ -188,6 +198,7 @@ func _refresh() -> void:
 	var crew := _crew_on_screen()
 	_crew.rebuild(crew)
 	_refresh_cards(crew)
+	_refresh_invite_slots()
 	_refresh_play()
 
 
@@ -251,21 +262,63 @@ func _refresh_cards(crew: Array[Dictionary]) -> void:
 			_card_of.erase(steam_id)
 
 
-## Puts one card over the body it belongs to. A seat behind the camera would
-## project to a point in front of it — `unproject_position` has no opinion about
-## what is behind you — so it is hidden instead.
+## Puts one card over the body it belongs to.
 func _place_card(steam_id: int) -> void:
 	var card: MenuPlayerCard = _card_of.get(steam_id)
 	var seat := _crew.seat_of(steam_id)
-	if card == null or seat == null:
-		return
+	if card != null and seat != null:
+		_place_over_seat(card, seat)
+
+
+## Pins a control over a seat, at the height a card floats at. Shared by the
+## cards and by the `+` slots so that a full seat and an empty one put their
+## label in exactly the same place — the row is read as one line of heads, and a
+## slot pinned by its own arithmetic would sit a few pixels off it.
+##
+## A seat behind the camera would project to a point in front of it —
+## `unproject_position` has no opinion about what is behind you — so it is hidden
+## instead.
+func _place_over_seat(control: Control, seat: Node3D) -> void:
 	var head := seat.global_position + Vector3.UP * CARD_HEIGHT
 	if _camera.is_position_behind(head):
-		card.hide()
+		control.hide()
 		return
-	card.show()
+	control.show()
 	var at := _camera.unproject_position(head)
-	card.position = at - Vector2(card.size.x * 0.5, card.size.y)
+	control.position = at - Vector2(control.size.x * 0.5, control.size.y)
+
+
+## One `+` per seat nobody is in. Built and freed the same way the cards are, and
+## for the same reason: a slot that survives its seat being filled is a `+` over
+## somebody's head.
+##
+## It runs after `_refresh_cards`, and has to — both read `MenuCrew`, and which
+## seats are empty is only settled once the bodies have been placed.
+func _refresh_invite_slots() -> void:
+	var empty := _crew.empty_seats()
+	for seat in empty:
+		var slot: MenuInviteSlot = _slot_of.get(seat)
+		if slot == null:
+			slot = INVITE_SLOT_SCENE.instantiate()
+			_slot_of[seat] = slot
+			_cards.add_child(slot)
+			slot.invite_pressed.connect(_on_invite_pressed)
+		# Whether there is a lobby to invite anybody to can change under a slot
+		# that is already up, so it is asked again rather than settled on the way in.
+		slot.refresh()
+		_place_over_seat(slot, seat)
+
+	for seat in _slot_of.keys():
+		if not empty.has(seat):
+			_slot_of[seat].queue_free()
+			_slot_of.erase(seat)
+
+
+## The `+` was pressed. Steam's own friends window does the rest; a refusal —
+## no Steam, no lobby — comes back on `lobby_failed` and lands in the status line
+## like every other one.
+func _on_invite_pressed() -> void:
+	LobbyManager.invite_friends()
 
 
 ## What the big button says, and whether it may be pressed at all. The host
@@ -305,14 +358,14 @@ func _say(message: String, color: Color) -> void:
 
 # --- What the autoloads say -------------------------------------------------
 
-func _on_lobby_entered(_lobby_id: int, is_host: bool) -> void:
+func _on_lobby_entered(_lobby_id: int, _is_host: bool) -> void:
 	# The crew entries are what the colour and the ready flag are written
 	# against, and in the menu both are chosen before anybody presses Play. So
 	# the host seats his crew on the way *in* to the lobby rather than on the way
 	# out of it. A client's crew still comes off the wire, through `JoinGate`.
 	LobbyManager.seat_the_crew()
 	_draw_local_player()
-	_say(tr("MENU_HOSTING_LOBBY") if is_host else tr("MENU_JOINED_LOBBY"), NOTICE_COLOR)
+	_status.text = ""
 	_refresh()
 
 

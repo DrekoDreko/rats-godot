@@ -18,7 +18,7 @@ const BLINKS := 6.0
 ## scene saved by the editor, and the `world.tscn` HUD is written by hand.
 @export var crosshair_path := NodePath("../Crosshair")
 
-@onready var button: Label = $VBoxContainer/Button
+@onready var button: BigFontOutlinedLabel = $VBoxContainer/Button
 @onready var bar: ProgressBar = $VBoxContainer/Bar
 @onready var crosshair: Control = get_node_or_null(crosshair_path)
 

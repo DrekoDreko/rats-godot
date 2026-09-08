@@ -156,7 +156,7 @@ const HELD_POSE := Vector3(66.0, 200.0, 0.0)
 ## `_held_scale` rather than an oversight. The first-person grip is a pose solved
 ## against this animal at this size — where the fist sits, how much of the body
 ## it covers, how much of it comes through the glove
-## (`player_view_model.gd: grip_offset`, `_test_grip.gd`) — and shrinking the rat
+## (`player_view_model.gd: grip_offset`) — and shrinking the rat
 ## inside it takes the hand off the animal without moving the hand at all: the
 ## glove went from covering an eighth of the rat to covering a fortieth, which is
 ## a fist beside a rat rather than round one. The two views are two pictures with

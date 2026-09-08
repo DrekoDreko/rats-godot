@@ -3,7 +3,8 @@
 [ext_resource type="Shader" uid="uid://je6sores1t8r" path="res://scripts/ps1_postprocess.gdshader" id="1_shader"]
 
 [resource]
-render_priority = 127
 shader = ExtResource("1_shader")
-shader_parameter/color_depth = 5
+shader_parameter/enabled = true
 shader_parameter/dithering = true
+shader_parameter/colors = 12
+shader_parameter/dither_size = 1

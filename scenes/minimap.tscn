@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/minimap.gd" id="1_minimap"]
+
+[node name="Minimap" type="Control"]
+custom_minimum_size = Vector2(132, 132)
+layout_mode = 3
+anchors_preset = 0
+mouse_filter = 2
+script = ExtResource("1_minimap")

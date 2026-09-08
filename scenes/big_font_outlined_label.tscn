@@ -19,4 +19,4 @@ script = ExtResource("1_d4as4")
 layout_mode = 2
 theme_override_constants/outline_size = 4
 theme_override_fonts/font = SubResource("FontVariation_pkbn7")
-text = "Hello World"
+text = "BIG_FONT_DEFAULT"

@@ -120,7 +120,7 @@ func _ready() -> void:
 	# way.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
-	multiplayer.peer_disconnected.connect(_on_peer_disconnected)
+	LobbyManager.peer_left.connect(_on_peer_left)
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
 	LobbyManager.lobby_left.connect(_on_lobby_left)
@@ -450,10 +450,13 @@ func _enter_scene(phase: Phase.Type) -> void:
 	var path := PhaseManager.scene_of(phase)
 	if path.is_empty():
 		path = LOBBY_SCENE
-	var current := get_tree().current_scene
-	if current != null and current.scene_file_path == path:
+	var wrapper := get_tree().current_scene as GamePostProcessWrapper
+	if wrapper != null and wrapper.current_game_scene_path() == path:
 		return
-	get_tree().change_scene_to_file(path)
+	if wrapper != null:
+		wrapper.change_scene_to_file(path)
+	else:
+		get_tree().change_scene_to_file(path)
 
 
 ## The host turning somebody down, whoever it was. His own refusal never goes on
@@ -492,10 +495,9 @@ func _on_peer_identified(_peer_id: int) -> void:
 ## The crew is keyed by Steam ID and the wire by peer id, so the man has to be
 ## looked up before he can be taken out. A peer that never introduced itself has
 ## no Steam ID to look up and leaves nothing behind to clean.
-func _on_peer_disconnected(peer_id: int) -> void:
+func _on_peer_left(_peer_id: int, steam_id: int) -> void:
 	if not PhaseManager.is_host():
 		return
-	var steam_id := LobbyManager.steam_id_of_peer(peer_id)
 	if steam_id == 0:
 		return
 	drop_player(steam_id)

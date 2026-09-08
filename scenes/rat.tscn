@@ -4,6 +4,15 @@
 [ext_resource type="PackedScene" uid="uid://c8f7bjmvqsrxx" path="res://mobs/rats/Rat_Fbx.fbx" id="2_model"]
 [ext_resource type="Resource" path="res://resources/species/common_rat.tres" id="3_species"]
 [ext_resource type="PackedScene" uid="uid://bgordf5uoxh7c" path="res://scenes/ps1.tscn" id="4_u6wux"]
+[ext_resource type="Texture2D" uid="uid://0wrsptp4p4rg" path="res://assets/textures/shadow_32x.png" id="5_shadow"]
+[ext_resource type="Script" path="res://scripts/floor_shadow.gd" id="6_floor_shadow"]
+
+[sub_resource type="StandardMaterial3D" id="Material_shadow"]
+transparency = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("5_shadow")
+cull_mode = 2
 
 [sub_resource type="CapsuleShape3D" id="Shape_rat"]
 radius = 0.06
@@ -53,6 +62,18 @@ path_max_distance = 3.0
 transform = Transform3D(0.18, 0, 0, 0, 0.18, 0, 0, 0, 0.18, 0, 0, 0)
 
 [node name="PS1" parent="Model/Mesh" unique_id=1777166207 instance=ExtResource("4_u6wux")]
+
+[node name="Shadow" type="Sprite3D" parent="."]
+position = Vector3(0, 0.00625, 0)
+script = ExtResource("6_floor_shadow")
+hide_while_captured = true
+axis = 1
+texture = ExtResource("5_shadow")
+pixel_size = 0.00625
+texture_filter = 1
+modulate = Color(1, 1, 1, 0.5)
+material_override = SubResource("Material_shadow")
+shaded = false
 
 [node name="Sync" type="MultiplayerSynchronizer" parent="." unique_id=1668221529]
 root_path = NodePath("..")
