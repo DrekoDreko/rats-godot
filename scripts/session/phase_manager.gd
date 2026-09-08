@@ -339,9 +339,9 @@ func _apply(phase: Phase.Type) -> void:
 
 ## Loads the phase's scene, then says the phase changed — in that order, so that
 ## whatever wakes up in the new scene is built already knowing where it is. The
-## wait of a frame is not politeness: `change_scene_to_file` is deferred by
-## Godot, and announcing before it lands would announce to the scene on its way
-## out.
+## wait of a frame is not politeness: `GamePostProcessWrapper` replaces the
+## scene inside its viewport immediately, and announcing before the next frame
+## would still announce to the outgoing scene before it is freed.
 ## What one shift leaves behind, wiped on the way back to the menu. Done on
 ## every machine and not only on the host, because every one of these is a local
 ## tally: this player's money, this player's crates, this player's pay slip.
@@ -383,17 +383,22 @@ func _clear_job() -> void:
 
 func _change_scene(path: String, previous: Phase.Type, phase: Phase.Type) -> void:
 	# The scene being left, held on to so that the announcement can wait for it
-	# to actually be gone. `change_scene_to_file` takes it out of the tree and
-	# queues it for freeing, and until that free lands its nodes are still
+	# to actually be gone. The wrapper takes it out of the viewport and queues it
+	# for freeing, and until that free lands its nodes are still
 	# connected to `phase_changed` — so the house the crew has just walked out of
 	# hears the phase that replaced it, tries to look a player up in a tree it is
 	# no longer in, and takes the game down with it. Every node in a scene would
 	# otherwise have to guard for that itself; waiting here is the one place it
 	# can be done once.
-	var outgoing := get_tree().current_scene
+	var wrapper := get_tree().current_scene as GamePostProcessWrapper
+	var outgoing := wrapper.current_game_scene() if wrapper != null else get_tree().current_scene
 
 	_changing_scene = true
-	get_tree().change_scene_to_file(path)
+	var error := wrapper.change_scene_to_file(path) if wrapper != null \
+		else get_tree().change_scene_to_file(path)
+	if error != OK:
+		_changing_scene = false
+		return
 	await get_tree().process_frame
 
 	# Capped rather than open-ended: a scene that somehow outlives its own free
@@ -474,5 +479,8 @@ func _sync(remaining: float) -> void:
 func _current_scene_path() -> String:
 	if _changing_scene:
 		return ""
+	var wrapper := get_tree().current_scene as GamePostProcessWrapper
+	if wrapper != null:
+		return wrapper.current_game_scene_path()
 	var scene := get_tree().current_scene
 	return "" if scene == null else scene.scene_file_path

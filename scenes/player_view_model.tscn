@@ -3,6 +3,7 @@
 [ext_resource type="Script" path="res://scripts/player_view_model.gd" id="1_view_model"]
 [ext_resource type="PackedScene" uid="uid://rowdmjh2bibw" path="res://models/hazmat_hand.glb" id="2_hand"]
 [ext_resource type="PackedScene" uid="uid://c6abr1dqlee33" path="res://models/baseball_bat_psx.glb" id="3_bat"]
+[ext_resource type="PackedScene" path="res://models/PSXBroom.glb" id="4_broom"]
 
 [node name="ViewModel" type="Node3D"]
 script = ExtResource("1_view_model")
@@ -19,6 +20,10 @@ script = ExtResource("1_view_model")
 
 [node name="BaseballBat" parent="Right/Hold" instance=ExtResource("3_bat")]
 visible = false
+
+[node name="Broom" parent="Right/Hold" instance=ExtResource("4_broom")]
+visible = false
+scale = Vector3(0.12, 0.12, 0.12)
 
 [node name="Left" type="Node3D" parent="."]
 

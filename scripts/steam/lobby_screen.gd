@@ -52,6 +52,8 @@ var _we_asked := false
 
 
 func _ready() -> void:
+	visibility_changed.connect(_on_visibility_changed)
+
 	_join.pressed.connect(_on_join_pressed)
 	_code.text_submitted.connect(func(_text: String) -> void: _on_join_pressed())
 	_refresh.pressed.connect(_on_refresh_pressed)
@@ -66,14 +68,19 @@ func _ready() -> void:
 	LobbyManager.lobby_failed.connect(_on_lobby_failed)
 	SettingsManager.streamer_mode_changed.connect(_on_streamer_mode_changed)
 
+	_refresh_controls()
+	_on_visibility_changed()
+
+
+func _on_visibility_changed() -> void:
+	if not visible:
+		return
 	if SteamManager.is_online:
 		# The player should land on a list, not on an empty box asking to be
 		# told what to do.
 		LobbyManager.refresh_lobbies()
 	else:
 		_say(tr("LOBBY_STEAM_OFFLINE"), ERROR_COLOR)
-
-	_refresh_controls()
 
 # --- The buttons ------------------------------------------------------------
 

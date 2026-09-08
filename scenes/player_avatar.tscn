@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/steam/player_avatar.gd" id="1_avatar"]
 [ext_resource type="PackedScene" path="res://scenes/player_model.tscn" id="2_model"]
+[ext_resource type="PackedScene" uid="uid://b4wetum1hnqtu" path="res://scenes/big_font_outlined_label.tscn" id="3_big_font"]
 
 [sub_resource type="SceneReplicationConfig" id="Replication_avatar"]
 properties/0/path = NodePath(".:sync_position")
@@ -23,16 +24,26 @@ script = ExtResource("1_avatar")
 
 [node name="Model" parent="." instance=ExtResource("2_model")]
 
-[node name="Name" type="Label3D" parent="."]
+[node name="NameViewport" type="SubViewport" parent="."]
+size = Vector2i(256, 48)
+transparent_bg = true
+render_target_update_mode = 4
+handle_input_locally = false
+
+[node name="Name" parent="NameViewport" instance=ExtResource("3_big_font")]
+offset_right = 256.0
+offset_bottom = 48.0
+font_size = 32
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "Player"
+
+[node name="Name" type="Sprite3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.2, 0)
 pixel_size = 0.004
 billboard = 1
 texture_filter = 0
 modulate = Color(1, 1, 1, 1)
-outline_modulate = Color(0, 0, 0, 0.5)
-text = "Player"
-font_size = 32
-outline_size = 4
 alpha_cut = 2
 
 [node name="CapturePoint" type="Node3D" parent="."]
@@ -41,5 +52,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.55, -0.6)
 [node name="Sync" type="MultiplayerSynchronizer" parent="."]
 process_mode = 3
 root_path = NodePath("..")
+public_visibility = false
 replication_interval = 0.05
 replication_config = SubResource("Replication_avatar")

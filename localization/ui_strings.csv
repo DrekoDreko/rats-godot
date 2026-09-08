@@ -41,6 +41,7 @@ MENU_LEFT_LOBBY,Left the lobby.,Saiu do lobby.
 MENU_PLAY_COUNT,PLAY  %d/%d,JOGAR  %d/%d
 MENU_CANCEL,CANCEL,CANCELAR
 MENU_READY,READY,PRONTO
+MENU_INVITE_TOOLTIP,Invite a friend,Convidar um amigo
 LOBBY_CODE_PLACEHOLDER,LOBBY ID,ID DO LOBBY
 LOBBY_JOIN,JOIN,ENTRAR
 LOBBY_REFRESH,REFRESH LIST,ATUALIZAR LISTA
@@ -61,3 +62,31 @@ SETTINGS_MUSIC_VOLUME,Music Volume,Volume da Música
 SETTINGS_VOICE_VOLUME,Voice Volume,Volume da Voz
 SETTINGS_STREAMER_MODE,Streamer Mode,Modo Streamer
 SETTINGS_LANGUAGE,Language,Idioma
+BIG_FONT_DEFAULT,Hello World,Olá mundo
+PHASE_LOBBY,LOBBY,LOBBY
+PHASE_TRAVEL,TRAVEL,VIAGEM
+PHASE_SURVEY,SURVEY,VISTORIA
+PHASE_HUNT,HUNT,CAÇADA
+PHASE_RESULT,RESULT,RESULTADO
+HUD_WAGER,x%d PAY,x%d PAGAMENTO
+HUD_READY,%d/%d READY,%d/%d PRONTOS
+HUD_RATS,Rats: %d / %d,Ratos: %d / %d
+HUD_MONEY_TOTAL,$ %d,$ %d
+HUD_MONEY_NOTICE,+$%d  %s,+$%d  %s
+HUD_INTERACT_PROMPT,E — %s,E — %s
+HUD_STRANGLE_BUTTON,CLICK,CLIQUE
+HUD_STRANGLE_INSTRUCTION,hammer to strangle,martele para estrangular
+PROMPT_STUDY_PLAN,study the plan,estude o plano
+PROMPT_USE_TERMINAL,use the terminal,use o terminal
+PROMPT_CLEAN_TRAP,clean the trap,limpe a armadilha
+PROMPT_STEP_AWAY_TABLE,step away from the table,afaste-se da mesa
+PROMPT_STEP_BACK_TERMINAL,step back from the terminal,afaste-se do terminal
+PROMPT_READY_UP,ready up,fique pronto
+PROMPT_STAND_DOWN,stand down,cancele a prontidão
+DEATH_NATURAL_CAUSES,natural causes,causas naturais
+DEATH_STRANGULATION,strangulation,estrangulamento
+DEATH_POISON,poison,veneno
+DEATH_TRAP,trap,armadilha
+DEATH_PIERCING,piercing,perfuração
+DEATH_GUNSHOT,gunshot,tiro
+DEATH_CRUSHING,crushing,esmagamento

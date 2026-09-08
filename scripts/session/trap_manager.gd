@@ -83,6 +83,7 @@ const PHASES: Array[Phase.Type] = [
 const SCENES := {
 	"mousetrap": "res://scenes/traps/mousetrap.tscn",
 	"rat_glue": "res://scenes/traps/glue_trap.tscn",
+	"explosive_cheese": "res://scenes/traps/explosive_cheese.tscn",
 }
 
 ## How far from the man who asked a trap may land. It is the weapon's own
@@ -539,9 +540,14 @@ func _body_of(steam_id: int) -> Node3D:
 		return null
 	if _is_ours(steam_id):
 		return tree.get_first_node_in_group("player") as Node3D
+	var avatars := tree.get_first_node_in_group("player_avatars_root")
+	if avatars != null and avatars.has_method("avatar_of"):
+		var peer_id := _peer_of(steam_id)
+		if peer_id != 0:
+			return avatars.avatar_of(peer_id) as Node3D
 	if tree.current_scene == null:
 		return null
-	var avatars := tree.current_scene.get_node_or_null(^"Players")
+	avatars = tree.current_scene.get_node_or_null(^"Players")
 	if avatars == null or not avatars.has_method("avatar_of"):
 		return null
 	var peer_id := _peer_of(steam_id)

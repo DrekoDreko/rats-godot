@@ -99,9 +99,8 @@ func _return_to_lobby(reason: String) -> void:
 	# client is standing when the host drops, and the crew he was standing with
 	# still has to be wiped. Returning early here left him looking at bodies for
 	# players who were no longer on any wire.
-	var current_scene := get_tree().current_scene
-	var already_there := current_scene != null \
-		and current_scene.scene_file_path == LOBBY_SCENE
+	var wrapper := get_tree().current_scene as GamePostProcessWrapper
+	var already_there := wrapper != null and wrapper.current_game_scene_path() == LOBBY_SCENE
 
 	_returning = true
 
@@ -124,7 +123,10 @@ func _return_to_lobby(reason: String) -> void:
 	# perfectly good and make the crew flicker; it listens to the same autoloads
 	# this just cleared and has already redrawn itself off them.
 	if not already_there:
-		get_tree().change_scene_to_file(LOBBY_SCENE)
+		if wrapper != null:
+			wrapper.change_scene_to_file(LOBBY_SCENE)
+		else:
+			get_tree().change_scene_to_file(LOBBY_SCENE)
 
 	# One frame of patience, so that the scene is standing before the guard is
 	# lowered — a signal that fires in the same frame as the change would find

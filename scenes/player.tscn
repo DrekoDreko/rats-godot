@@ -3,13 +3,15 @@
 [ext_resource type="Script" uid="uid://b8ngq8c3emtyi" path="res://scripts/player.gd" id="1_player"]
 [ext_resource type="Script" uid="uid://cpie0sl72t3vp" path="res://scripts/weapons/hands.gd" id="2_hands"]
 [ext_resource type="Script" uid="uid://dximu67j2r1kf" path="res://scripts/weapons/inventory.gd" id="3_inventory"]
-[ext_resource type="Script" path="res://scripts/weapons/mousetrap_weapon.gd" id="4_mousetrap"]
-[ext_resource type="Script" path="res://scripts/weapons/glue_weapon.gd" id="5_glue"]
-[ext_resource type="Script" path="res://scripts/weapons/melee_weapon.gd" id="10_melee"]
+[ext_resource type="Script" uid="uid://bgaqj05qp3ym" path="res://scripts/weapons/mousetrap_weapon.gd" id="4_mousetrap"]
+[ext_resource type="Script" uid="uid://doddy5h2t8nqt" path="res://scripts/weapons/glue_weapon.gd" id="5_glue"]
 [ext_resource type="PackedScene" path="res://scenes/traps/mousetrap.tscn" id="6_mousetrap_scene"]
 [ext_resource type="PackedScene" path="res://scenes/traps/glue_trap.tscn" id="7_glue_scene"]
-[ext_resource type="PackedScene" path="res://scenes/player_model.tscn" id="8_model"]
+[ext_resource type="Script" path="res://scripts/weapons/explosive_cheese_weapon.gd" id="8_cheese"]
+[ext_resource type="PackedScene" path="res://scenes/traps/explosive_cheese.tscn" id="9_cheese_scene"]
+[ext_resource type="PackedScene" uid="uid://cspc7qlhbpj7i" path="res://scenes/player_model.tscn" id="8_model"]
 [ext_resource type="PackedScene" uid="uid://ck8y2v1rw4mqn" path="res://scenes/player_view_model.tscn" id="9_view_model"]
+[ext_resource type="Script" uid="uid://bxw3rm1vg0arj" path="res://scripts/weapons/melee_weapon.gd" id="10_melee"]
 
 [sub_resource type="CapsuleShape3D" id="Shape_body"]
 radius = 0.4
@@ -25,11 +27,9 @@ shape = SubResource("Shape_body")
 
 [node name="Ceiling" type="ShapeCast3D" parent="." unique_id=1093428771]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+enabled = false
 shape = SubResource("Shape_body")
 target_position = Vector3(0, 0, 0)
-collision_mask = 1
-collide_with_areas = false
-enabled = false
 
 [node name="Model" parent="." unique_id=1825946101 instance=ExtResource("8_model")]
 
@@ -59,8 +59,8 @@ display_name = "Hands"
 transform = Transform3D(1, 0, 0, 0, 0.574, -0.819, 0, 0.819, 0.574, 0.3, -0.28, -0.35)
 script = ExtResource("4_mousetrap")
 stock_id = "mousetrap"
-salvage_fee = 2
 trap_scene = ExtResource("6_mousetrap_scene")
+salvage_fee = 2
 display_name = "Trap"
 cooldown = 0.6
 
@@ -72,21 +72,35 @@ trap_scene = ExtResource("7_glue_scene")
 display_name = "Glue"
 cooldown = 0.6
 
-[node name="BaseballBat" type="Node3D" parent="Head"]
+[node name="BaseballBat" type="Node3D" parent="Head" unique_id=434351760]
 transform = Transform3D(1, 0, 0, 0, 0.574, -0.819, 0, 0.819, 0.574, 0.33, -0.3, -0.3)
 script = ExtResource("10_melee")
 display_name = "Bat"
 reach = 2.2
 angle = 35.0
 cooldown = 0.55
-death_type = 6
-leap = 4.0
+
+[node name="Broom" type="Node3D" parent="Head"]
+transform = Transform3D(1, 0, 0, 0, 0.574, -0.819, 0, 0.819, 0.574, 0.33, -0.3, -0.3)
+script = ExtResource("10_melee")
+display_name = "Broom"
+reach = 3.6
+angle = 40.0
+cooldown = 0.7
+leap = 2.0
+held_item = &"Broom"
+
+[node name="ExplosiveCheese" type="Node3D" parent="Head"]
+transform = Transform3D(1, 0, 0, 0, 0.574, -0.819, 0, 0.819, 0.574, 0.3, -0.28, -0.35)
+script = ExtResource("8_cheese")
+stock_id = "explosive_cheese"
+trap_scene = ExtResource("9_cheese_scene")
+display_name = "Explosive Cheese"
+cooldown = 0.6
 
 [node name="CapturePoint" type="Node3D" parent="Head" unique_id=276718476]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.05, -0.6)
 
 [node name="Inventory" type="Node" parent="Head" unique_id=1147383766]
 script = ExtResource("3_inventory")
-slot_capacity = 3
-weapons_root = NodePath("..")
 hands_path = NodePath("../Hands")

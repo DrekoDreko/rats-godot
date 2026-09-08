@@ -3,15 +3,30 @@
 [ext_resource type="Script" uid="uid://c1lbbir4ycxo1" path="res://scripts/ui/menu_player_card.gd" id="1_card"]
 [ext_resource type="PackedScene" uid="uid://b4wetum1hnqtu" path="res://scenes/big_font_outlined_label.tscn" id="2_pynyb"]
 
+[sub_resource type="StyleBoxFlat" id="Style_portrait_frame"]
+bg_color = Color(0.035, 0.035, 0.04, 0.9)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.8, 0.8, 0.8, 0.7)
+
 [node name="MenuPlayerCard" type="VBoxContainer" unique_id=1299477859]
+custom_minimum_size = Vector2(72, 0)
 mouse_filter = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 3
 alignment = 1
 script = ExtResource("1_card")
 
-[node name="Photo" type="TextureRect" parent="." unique_id=712104251]
+[node name="PortraitFrame" type="PanelContainer" parent="." unique_id=298816403]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_portrait_frame")
+
+[node name="Photo" type="TextureRect" parent="PortraitFrame" unique_id=712104251]
 texture_filter = 1
-custom_minimum_size = Vector2(32, 32)
 layout_mode = 2
 mouse_filter = 2
 expand_mode = 1
@@ -19,11 +34,11 @@ stretch_mode = 5
 
 [node name="Name" parent="." unique_id=776359099 instance=ExtResource("2_pynyb")]
 layout_mode = 2
-size_flags_horizontal = 0
+size_flags_horizontal = 4
 text = "Hello"
 
 [node name="Swatch" type="Button" parent="." unique_id=1936632405]
-custom_minimum_size = Vector2(14, 14)
+custom_minimum_size = Vector2(18, 12)
 layout_mode = 2
 size_flags_horizontal = 4
 tooltip_text = "Pick your colour"

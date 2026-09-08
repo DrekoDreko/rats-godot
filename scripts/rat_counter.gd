@@ -1,4 +1,4 @@
-extends Label
+extends BigFontOutlinedLabel
 ## Shows how many rats are still loose on the map.
 
 const INTERVAL := 0.2
@@ -7,6 +7,7 @@ var _total := 0
 var _time := 0.0
 
 func _ready() -> void:
+	super._ready()
 	# Wait one frame so every rat is already in the tree.
 	# Held onto before the wait rather than fetched again after it: a phase can
 	# end on the frame this HUD is waiting through — the board in the van does
@@ -33,4 +34,4 @@ func _process(delta: float) -> void:
 func _update() -> void:
 	var alive := get_tree().get_nodes_in_group("rats").size()
 	_total = maxi(_total, alive)
-	text = "Rats: %d / %d" % [alive, _total]
+	text = tr("HUD_RATS") % [alive, _total]

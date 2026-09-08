@@ -51,8 +51,8 @@ const CREW_DARK := Color("140a0a")
 
 ## What the prompt reads in each of the two states. The board says what pressing
 ## it would do, not what it is: "ready up" on a board that is red.
-const PROMPT_READY_UP := "ready up"
-const PROMPT_STAND_DOWN := "stand down"
+const PROMPT_READY_UP := "PROMPT_READY_UP"
+const PROMPT_STAND_DOWN := "PROMPT_STAND_DOWN"
 
 ## The plate itself and the row of crew bulbs. Both are optional — a board built
 ## without either still works, it just says less — which is what lets the button

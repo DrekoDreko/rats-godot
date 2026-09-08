@@ -1,0 +1,25 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/traps/explosive_cheese.gd" id="1_cheese"]
+[ext_resource type="PackedScene" path="res://models/cheese.glb" id="2_model"]
+[ext_resource type="PackedScene" uid="uid://bgordf5uoxh7c" path="res://scenes/ps1.tscn" id="3_ps1"]
+
+[sub_resource type="CylinderShape3D" id="Shape_cheese"]
+radius = 0.35
+height = 0.2
+
+[node name="ExplosiveCheese" type="Area3D"]
+script = ExtResource("1_cheese")
+stock_id = "explosive_cheese"
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0)
+shape = SubResource("Shape_cheese")
+
+[node name="Model" type="Node3D" parent="."]
+position = Vector3(0, 0.063, 0)
+scale = Vector3(1.2, 1.2, 1.2)
+
+[node name="Mesh" parent="Model" instance=ExtResource("2_model")]
+
+[node name="PS1" parent="Model/Mesh" instance=ExtResource("3_ps1")]

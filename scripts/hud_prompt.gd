@@ -1,4 +1,4 @@
-extends Label
+extends BigFontOutlinedLabel
 ## The prompt for the hands: what the player is looking at, and the key that
 ## uses it.
 ##
@@ -8,6 +8,7 @@ extends Label
 ## announces null and the line leaves the screen.
 
 func _ready() -> void:
+	super._ready()
 	hide()
 	# Wait one frame so the player is already in the tree.
 	#
@@ -35,5 +36,5 @@ func _on_interactable_changed(interactable: Interactable) -> void:
 	if interactable == null:
 		hide()
 		return
-	text = "E — %s" % interactable.prompt
+	text = tr("HUD_INTERACT_PROMPT") % tr(interactable.prompt)
 	show()

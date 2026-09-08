@@ -74,12 +74,12 @@ const TINT_WHITENING := 0.5
 ## (`set_arms`). It stays in `PlayerAvatar.State` because the number crosses the
 ## wire and the values are not ours to renumber, but nothing produces it.
 const ANIMATIONS := {
-	PlayerAvatar.State.IDLE: &"Idle",
-	PlayerAvatar.State.WALKING: &"Running",
-	PlayerAvatar.State.RUNNING: &"Running",
-	PlayerAvatar.State.AIRBORNE: &"Jump",
-	PlayerAvatar.State.CROUCHING: &"CrouchIdle",
-	PlayerAvatar.State.CROUCH_WALKING: &"CrouchedWalking",
+    PlayerAvatar.State.IDLE: &"Idle",
+    PlayerAvatar.State.WALKING: &"Running",
+    PlayerAvatar.State.RUNNING: &"Running",
+    PlayerAvatar.State.AIRBORNE: &"Jump",
+    PlayerAvatar.State.CROUCHING: &"CrouchIdle",
+    PlayerAvatar.State.CROUCH_WALKING: &"CrouchedWalking",
 }
 
 ## The state being shown, so that a state which has not changed is not played
@@ -105,28 +105,32 @@ var _arms: PlayerArms
 
 
 func _ready() -> void:
-	_build_arms()
-	_play(_state)
-	_started = true
+    _build_arms()
+    _play(_state)
+    _started = true
 
 
 ## What the body is doing. Called every frame by whoever owns this model — the
 ## character on his own machine, the avatar on everybody else's — and cheap to
 ## call with a state that has not changed, which is the usual case.
 func set_state(state: PlayerAvatar.State) -> void:
-	if state == _state and _started:
-		return
-	_state = state
-	_play(state)
+    if state == _state and _started:
+        return
+    _state = state
+    # A model can be configured immediately after it is instanced, before its
+    # AnimationPlayer has entered the tree. `_ready` will play this saved state.
+    if not is_node_ready():
+        return
+    _play(state)
 
 
 ## Whether his hands are full, which is a different question from what his legs
 ## are doing and is asked separately for that reason. Called every frame by
 ## whoever owns this model, and cheap on a value that has not changed.
 func set_arms(arms: PlayerAvatar.Arms) -> void:
-	if _arms == null:
-		return
-	_arms.holding = arms == PlayerAvatar.Arms.HOLDING
+    if _arms == null:
+        return
+    _arms.holding = arms == PlayerAvatar.Arms.HOLDING
 
 
 ## One squeeze of whatever is in his hands: a thing that happens rather than a
@@ -134,9 +138,9 @@ func set_arms(arms: PlayerAvatar.Arms) -> void:
 ## rhythm on the strangling for everybody who is only watching it — see
 ## `PlayerArms.squeeze`.
 func squeeze() -> void:
-	if _arms == null:
-		return
-	_arms.squeeze()
+    if _arms == null:
+        return
+    _arms.squeeze()
 
 
 ## Where this body is holding something, in world space.
@@ -152,16 +156,16 @@ func squeeze() -> void:
 ## worse answer than the old fixed point, but it is only reached on a skeleton
 ## this file does not understand, where every other answer would be wrong too.
 func grip_point() -> Vector3:
-	if _arms == null:
-		return global_position
-	return _arms.get_skeleton().global_transform * _arms.grip_point()
+    if _arms == null:
+        return global_position
+    return _arms.get_skeleton().global_transform * _arms.grip_point()
 
 
 ## The animation now running, by name. It is exposed so replicated movement can
 ## confirm that a state crossed the wire and became the right movement — a
 ## stronger thing to assert than that something moved.
 func current_animation() -> StringName:
-	return _animation.current_animation
+    return _animation.current_animation
 
 
 ## Paints the suit in the player's colour. It has to cope with two different
@@ -186,22 +190,22 @@ func current_animation() -> StringName:
 ## the fallback for the PS1 look being off, and it looks worse — which is the
 ## honest state of it rather than something to hide.
 func set_tint(color: Color) -> void:
-	if _mesh == null:
-		return
-	for surface in _mesh.get_surface_override_material_count():
-		var material := _mesh.get_active_material(surface)
-		if material is ShaderMaterial:
-			var shader_material := material as ShaderMaterial
-			shader_material.set_shader_parameter(&"recolor_target", color)
-			shader_material.set_shader_parameter(&"recolor_strength", 1.0)
-		elif material is BaseMaterial3D:
-			# The imported material is baked into the mesh, which every instance
-			# of the model shares: painting it in place would dress the whole van
-			# in one man's colour. The applier already duplicates per surface, so
-			# this only bites when the PS1 look is off.
-			var own := (material as BaseMaterial3D).duplicate() as BaseMaterial3D
-			own.albedo_color = color.lerp(Color.WHITE, TINT_WHITENING)
-			_mesh.set_surface_override_material(surface, own)
+    if _mesh == null:
+        return
+    for surface in _mesh.get_surface_override_material_count():
+        var material := _mesh.get_active_material(surface)
+        if material is ShaderMaterial:
+            var shader_material := material as ShaderMaterial
+            shader_material.set_shader_parameter(&"recolor_target", color)
+            shader_material.set_shader_parameter(&"recolor_strength", 1.0)
+        elif material is BaseMaterial3D:
+            # The imported material is baked into the mesh, which every instance
+            # of the model shares: painting it in place would dress the whole van
+            # in one man's colour. The applier already duplicates per surface, so
+            # this only bites when the PS1 look is off.
+            var own := (material as BaseMaterial3D).duplicate() as BaseMaterial3D
+            own.albedo_color = color.lerp(Color.WHITE, TINT_WHITENING)
+            _mesh.set_surface_override_material(surface, own)
 
 
 ## The skinned surface itself, for the one caller that has to reach past the
@@ -215,7 +219,7 @@ func set_tint(color: Color) -> void:
 ## `set_shadows_only`, and anything new that wants the mesh should ask itself
 ## whether it really wants the mesh or only wants the body to look different.
 func mesh_instance() -> MeshInstance3D:
-	return _mesh
+    return _mesh
 
 
 ## Draws the body as a shadow and nothing else. It is what the player's own copy
@@ -226,22 +230,22 @@ func mesh_instance() -> MeshInstance3D:
 ## It is set from here rather than in the scene because the mesh lives inside the
 ## imported GLB, where the editor cannot reach it.
 func set_shadows_only(enabled: bool) -> void:
-	if _mesh == null:
-		return
-	_mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY if enabled \
-		else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+    if _mesh == null:
+        return
+    _mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY if enabled \
+        else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 
 
 ## Puts the arms layer under the imported skeleton. Quietly does nothing when
 ## there is no skeleton to put it under, which is every model that is not this
 ## one and is not an error worth stopping the game for.
 func _build_arms() -> void:
-	var skeleton := get_node_or_null("Hazmat/Armature/Skeleton3D") as Skeleton3D
-	if skeleton == null:
-		return
-	_arms = PlayerArms.new()
-	_arms.name = "Arms"
-	skeleton.add_child(_arms)
+    var skeleton := get_node_or_null("Hazmat/Armature/Skeleton3D") as Skeleton3D
+    if skeleton == null:
+        return
+    _arms = PlayerArms.new()
+    _arms.name = "Arms"
+    skeleton.add_child(_arms)
 
 
 ## The animation itself. `Jump` is the one that does not loop, and that is on
@@ -250,6 +254,6 @@ func _build_arms() -> void:
 ## holds its last frame — which is a landing pose — for as long as the man is off
 ## the ground.
 func _play(state: PlayerAvatar.State) -> void:
-	var animation: StringName = ANIMATIONS.get(state, &"Idle")
-	var blend := JUMP_BLEND_TIME if state == PlayerAvatar.State.AIRBORNE else BLEND_TIME
-	_animation.play(animation, blend)
+    var animation: StringName = ANIMATIONS.get(state, &"Idle")
+    var blend := JUMP_BLEND_TIME if state == PlayerAvatar.State.AIRBORNE else BLEND_TIME
+    _animation.play(animation, blend)

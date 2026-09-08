@@ -209,18 +209,12 @@ var _last_sync_position := Vector3.ZERO
 var _sync_age := 0.0
 
 @onready var _model: PlayerModel = $Model
-@onready var _tag: Label3D = $Name
-## How solid the name and its outline are with nothing faded — whatever the
-## scene was built with.
-##
-## Kept because the fade *scales* these rather than setting the alpha outright.
-## The outline is deliberately half transparent (it is there to lift the letters
-## off a white wall, not to draw a box round them), and a fade that wrote
-## `outline_modulate.a = faded` would throw that away the moment anybody walked
-## close enough to be at full strength — the thick black letters this was fixing
-## in the first place, back again at ten metres.
+@onready var _tag_viewport: SubViewport = $NameViewport
+@onready var _tag_label: BigFontOutlinedLabel = $NameViewport/Name
+@onready var _tag: Sprite3D = $Name
+## How solid the name is with nothing faded. The outline is part of the rendered
+## BigFont texture, so the Sprite3D's single alpha controls both together.
 @onready var _tag_alpha: float = _tag.modulate.a
-@onready var _tag_outline_alpha: float = _tag.outline_modulate.a
 @onready var _sync: MultiplayerSynchronizer = $Sync
 ## Where a rat this player has grabbed is held, on the machines that are only
 ## watching him. It stands in for the `Head/CapturePoint` of `player.tscn`, which
@@ -244,6 +238,7 @@ var _sync_age := 0.0
 
 
 func _ready() -> void:
+	_tag.texture = _tag_viewport.get_texture()
 	_update_tag()
 	var settings := _autoload("SettingsManager")
 	if settings != null:
@@ -277,6 +272,14 @@ func _ready() -> void:
 		return
 	set_physics_process(false)
 	_sync.synchronized.connect(_on_synchronized)
+
+
+## Lets this avatar's owner publish to one peer whose matching avatar is known
+## to be in that peer's tree. Kept on the avatar because its synchronizer owns
+## the visibility rule; the crowd only performs the cross-peer handshake.
+func allow_sync_to(peer_id: int) -> void:
+	if peer_id > 0:
+		_sync.set_visibility_for(peer_id, true)
 
 
 ## Ours, and only ours: the character is read, and the reading is what goes out.
@@ -413,7 +416,7 @@ func _on_synchronized() -> void:
 
 ## The name, dimmed by how far off its owner is, as seen from `viewer`.
 ##
-## Done here rather than in the scene because a `Label3D` has no distance fade of
+## Done here rather than in the scene because a `Sprite3D` has no distance fade of
 ## its own — the `distance_fade_*` properties belong to `BaseMaterial3D`, and
 ## writing them into the `.tscn` is the worst kind of wrong: the scene loads, no
 ## error is printed, and the name simply never fades. That is not a guess; it was
@@ -435,9 +438,6 @@ func fade_tag(viewer: Vector3) -> void:
 		inverse_lerp(TAG_FADE_DISTANCE, TAG_FULL_DISTANCE, distance), 0.0, 1.0
 	)
 	_tag.modulate.a = _tag_alpha * faded
-	# The outline is what makes a name readable against a wall, so it fades with
-	# the name rather than staying behind as a ghost of it.
-	_tag.outline_modulate.a = _tag_outline_alpha * faded
 	# Nothing to draw at all once it is gone: a fully transparent label is still
 	# a quad the renderer sorts and rasterises every frame, once per player.
 	_tag.visible = faded > 0.0
@@ -470,14 +470,14 @@ func _repaint() -> void:
 ## under Streamer Mode — a viewer can already see that colour on the body, so
 ## it costs nothing to tell players apart and reveals nothing to hide.
 func _update_tag() -> void:
-	if _tag == null:
+	if _tag_label == null:
 		return
 	var settings := _autoload("SettingsManager")
 	if settings != null and settings.streamer_mode:
 		var colors := _autoload("ColorManager")
-		_tag.text = colors.display_name_for(steam_id) if colors != null else player_name
+		_tag_label.text = colors.display_name_for(steam_id) if colors != null else player_name
 		return
-	_tag.text = player_name
+	_tag_label.text = player_name
 
 
 func _on_streamer_mode_changed(_enabled: bool) -> void:

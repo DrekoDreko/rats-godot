@@ -9,7 +9,7 @@ extends MarginContainer
         _apply_font_size()
 
 
-@export var text: String = "Lorem":
+@export var text: String = "BIG_FONT_DEFAULT":
     set(value):
         text = value
         _apply_text()
@@ -20,6 +20,21 @@ extends MarginContainer
         autowrap_mode = value
         _apply_autowrap_mode()
 
+@export_range(0, 3, 1) var horizontal_alignment: int = HORIZONTAL_ALIGNMENT_LEFT:
+    set(value):
+        horizontal_alignment = value
+        _apply_alignment()
+
+@export_range(0, 3, 1) var vertical_alignment: int = VERTICAL_ALIGNMENT_TOP:
+    set(value):
+        vertical_alignment = value
+        _apply_alignment()
+
+@export_range(0, 4, 1) var text_overrun_behavior: int = TextServer.OVERRUN_NO_TRIMMING:
+    set(value):
+        text_overrun_behavior = value
+        _apply_text_overrun_behavior()
+
 
 
 @onready var label: Label = $Label
@@ -29,6 +44,8 @@ func _ready() -> void:
     _apply_font_size()
     _apply_text()
     _apply_autowrap_mode()
+    _apply_alignment()
+    _apply_text_overrun_behavior()
 
 
 func _get_label() -> Label:
@@ -55,3 +72,17 @@ func _apply_autowrap_mode() -> void:
     var target := _get_label()
     if target != null:
         target.autowrap_mode = autowrap_mode
+
+
+func _apply_alignment() -> void:
+    var target := _get_label()
+    if target == null:
+        return
+    target.horizontal_alignment = horizontal_alignment
+    target.vertical_alignment = vertical_alignment
+
+
+func _apply_text_overrun_behavior() -> void:
+    var target := _get_label()
+    if target != null:
+        target.text_overrun_behavior = text_overrun_behavior

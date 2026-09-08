@@ -16,8 +16,8 @@ const NOTICE_HOLD := 1.6
 ## How long the fade itself takes.
 const NOTICE_FADE := 0.8
 
-@onready var total: Label = $Total
-@onready var notice: Label = $Notice
+@onready var total: BigFontOutlinedLabel = $Total
+@onready var notice: BigFontOutlinedLabel = $Notice
 
 ## What is left of the notice's life, in seconds. Zero means there is none.
 var _notice_time := 0.0
@@ -43,13 +43,14 @@ func _process(delta: float) -> void:
 ## The total comes from the signal and not from `Wallet.money` so that a
 ## `reset()`, which announces zero, wipes the screen along with the wallet.
 func _on_money_changed(total_value: int, _gain: int) -> void:
-	total.text = "$ %d" % total_value
+	total.text = tr("HUD_MONEY_TOTAL") % total_value
 
 func _on_catch_recorded(_species: RatSpecies, death_type: Death.Type, value: int) -> void:
 	# The death is what the player can still act on: it is the discount they pay
 	# for how they killed. Once there is more than one breed on the map,
 	# `_species.display_name` joins the line.
-	notice.text = "+$%d  %s" % [value, Death.name_of(death_type)]
+	var death_key := "DEATH_" + Death.name_of(death_type).to_upper().replace(" ", "_")
+	notice.text = tr("HUD_MONEY_NOTICE") % [value, tr(death_key)]
 	notice.modulate.a = 1.0
 	_notice_time = NOTICE_HOLD + NOTICE_FADE
 	set_process(true)

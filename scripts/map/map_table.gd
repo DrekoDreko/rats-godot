@@ -12,8 +12,8 @@ extends Interactable
 ## inside `MapViewer` (`res://scripts/map/map_viewer.gd`), leaving this station
 ## as only the 3D furniture that holds it.
 
-const PROMPT_READ := "study the plan"
-const PROMPT_LEAVE := "step away from the table"
+const PROMPT_READ := "PROMPT_STUDY_PLAN"
+const PROMPT_LEAVE := "PROMPT_STEP_AWAY_TABLE"
 
 ## The lamp over the table, lit when there is a plan on it and dimmed when the
 ## surface is bare. The same two levels the other stations light theirs with.

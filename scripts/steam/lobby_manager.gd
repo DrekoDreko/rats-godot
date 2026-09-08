@@ -62,6 +62,9 @@ signal lobby_failed(reason: String)
 ## so whoever shows a name listens to this and corrects it in place (see
 ## `scripts/steam/player_avatars.gd`).
 signal peer_identified(peer_id: int)
+## A wire peer is leaving while its identity is still available. Consumers that
+## hold state by Steam ID use this rather than racing the peer cleanup below.
+signal peer_left(peer_id: int, steam_id: int)
 
 ## The lobby data that tells our lobbies apart from everybody else's. It matters
 ## more than it looks: until RATS has an app ID of its own the game borrows
@@ -73,6 +76,23 @@ const GAME_VALUE := "rats"
 ## The host's Steam name, written into the lobby so the browser has something to
 ## show besides a nineteen-digit number.
 const HOST_KEY := "host_name"
+
+## Steam's own rich-presence keys, which are special and not ours to invent.
+##
+## `connect` is the one that matters: Valve reads it off our presence and turns
+## it into the "Join game" button a friend sees against our name in the overlay
+## (Shift+Tab) and in the friends list. Its value is handed to the friend's game
+## as a launch command line when their game is shut, and comes back on
+## `join_game_requested` when it is open — which is why it is written in exactly
+## the `+connect_lobby <id>` shape `_join_from_command_line` already reads.
+##
+## Without it the lobby is joinable as far as Steam is concerned and there is
+## still no button to press: `setLobbyJoinable` governs whether a knock is
+## answered, and the presence is what tells the friends list there is a door.
+const PRESENCE_CONNECT_KEY := "connect"
+## Shown against our name in the friends list. Cosmetic, and worth setting in the
+## same breath so a friend reading the list knows what he would be joining.
+const PRESENCE_STATUS_KEY := "status"
 
 ## How many fit in the van. `create_lobby` clamps to it.
 const MAX_PLAYERS := 4
@@ -97,11 +117,10 @@ const LOCAL_PORT := 47130
 ## something no real lobby can collide with.
 const LOCAL_LOBBY_ID := 2
 ## Where the stand-in account numbers start. A real SteamID64 is seventeen digits
-## beginning 765, and `SOLO_STEAM_ID` is already 1 on the same reasoning: a small
-## number is one no account can have, which is what makes it safe to file a local
-## player under it and let every manager downstream treat him as an ordinary
-## member of the crew. The peer id is added to it, so the two windows get two
-## different numbers without having to agree on anything first.
+## beginning 765, and `SOLO_STEAM_ID` is already 1 on the same reasoning: this
+## range cannot collide with a real account. The peer id is added directly, so
+## the account stays the same for its entire ENet connection even when another
+## peer joins or leaves.
 const LOCAL_STEAM_BASE := 100
 
 ## The lobby everyone in it can be reached through, or zero when there is none.
@@ -179,6 +198,11 @@ func _ready() -> void:
 	Steam.lobby_match_list.connect(_on_lobby_match_list)
 	Steam.lobby_kicked.connect(_on_lobby_kicked)
 	Steam.join_requested.connect(_on_join_requested)
+	# The other road in, and a genuinely different one: `join_requested` is a
+	# friend accepting a *lobby* invite sent from inside the game, while this is
+	# a friend pressing "Join game" in the overlay or the friends list, which
+	# Steam answers off the `connect` presence below. Both end at `join_lobby`.
+	Steam.join_game_requested.connect(_on_join_game_requested)
 	Steam.persona_state_change.connect(_on_persona_state_change)
 
 	_join_from_command_line()
@@ -283,16 +307,11 @@ func _enter_local(peer: ENetMultiplayerPeer, hosting: bool) -> void:
 
 
 ## The stand-in for a Steam account on the local wire, and the number every
-## manager downstream files this player under.
-##
-## The host is 1, and everybody else is numbered by where his peer id falls once
-## they are sorted. It would be simpler to add the peer id straight on, but ENet
-## hands a client a random id in the millions, which would make one man account
-## 1955902596 and the next one something else entirely — numbers nobody can read
-## in a log, and different every run. Sorting gives 2, 3, 4 instead, which is
-## what the men in the van would call each other anyway.
+## manager downstream files this player under. It must come directly from the
+## peer id: deriving it from a peer's sorted position renumbers an established
+## player when another ENet peer with a lower random id joins.
 func _local_steam_id(peer_id: int) -> int:
-	return LOCAL_STEAM_BASE + _local_seat(peer_id)
+	return LOCAL_STEAM_BASE + peer_id
 
 
 ## Where a peer falls once everybody on the wire is sorted, counting from one.
@@ -350,6 +369,9 @@ func leave_lobby() -> void:
 		return
 	if not is_local:
 		Steam.leaveLobby(lobby_id)
+		# Before the id is cleared below: the door goes away with the lobby, or a
+		# friend is left holding a button that knocks on nothing.
+		_clear_presence()
 	_close_peer()
 	lobby_id = 0
 	owner_id = 0
@@ -513,6 +535,10 @@ func _on_peer_connected(peer_id: int) -> void:
 
 
 func _on_peer_disconnected(peer_id: int) -> void:
+	# `JoinGate` keeps the crew by Steam ID. Tell it the mapping before removing
+	# it, rather than relying on callback order between two peer-disconnect
+	# listeners.
+	peer_left.emit(peer_id, steam_id_of_peer(peer_id))
 	_identities.erase(peer_id)
 	_pings.erase(peer_id)
 	if is_local:
@@ -685,6 +711,10 @@ func refresh_lobbies() -> bool:
 ## Steam's own invite window, over the game. A friend who accepts arrives on
 ## `join_requested` when their game is open, and on the launch command line when
 ## it is not — both roads lead back to `join_lobby`.
+##
+## Anybody in the lobby may open it, not only the host. Steam sends the invite
+## against the lobby rather than against the sender, so a guest inviting a friend
+## fills the same van — which is what the `+` buttons on the empty seats offer.
 func invite_friends() -> bool:
 	if not _needs_steam("invite anybody"):
 		return false
@@ -693,6 +723,40 @@ func invite_friends() -> bool:
 		return false
 	Steam.activateGameOverlayInviteDialog(lobby_id)
 	return true
+
+
+## Tells Steam there is a door, so that a friend who never opens this game's
+## overlay still gets a "Join game" button against our name in his friends list
+## and in Shift+Tab.
+##
+## It is separate from `setLobbyJoinable`, and the two are easy to confuse. That
+## one decides whether a knock is *answered*; this one decides whether a friend
+## is shown anything to knock with. A lobby with the first and not the second is
+## open and invisible, which is what the game did before this existed — invites
+## worked, because an invite carries the lobby with it, and the friends list did
+## not, because nothing had told it the number.
+##
+## The value is written in the very shape `_join_from_command_line` reads, so
+## the friend whose game is shut is launched straight into the lobby down code
+## that was already here.
+func _publish_presence() -> void:
+	if not SteamManager.is_online or is_local:
+		return
+	Steam.setRichPresence(PRESENCE_CONNECT_KEY, "+connect_lobby %d" % lobby_id)
+	Steam.setRichPresence(PRESENCE_STATUS_KEY, "In the van (%d/%d)" % [
+		Steam.getNumLobbyMembers(lobby_id), Steam.getLobbyMemberLimit(lobby_id),
+	])
+
+
+## Takes the door away again. An empty `connect` is how Steam is told to drop the
+## key, and dropping it is what removes the "Join game" button — a friend left
+## holding one for a lobby we have walked out of would knock on a door that is no
+## longer there.
+func _clear_presence() -> void:
+	if not SteamManager.is_online:
+		return
+	Steam.setRichPresence(PRESENCE_CONNECT_KEY, "")
+	Steam.setRichPresence(PRESENCE_STATUS_KEY, "")
 
 
 ## Into the map. The host says when, and everybody goes at once; with no lobby
@@ -751,6 +815,9 @@ func _enter_lobby(entered_id: int) -> void:
 		lobby_id, "hosting" if is_host else "joined",
 		Steam.getNumLobbyMembers(lobby_id), Steam.getLobbyMemberLimit(lobby_id),
 	])
+	# The friends list is told there is a door the moment there is one, so a
+	# friend who never sees an invite can still walk in off Shift+Tab.
+	_publish_presence()
 	lobby_entered.emit(lobby_id, is_host)
 	members_changed.emit(list_players())
 
@@ -955,6 +1022,9 @@ func _on_lobby_chat_update(updated_id: int, changed_id: int, _by_id: int, state:
 		_fail_and_leave("The host left the lobby.")
 		return
 	owner_id = new_owner
+	# The headcount is part of what the friends list shows, so it is rewritten
+	# whenever it changes rather than left saying 1/4 at a full van.
+	_publish_presence()
 	members_changed.emit(list_players())
 
 
@@ -985,6 +1055,17 @@ func _on_lobby_kicked(kicked_from: int, _admin_id: int, _disconnected: int) -> v
 ## A friend's invite, accepted with the game already running.
 func _on_join_requested(requested_id: int, _friend_id: int) -> void:
 	join_lobby(requested_id)
+
+
+## "Join game" pressed against our name in the overlay or the friends list, with
+## the friend's game already running. What comes back is the `connect` string we
+## published — the same `+connect_lobby <id>` his game would have been launched
+## with had it been shut — so it is read with the same parser rather than a
+## second one that could drift from it.
+func _on_join_game_requested(_friend_id: int, connect_string: String) -> void:
+	var id := _lobby_from_arguments(connect_string.split(" ", false))
+	if id != 0:
+		join_lobby(id)
 
 
 ## A name has finally arrived from Steam. Only worth a redraw when it belongs to

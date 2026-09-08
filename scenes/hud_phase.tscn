@@ -48,7 +48,7 @@ mouse_filter = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
-text = "LOBBY"
+text = "PHASE_LOBBY"
 label_settings = SubResource("Label_hud_phase")
 horizontal_alignment = 1
 
@@ -70,7 +70,7 @@ mouse_filter = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
-text = "x1"
+text = "HUD_WAGER"
 label_settings = SubResource("Label_hud_phase")
 horizontal_alignment = 1
 
@@ -80,7 +80,7 @@ mouse_filter = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
-text = "0/0 READY"
+text = "HUD_READY"
 label_settings = SubResource("Label_hud_phase")
 horizontal_alignment = 1
 
