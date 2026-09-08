@@ -61,3 +61,13 @@ SETTINGS_MUSIC_VOLUME,Music Volume,Volume da Música
 SETTINGS_VOICE_VOLUME,Voice Volume,Volume da Voz
 SETTINGS_STREAMER_MODE,Streamer Mode,Modo Streamer
 SETTINGS_LANGUAGE,Language,Idioma
+CONTRACT_VOTE_TITLE,Choose the contract,Escolha o contrato
+CONTRACT_VOTE_RATS,%d rats,%d ratos
+CONTRACT_VOTE_COUNT,%d votes,%d votos
+CONTRACT_VOTE_3MIN,3 min,3 min
+CONTRACT_VOTE_5MIN,5 min,5 min
+CONTRACT_VOTE_10MIN,10 min,10 min
+CONTRACT_VOTE_RATE,$%d/rat,$%d/rato
+CONTRACT_VOTE_START,START,COMEÇAR
+CONTRACT_VOTE_PICK_ONE,Pick a job.,Escolha um contrato.
+CONTRACT_VOTE_WAITING_HOST,Waiting for the crew leader to confirm.,Aguardando o líder da equipe confirmar.

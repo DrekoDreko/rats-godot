@@ -17,6 +17,7 @@
 [ext_resource type="PackedScene" path="res://scenes/store_screen.tscn" id="17_store"]
 [ext_resource type="PackedScene" uid="uid://dmio8uviym8en" path="res://models/totem.glb" id="18_totem"]
 [ext_resource type="Script" uid="uid://bcvx5d4kfjqk1" path="res://scripts/session/store_terminal.gd" id="19_terminal"]
+[ext_resource type="PackedScene" path="res://scenes/contract_vote_screen.tscn" id="20_vote"]
 [ext_resource type="PackedScene" path="res://scenes/pause_menu.tscn" id="99_pause"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_d5yb3"]
@@ -711,3 +712,10 @@ horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="PauseMenu" parent="." unique_id=388792559 instance=ExtResource("99_pause")]
+
+[node name="VoteUI" type="CanvasLayer" parent="."]
+layer = 2
+
+[node name="ContractVoteScreen" parent="VoteUI" instance=ExtResource("20_vote")]
+visible = false
+hud_path = NodePath("../../HUD")

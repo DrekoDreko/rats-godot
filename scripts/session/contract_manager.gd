@@ -1,25 +1,33 @@
 extends Node
-## The board of jobs and the one signature that settles which of them is worked.
+## The board of jobs, the crew's vote on which one goes first, and the one
+## signature that settles it.
 ##
-## Everybody may read the board and everybody may leaf through it — a crew that
-## cannot see what it is about to walk into is a crew that cannot argue about
-## it. **Only the host signs.** That is the whole of the rule this file exists
-## to hold, and it is held the way every other decision in the van is held: a
-## client asks, the host decides, and the host's answer is what every machine
-## writes down (`request_sign` -> `_handle_request` -> `_apply`).
+## Everybody may read the board — a crew that cannot see what it is about to
+## walk into is a crew that cannot argue about it. Everybody may vote, too:
+## the sheets go up on their own the moment the van pulls off
+## (`_on_phase_changed`), every man in the crew, leader included, picks a card
+## (`request_vote`), and once all of them have, the host reads the room and
+## signs whichever job has the most hands up (`settle_vote` ->
+## `_winning_contract`). **Only the host settles it** — that is the one rule
+## left from the clipboard this replaced, and it is held the way every other
+## decision in the van is: a client asks, the host decides, and the host's
+## answer is what every machine writes down.
+##
+## **The vote happens on the road, not in the menu.** The van leaves as soon as
+## the host presses PLAY and the crew argues about the house on the way there,
+## which is the one stretch of the shift where everybody is sitting down with
+## nothing else to do. Until it is settled nobody is out of his seat: the screen
+## the vote is drawn on takes the player the same way the shop does
+## (`contract_vote_screen.gd`), so a van full of men walking about is a van
+## whose job is already chosen.
 ##
 ## **The length of the hunt is settled here too**, and by the same rule and the
 ## same road (`request_hunt_time` -> `_handle_hunt_time` -> `_apply_hunt_time`).
-## It sits beside the signature rather than in the phase machine because it is
-## the second half of one decision: the sheet says how bad the house is, and the
-## booking says how long the crew gives itself in it and what that is worth
-## (`HuntTime`). A crew reading one without the other is a crew betting blind.
-##
-## Leafing is deliberately *not* on the wire. Which sheet a man happens to be
-## looking at is his own business and nobody else's — four crew reading four
-## different pages at once is the point of a clipboard, and replicating the page
-## number would mean the host's thumb dragging everybody else's eyes along with
-## it. What is replicated is the signature and nothing but.
+## It sits beside the vote rather than in the phase machine because it is the
+## second half of one decision: the sheets say how bad each house is, and the
+## booking says how long the crew gives itself in whichever one wins and what
+## that is worth (`HuntTime`). A crew voting without knowing the wager is a
+## crew betting blind.
 ##
 ## **The catalogue is read off disk, not registered.** Every machine scans
 ## `resources/contracts/` on the way up and sorts what it finds, so all of them
@@ -31,6 +39,16 @@ extends Node
 ## The host signed something. `contract_id` is empty when the board was cleared,
 ## which is what the start of a new shift looks like.
 signal contract_signed(contract_id: String)
+
+## The sheets went up for a vote. Host only, and it is the van pulling off that
+## puts them up — see the "Voting" section below.
+signal voting_opened()
+
+## Somebody's vote was counted — a fresh one or a switched one.
+signal vote_changed(steam_id: int, contract_id: String)
+
+## The vote closed: the job that won is signed and the crew has its legs back.
+signal voting_closed()
 
 ## The host booked the hunt at a length. Fired on every machine, the host's
 ## included, so that a clipboard drawing the wager never has to ask who it is.
@@ -75,6 +93,16 @@ const REFUSAL_TIME_UNDER_WAY := "The hunt time is settled."
 ## does not change while the game is running.
 var contracts: Array[Contract] = []
 
+## Whether the crew is voting on the next job right now — the stretch between
+## the van pulling off and the host settling the show of hands, which replaced
+## the old clipboard's single signature. Only ever true on the road.
+var voting_open := false
+
+## Who voted for what, by Steam ID. Cleared every time a vote opens, and
+## written the same way the signature is: the host counts it and broadcasts
+## the count, and nothing here ever writes a ballot twice.
+var votes: Dictionary[int, String] = {}
+
 
 func _ready() -> void:
 	# A signature can land while the game is paused, the same as a phase change
@@ -83,6 +111,25 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 
 	contracts = _scan(FOLDER)
+	PhaseManager.phase_changed.connect(_on_phase_changed)
+
+
+## The van pulling off is what lays the sheets out. **Host only**, and only for a
+## van with no job signed to it: the road is reached with a blank board at the
+## start of a shift and again after every house (`PhaseManager._clear_job`), so
+## this is the one condition, and a crew that somehow arrives already signed — a
+## bench, a lobby set up from a command line — drives straight to it instead of
+## voting on a decision that is already made.
+##
+## It is here and not on the screen because the vote is this autoload's state:
+## a screen that opened its own vote would be one machine's UI deciding what
+## every machine writes down, and a client's van has no business doing that.
+func _on_phase_changed(_previous: Phase.Type, phase: Phase.Type) -> void:
+	if phase != Phase.Type.TRAVEL:
+		return
+	if not PhaseManager.is_host() or voting_open or is_signed():
+		return
+	open_voting()
 
 
 ## How many jobs are on the board.
@@ -273,6 +320,186 @@ func adopt_hunt_time(value: int) -> void:
 			% value)
 		return
 	_settle_hunt_time(value)
+
+
+## Takes a newcomer's copy of a vote already under way, the same way `adopt`
+## takes a signature. Silently ignored when nobody is voting — a newcomer
+## arriving between two shifts has no vote to catch up on.
+func adopt_votes(state_votes: Dictionary, is_open: bool) -> void:
+	voting_open = is_open
+	votes.clear()
+	for steam_id in state_votes:
+		votes[int(steam_id)] = String(state_votes[steam_id])
+	_apply_hold()
+
+# --- Voting -------------------------------------------------------------
+#
+# The crew's replacement for the clipboard's single signature: every man
+# picks a card instead of one of them picking for everybody, and the host —
+# same as everywhere else in the van — is the one who counts the room and
+# says when it is settled.
+
+## Lays the sheets out for a vote. **Host only** — called by the road itself
+## (`_on_phase_changed`) rather than by a button, so the sheets are up before
+## anybody is out of his seat.
+func open_voting() -> void:
+	if not PhaseManager.is_host():
+		push_warning("ContractManager: only the host opens the vote.")
+		return
+	_open_voting.rpc()
+
+
+## Asks the host to count our vote for a job. **This is the only way in from a
+## card** — nothing is written locally and corrected later, so a tally on
+## screen is always what the host actually counted.
+func request_vote(steam_id: int, contract_id: String) -> void:
+	if steam_id == 0:
+		return
+	if PhaseManager.is_host():
+		_handle_vote(steam_id, contract_id, _our_peer_id())
+		return
+	_vote.rpc_id(HOST_PEER, steam_id, contract_id)
+
+
+## How many votes a job has, for the tally on its card.
+func votes_for(contract_id: String) -> int:
+	var total := 0
+	for picked in votes.values():
+		if picked == contract_id:
+			total += 1
+	return total
+
+
+## Whether every man in the crew has picked a job. What the host's START button
+## reads before it lights up.
+func everybody_voted() -> bool:
+	if not voting_open or SessionManager.players.is_empty():
+		return false
+	for steam_id in SessionManager.players:
+		if not votes.has(steam_id):
+			return false
+	return true
+
+
+## Signs the job the room picked and takes the sheets away. **Host only**, and
+## only once the whole crew has picked — the button that reaches for this is
+## disabled until then, and this is the belt-and-braces check for a press that
+## somehow beat it.
+##
+## It moves nothing: the van is already on the road by the time the vote is
+## drawn, and what the crew gets back is its legs, not a scene change. The house
+## is reached the way it always was — the ready boards, or the host's clock.
+func settle_vote() -> void:
+	if not PhaseManager.is_host():
+		push_warning("ContractManager: only the host settles the vote.")
+		return
+	if not everybody_voted():
+		push_warning("ContractManager: the crew has not all voted yet.")
+		return
+	var winner := _winning_contract()
+	if winner.is_empty():
+		return
+	_handle_request(winner, 0)
+	_close_voting.rpc()
+
+
+## The job with the most votes. Ties fall to whichever comes first on the
+## board — the same order every machine already agrees on — so a crew split
+## down the middle always lands on the same house rather than four different
+## ones.
+func _winning_contract() -> String:
+	var best_id := ""
+	var best_votes := -1
+	for contract in contracts:
+		var count := votes_for(contract.id)
+		if count > best_votes:
+			best_votes = count
+			best_id = contract.id
+	return best_id
+
+
+## Holds the shift while the sheets are up, and lets it go when they come down.
+##
+## The hold is `ReadyManager`'s, not a second one of our own: it is the same
+## mechanism the old signing board used, and it is what stops the crew — or the
+## host's two-minute clock — taking the van to a house nobody has picked yet.
+## Set on every machine, because `voting_open` is on every machine, and a board
+## whose light disagreed with the host's would be a board that lies about why
+## the van is standing still.
+func _apply_hold() -> void:
+	ReadyManager.blocked = voting_open
+
+
+func _handle_vote(steam_id: int, contract_id: String, from_peer: int) -> void:
+	if not voting_open:
+		return
+	if find(contract_id) == null:
+		return
+	if not SessionManager.has_player(steam_id):
+		push_warning("ContractManager: a vote arrived for %d, who is not in the crew." % steam_id)
+		return
+	if not _may_vote_for(from_peer, steam_id):
+		push_warning("ContractManager: peer %d tried to vote for %d." % [from_peer, steam_id])
+		return
+	if votes.get(steam_id, "") == contract_id:
+		return
+	_apply_vote.rpc(steam_id, contract_id)
+
+
+## Whether a peer may cast a vote under a Steam ID: his own only. The same
+## shape `ColorManager._may_speak_for` and `ReadyManager._may_speak_for` take,
+## kept here rather than shared because each of the three checks a different
+## room's worth of state.
+func _may_vote_for(from_peer: int, steam_id: int) -> bool:
+	if from_peer == 0 or not multiplayer.has_multiplayer_peer():
+		return true
+	var owner_id := LobbyManager.steam_id_of_peer(from_peer)
+	return owner_id == 0 or owner_id == steam_id
+
+
+@rpc("authority", "call_local", "reliable")
+func _open_voting() -> void:
+	var sender := multiplayer.get_remote_sender_id()
+	if sender != 0 and sender != HOST_PEER:
+		return
+	votes.clear()
+	voting_open = true
+	_apply_hold()
+	voting_opened.emit()
+
+
+@rpc("authority", "call_local", "reliable")
+func _close_voting() -> void:
+	var sender := multiplayer.get_remote_sender_id()
+	if sender != 0 and sender != HOST_PEER:
+		return
+	voting_open = false
+	_apply_hold()
+	voting_closed.emit()
+
+
+## A client's vote, arriving at the host. `any_peer` because anybody may vote;
+## what makes it safe is that the host is the only one who acts on it.
+@rpc("any_peer", "reliable")
+func _vote(steam_id: int, contract_id: String) -> void:
+	if not PhaseManager.is_host():
+		push_warning("ContractManager: a vote reached a machine that is not the host.")
+		return
+	_handle_vote(steam_id, contract_id, multiplayer.get_remote_sender_id())
+
+
+## The tally, run on every machine at once, the host included (`call_local`) —
+## a vote counted only on the host's own screen is a card the rest of the crew
+## is looking at wrong.
+@rpc("authority", "call_local", "reliable")
+func _apply_vote(steam_id: int, contract_id: String) -> void:
+	var sender := multiplayer.get_remote_sender_id()
+	if sender != 0 and sender != HOST_PEER:
+		push_warning("ContractManager: a vote from peer %d, which is not the host — ignored."
+			% sender)
+		return
+	votes[steam_id] = contract_id
+	vote_changed.emit(steam_id, contract_id)
 
 # --- The wire ---------------------------------------------------------------
 

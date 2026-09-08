@@ -37,7 +37,7 @@ enum Type {
 ##
 ## **The hunt is not in this table, and that is the point of it being zero here.**
 ## Its length is not a property of the phase but of the shift — the crew books it
-## at ten minutes, five or two, and is paid accordingly (`HuntTime`). Ask
+## at ten minutes, five or three, and is paid accordingly (`HuntTime`). Ask
 ## `PhaseManager.duration_of` rather than this for a length that has to be right
 ## for the shift in hand; this table is what that function falls back on for
 ## every other phase.

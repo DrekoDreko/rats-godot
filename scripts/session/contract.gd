@@ -39,11 +39,20 @@ extends Resource
 ## The floor plan, pinned to the map table on the road (card 11) and drawn on
 ## the clipboard here. Without one the sheet shows the writing and no picture.
 @export var floor_plan: Texture2D
+## A photograph of the house, drawn behind the writing on the vote card
+## (`contract_vote_card.gd`). Without one the card is the plain frame it was.
+@export var photo: Texture2D
 
 @export_group("The job")
 ## How many rats the house holds. The hunt draws its nests off this and off the
 ## shift's seed; here it is a number on a sheet the crew reads before signing.
 @export_range(1, 60) var infestation := 6
+## Which breeds are in the house, by a plain id — flavour on the vote card and
+## nothing more, until there is more than one `RatSpecies` and a reason to draw
+## from the list rather than always spawning the common rat. Drawn as a row of
+## plain dots on the card (`contract_vote_card.gd`) until there are icons to
+## put on them.
+@export var rat_types: Array[String] = []
 ## What the job pays when the house is cleared.
 @export var reward := 250
 ## How hard it is, one to five. It is what the board sorts on and what the row

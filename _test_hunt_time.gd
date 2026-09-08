@@ -26,11 +26,11 @@ const MEDIUM := 1
 const SHORT := 2
 
 ## What each of them is supposed to be worth, from the design: ten minutes at
-## face value, five at double, two at five times.
+## face value, five at double, three at five times.
 const EXPECTED := {
 	LONG: [600.0, 1.0],
 	MEDIUM: [300.0, 2.0],
-	SHORT: [120.0, 5.0],
+	SHORT: [180.0, 5.0],
 }
 
 ## The phases, as their enum values — same reason as above.
@@ -170,8 +170,8 @@ func _check_phase_clock() -> bool:
 	_session.register_player(ANA, "Ana", true)
 
 	_session.set_hunt_time(SHORT)
-	_expect(is_equal_approx(_phase.duration_of(HUNT), 120.0),
-		"the short hunt runs %.0fs, expected 120" % _phase.duration_of(HUNT))
+	_expect(is_equal_approx(_phase.duration_of(HUNT), 180.0),
+		"the short hunt runs %.0fs, expected 180" % _phase.duration_of(HUNT))
 	_session.set_hunt_time(LONG)
 	_expect(is_equal_approx(_phase.duration_of(HUNT), 600.0),
 		"the long hunt runs %.0fs, expected 600" % _phase.duration_of(HUNT))
@@ -213,7 +213,7 @@ func _check_wallet_pays_at_the_booked_rate() -> bool:
 	_expect(int(paid[MEDIUM]) == int(paid[LONG]) * 2,
 		"the five-minute rat paid %d, expected twice %d" % [paid[MEDIUM], paid[LONG]])
 	_expect(int(paid[SHORT]) == int(paid[LONG]) * 5,
-		"the two-minute rat paid %d, expected five times %d" % [paid[SHORT], paid[LONG]])
+		"the three-minute rat paid %d, expected five times %d" % [paid[SHORT], paid[LONG]])
 
 	_wallet.reset()
 	_session.set_hunt_time(LONG)
@@ -241,8 +241,8 @@ func _check_clock_ends_the_hunt() -> bool:
 	_phase.go_to(HUNT)
 	_expect(_phase.has_timer(),
 		"the hunt started with no clock on it")
-	_expect(_phase.seconds_left > 100.0,
-		"the hunt started with %.0fs left, expected about 120" % _phase.seconds_left)
+	_expect(_phase.seconds_left > 150.0,
+		"the hunt started with %.0fs left, expected about 180" % _phase.seconds_left)
 
 	var timer := _host_timer()
 	if timer == null:

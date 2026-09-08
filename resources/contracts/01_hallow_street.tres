@@ -1,7 +1,8 @@
-[gd_resource type="Resource" script_class="Contract" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="Contract" load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/session/contract.gd" id="1_contract"]
 [ext_resource type="Texture2D" path="res://resources/contracts/plans/01_hallow_street_plan.png" id="2_plan"]
+[ext_resource type="Texture2D" path="res://resources/contracts/photos/01_hallow_street_photo.webp" id="3_photo"]
 
 [resource]
 script = ExtResource("1_contract")
@@ -11,6 +12,8 @@ address = "14 Hallow Street"
 notes = "Scratching under the kitchen floor. One room, one nest, nothing clever."
 house_scene = "res://scenes/world.tscn"
 floor_plan = ExtResource("2_plan")
+photo = ExtResource("3_photo")
 infestation = 4
+rat_types = Array[String](["common"])
 reward = 180
 difficulty = 1

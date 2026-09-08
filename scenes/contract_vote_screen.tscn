@@ -1,0 +1,110 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/contract_vote_screen.gd" id="1_screen"]
+[ext_resource type="FontFile" uid="uid://b3vvnk0rcn80q" path="res://assets/fonts/matchup.ttf" id="2_font"]
+[ext_resource type="PackedScene" uid="uid://r6380qbonva8" path="res://scenes/black_button.tscn" id="3_button"]
+[ext_resource type="PackedScene" path="res://scenes/check_option.tscn" id="4_check"]
+
+[sub_resource type="FontVariation" id="FontVariation_vote"]
+base_font = ExtResource("2_font")
+spacing_top = -3
+spacing_bottom = -1
+
+[sub_resource type="Theme" id="Theme_vote"]
+default_font = SubResource("FontVariation_vote")
+default_font_size = 16
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_time"]
+
+[node name="ContractVoteScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = SubResource("Theme_vote")
+script = ExtResource("1_screen")
+
+[node name="Dim" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.72)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Rows" type="VBoxContainer" parent="Center"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="Title" type="Label" parent="Center/Rows"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 42
+horizontal_alignment = 1
+text = "CONTRACT_VOTE_TITLE"
+
+[node name="CardsRow" type="HBoxContainer" parent="Center/Rows"]
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="TimeRow" type="HBoxContainer" parent="Center/Rows"]
+layout_mode = 2
+theme_override_constants/separation = 14
+alignment = 1
+
+[node name="Time3" parent="Center/Rows/TimeRow" instance=ExtResource("4_check")]
+layout_mode = 2
+toggle_mode = true
+button_group = SubResource("ButtonGroup_time")
+text = "CONTRACT_VOTE_3MIN"
+
+[node name="Time5" parent="Center/Rows/TimeRow" instance=ExtResource("4_check")]
+layout_mode = 2
+toggle_mode = true
+button_group = SubResource("ButtonGroup_time")
+text = "CONTRACT_VOTE_5MIN"
+
+[node name="Time10" parent="Center/Rows/TimeRow" instance=ExtResource("4_check")]
+layout_mode = 2
+toggle_mode = true
+button_group = SubResource("ButtonGroup_time")
+text = "CONTRACT_VOTE_10MIN"
+
+[node name="Rate" type="Label" parent="Center/Rows"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 29
+horizontal_alignment = 1
+text = "CONTRACT_VOTE_RATE"
+
+[node name="Start" parent="Center/Rows" instance=ExtResource("3_button")]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "CONTRACT_VOTE_START"
+
+[node name="Hint" type="Label" parent="Center/Rows"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 0.6)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 15
+horizontal_alignment = 1
+autowrap_mode = 2

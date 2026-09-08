@@ -54,10 +54,10 @@ signal hold_changed(held: bool)
 ## reason: Godot hands it to the host the moment the wire comes up.
 const HOST_PEER := 1
 
-## What the last man ready used to be told when the crew was all green and the
-## shift still did not move, back when `blocked` was raised by an unsigned
-## contract. Nothing sets `blocked` any more — the signing board is gone — so
-## this sits unused until whatever replaces it needs the same hold.
+## What the last man ready is told when the crew is all green and the shift still
+## does not move. It is raised by the vote on the road
+## (`ContractManager._apply_hold`): a van with nothing signed to it has nowhere
+## to drive, and the crew is still arguing about where.
 const REASON_HELD := "No job is signed — the van has nowhere to go."
 
 ## The phases in which saying ready means anything. The hunt ends when the house
@@ -70,11 +70,11 @@ const PHASES: Array[Phase.Type] = [
 	Phase.Type.SURVEY,
 ]
 
-## Whether the shift is allowed to walk on when everybody says so. Nothing
-## currently sets this — it used to be raised while no contract was signed,
-## until that board was removed — but the mechanism stays: with it set, the
-## boards still light and the crew still goes green, while the last man ready
-## does not take the van away.
+## Whether the shift is allowed to walk on when everybody says so. Raised while
+## the crew is voting on the road (`ContractManager`): with it set, the boards
+## still light and the crew still goes green, while the last man ready does not
+## take the van away — nor does the host's clock running out
+## (`PhaseManager._on_timeout`).
 var blocked := false:
 	set(value):
 		if blocked == value:

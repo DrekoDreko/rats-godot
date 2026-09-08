@@ -15,6 +15,10 @@ run/main_scene="res://scenes/menu.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
 
+[audio]
+
+buses/default_bus_layout="res://audio/bus_layout.tres"
+
 [autoload]
 
 SteamManager="*res://scripts/steam/steam_manager.gd"
@@ -35,10 +39,6 @@ SteamAvatars="*res://scripts/steam/steam_avatars.gd"
 ShiftReport="*res://scripts/session/shift_report.gd"
 Bank="*res://scripts/economy/bank.gd"
 SettingsManager="*res://scripts/settings/settings_manager.gd"
-
-[audio]
-
-buses/default_bus_layout="res://audio/bus_layout.tres"
 
 [display]
 

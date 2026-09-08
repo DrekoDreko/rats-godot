@@ -168,6 +168,9 @@ func _on_play_pressed() -> void:
 			_say(tr(WAITING_ON_CREW), ERROR_COLOR)
 			_refresh_play()
 			return
+		# Straight onto the road. The job is not chosen here any more — the crew
+		# votes on it in the moving van, where the sheets go up on their own
+		# (`ContractManager._on_phase_changed`).
 		LobbyManager.start_game()
 		return
 	ReadyManager.request_toggle(LobbyManager.our_crew_id())

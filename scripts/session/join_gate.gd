@@ -387,6 +387,8 @@ func _snapshot() -> Dictionary:
 		"crew": crew,
 		"contract": SessionManager.current_contract,
 		"hunt_time": ContractManager.hunt_time_state(),
+		"voting_open": ContractManager.voting_open,
+		"votes": ContractManager.votes,
 		"phase": SessionManager.phase,
 		"seed": SessionManager.random_seed,
 		"pins": MapManager.state(),
@@ -426,6 +428,10 @@ func _apply_welcome(state: Dictionary) -> void:
 	# the signature is — the default is a length, and a wrong length is worse than
 	# no length at all.
 	ContractManager.adopt_hunt_time(int(state.get("hunt_time", HuntTime.DEFAULT)))
+	# The vote itself, if one is under way — a newcomer who walked in mid-vote
+	# gets the room's ballots along with everything else, rather than an empty
+	# board that only fills in once somebody's vote happens to change.
+	ContractManager.adopt_votes(state.get("votes", {}), bool(state.get("voting_open", false)))
 	MapManager.adopt(state.get("pins", []))
 	SessionManager.random_seed = int(state.get("seed", 0))
 	var phase: Phase.Type = state.get("phase", Phase.Type.LOBBY)

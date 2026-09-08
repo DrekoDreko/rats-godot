@@ -1,0 +1,46 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/check_option.gd" id="1_check"]
+[ext_resource type="FontFile" uid="uid://b3vvnk0rcn80q" path="res://assets/fonts/matchup.ttf" id="2_font"]
+
+[sub_resource type="FontVariation" id="FontVariation_check"]
+base_font = ExtResource("2_font")
+spacing_top = -3
+spacing_bottom = -1
+
+[sub_resource type="StyleBoxEmpty" id="Style_check_flat"]
+content_margin_left = 24.0
+content_margin_top = 2.0
+content_margin_right = 2.0
+content_margin_bottom = 2.0
+
+[sub_resource type="StyleBoxEmpty" id="Style_check_focus"]
+
+[node name="CheckOption" type="Button"]
+custom_minimum_size = Vector2(0, 24)
+theme_override_colors/font_color = Color(0.82, 0.82, 0.82, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
+theme_override_colors/font_focus_color = Color(0.82, 0.82, 0.82, 1)
+theme_override_colors/font_disabled_color = Color(1, 1, 1, 0.45)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_fonts/font = SubResource("FontVariation_check")
+theme_override_font_sizes/font_size = 25
+theme_override_styles/normal = SubResource("Style_check_flat")
+theme_override_styles/hover = SubResource("Style_check_flat")
+theme_override_styles/pressed = SubResource("Style_check_flat")
+theme_override_styles/disabled = SubResource("Style_check_flat")
+theme_override_styles/focus = SubResource("Style_check_focus")
+script = ExtResource("1_check")
+
+[node name="Box" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_top = -7.0
+offset_right = 14.0
+offset_bottom = 7.0
+grow_vertical = 2
+mouse_filter = 2

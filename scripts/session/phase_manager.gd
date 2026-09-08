@@ -181,7 +181,7 @@ func has_timer() -> bool:
 ##
 ## Every phase but the hunt reads its length off `Phase.DURATION`, which is the
 ## same on every shift. The hunt does not: the crew books it in the van, at ten
-## minutes, five or two, and the shorter the booking the more each rat is worth
+## minutes, five or three, and the shorter the booking the more each rat is worth
 ## (`HuntTime`). So the length has to be asked of the shift rather than of the
 ## table — and asked *here*, in the one place, so that the clock the host starts
 ## and the clock the HUD decides to draw can never be two different answers.

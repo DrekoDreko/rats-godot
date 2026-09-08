@@ -5,15 +5,16 @@ extends RefCounted
 ## The hunt is the one phase whose clock the crew sets rather than reads. A long
 ## shift is a comfortable one — every hole checked twice, every trap collected —
 ## and it pays what the rats are worth and nothing more. A short one is a gamble:
-## the same house, the same animals, five times the money and two minutes to get
-## it, with whatever is still loose when the clock runs out left in the walls.
+## the same house, the same animals, five times the money and three minutes to
+## get it, with whatever is still loose when the clock runs out left in the
+## walls.
 ##
 ## **The wager is the whole point.** A crew that always picks ten minutes is a
-## crew that never loses and never earns; one that always picks two is a crew
+## crew that never loses and never earns; one that always picks three is a crew
 ## that comes home with an empty van. The interesting choice is the one made
-## against a contract already read — a low infestation is a two-minute job, a
-## house with forty rats in it is not — which is why this is picked on the
-## clipboard, next to the sheet that says how bad the house is.
+## against a contract already read — a low infestation is a three-minute job, a
+## house with forty rats in it is not — which is why this is picked on the vote
+## screen, next to the sheet that says how bad the house is.
 ##
 ## **What the multiplier touches is the rats and nothing else.** It is applied
 ## where an animal is paid for (`Wallet.collect`), after the species price and
@@ -33,14 +34,14 @@ extends RefCounted
 enum Type {
 	LONG,   ## Ten minutes at face value.
 	MEDIUM, ## Five minutes at double.
-	SHORT,  ## Two minutes at five times.
+	SHORT,  ## Three minutes at five times.
 }
 
 ## How long each setting runs, in seconds.
 const DURATION := {
 	Type.LONG: 600.0,
 	Type.MEDIUM: 300.0,
-	Type.SHORT: 120.0,
+	Type.SHORT: 180.0,
 }
 
 ## What every rat delivered is multiplied by. Whole numbers on purpose: a crew
