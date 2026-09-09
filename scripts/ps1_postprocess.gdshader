@@ -1,6 +1,8 @@
 shader_type canvas_item;
 render_mode unshaded;
 
+uniform sampler2D SCREEN_TEXTURE : hint_screen_texture;
+
 #define MAXCOLORS 16
 
 uniform bool enabled = true;
@@ -45,7 +47,7 @@ float reduce_color(float raw, float dither, int depth) {
 }
 
 void fragment() {
-	vec4 raw = texture(TEXTURE, SCREEN_UV);
+	vec4 raw = texture(SCREEN_TEXTURE, SCREEN_UV);
 	ivec2 uv = ivec2(FRAGCOORD.xy / float(dither_size));
 
 	if (enabled) {

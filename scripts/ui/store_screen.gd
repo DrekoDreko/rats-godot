@@ -1048,6 +1048,7 @@ func _on_item_bought(steam_id: int, _item_id: String) -> void:
 	_refresh()
 	if steam_id == _our_steam_id():
 		_flash_bought()
+		AudioManager.play_ui("equip_inventory")
 
 
 ## The host turned us down — an empty pocket, or the van already off the road

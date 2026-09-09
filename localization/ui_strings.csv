@@ -60,6 +60,7 @@ SETTINGS_FULLSCREEN,Fullscreen,Tela cheia
 SETTINGS_SOUND_VOLUME,Sound Volume,Volume do Som
 SETTINGS_MUSIC_VOLUME,Music Volume,Volume da Música
 SETTINGS_VOICE_VOLUME,Voice Volume,Volume da Voz
+SETTINGS_PS1_DITHERING,PS1 Dithering,Dithering PS1
 SETTINGS_STREAMER_MODE,Streamer Mode,Modo Streamer
 SETTINGS_LANGUAGE,Language,Idioma
 CONTRACT_VOTE_TITLE,Choose the contract,Escolha o contrato

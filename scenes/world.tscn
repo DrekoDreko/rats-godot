@@ -1242,7 +1242,7 @@ offset_top = 12.0
 offset_right = 220.0
 offset_bottom = 40.0
 grow_horizontal = 0
-theme_override_colors/font_color = Color(1, 1, 1, 1)
+font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
 text = "HUD_RATS"
@@ -1262,7 +1262,7 @@ script = ExtResource("8_money")
 
 [node name="Total" parent="HUD/Money" unique_id=335423766 instance=ExtResource("27_big_font")]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
+font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
 text = "HUD_MONEY_TOTAL"
@@ -1271,7 +1271,7 @@ horizontal_alignment = 0
 
 [node name="Notice" parent="HUD/Money" unique_id=1741915399 instance=ExtResource("27_big_font")]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.85, 0.45, 1)
+font_color = Color(0.55, 0.85, 0.45, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
 font_size = 16
@@ -1347,7 +1347,7 @@ text_overrun_behavior = 3
 layout_mode = 2
 size_flags_horizontal = 8
 size_flags_vertical = 8
-theme_override_colors/font_color = Color(1, 1, 1, 1)
+font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
 font_size = 16
@@ -1378,7 +1378,7 @@ text_overrun_behavior = 3
 layout_mode = 2
 size_flags_horizontal = 8
 size_flags_vertical = 8
-theme_override_colors/font_color = Color(1, 1, 1, 1)
+font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
 font_size = 16
@@ -1409,7 +1409,7 @@ text_overrun_behavior = 3
 layout_mode = 2
 size_flags_horizontal = 8
 size_flags_vertical = 8
-theme_override_colors/font_color = Color(1, 1, 1, 1)
+font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
 font_size = 16
@@ -1428,7 +1428,7 @@ offset_right = 10.0
 offset_bottom = 14.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_colors/font_color = Color(1, 1, 1, 0.75)
+font_color = Color(1, 1, 1, 0.75)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 0.6)
 theme_override_constants/outline_size = 4
 text = "+"
@@ -1455,7 +1455,7 @@ size_flags_vertical = 8
 
 [node name="Button" parent="HUD/Strangle/VBoxContainer" unique_id=681584922 instance=ExtResource("27_big_font")]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.94, 0.86, 0.36, 1)
+font_color = Color(0.94, 0.86, 0.36, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 8
 font_size = 32
@@ -1471,7 +1471,7 @@ show_percentage = false
 
 [node name="Instruction" parent="HUD/Strangle/VBoxContainer" unique_id=1090993103 instance=ExtResource("27_big_font")]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
+font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
 text = "HUD_STRANGLE_INSTRUCTION"
@@ -1506,7 +1506,7 @@ alignment = 2
 
 [node name="Label" parent="HUD/Hold/VBoxContainer" unique_id=163608909 instance=ExtResource("27_big_font")]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
+font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
 text = "PROMPT_CLEAN_TRAP"
@@ -1531,7 +1531,7 @@ offset_right = 120.0
 offset_bottom = 32.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
+font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
 font_size = 16

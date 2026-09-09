@@ -57,8 +57,14 @@ const LOBBY_SCENE := "res://scenes/menu.tscn"
 ## is gone before it is noticed, and slow enough to read.
 const CREW_REFRESH := 0.5
 
+## The label every row of this menu is built from, the same one the rest of the
+## interface is (`AGENTS.md`): the font, the outline and the spacing all come
+## with it, so a row built here can never quietly drift away from the ones the
+## scene laid out above it.
+const ROW_LABEL := preload("res://scenes/big_font_outlined_label.tscn")
+
 ## The dot in front of each name, drawn in that player's colour. A filled circle
-## is the one glyph that reads as a colour swatch at eight points.
+## is the one glyph that reads as a colour swatch at a row's size.
 const CREW_SWATCH := "●"
 
 ## What marks the host in the list, as a translation key. It goes after the
@@ -70,9 +76,13 @@ const CREW_HOST_MARK := "PAUSE_HOST_MARK"
 ## would be a lie of exactly the kind a player would believe.
 const CREW_NO_PING := "—"
 
-## Font size for a crew row. The same eight points the hint under the title
-## uses: this is a footnote to the menu, not the menu.
-const CREW_FONT_SIZE := 8
+## Font size for a crew row. The same sixteen the rest of the menu uses, because
+## `matchup.ttf` is a pixel face: it is drawn on a sixteen-pixel grid and any
+## size off that grid comes out with the stems at uneven widths. The shared
+## label enforces this itself (`big_font_outlined_label.gd` rounds to the
+## nearest multiple of sixteen), and the constant is kept only so the three
+## labels in a row are set from one place.
+const CREW_FONT_SIZE := 16
 
 @onready var _resume: Button = $Center/Panel/Margin/Rows/Resume
 @onready var _leave: Button = $Center/Panel/Margin/Rows/Leave
@@ -81,7 +91,7 @@ const CREW_FONT_SIZE := 8
 ## step row by row: four rows is nothing to build, and a list that is rebuilt
 ## whole can never be a list that quietly disagrees with the crew.
 @onready var _crew: VBoxContainer = $Center/Panel/Margin/Rows/Crew
-@onready var _crew_title: Label = $Center/Panel/Margin/Rows/CrewTitle
+@onready var _crew_title: BigFontOutlinedLabel = $Center/Panel/Margin/Rows/CrewTitle
 @onready var _crew_separator: HSeparator = $Center/Panel/Margin/Rows/CrewSeparator
 @onready var _how_to: Button = $Center/Panel/Margin/Rows/HowTo
 @onready var _settings: Button = $Center/Panel/Margin/Rows/Settings
@@ -348,48 +358,43 @@ func _refresh_crew() -> void:
 ## One line of the list: a dot in the player's colour, his name, the host mark
 ## if it is his, and his ping pushed out to the right.
 ##
-## The dot is a `Label` of its own so that only it carries the colour — a whole
+## The dot is a label of its own so that only it carries the colour — a whole
 ## row tinted red would be a row that reads as an error rather than as a man in
 ## a red suit.
 func _crew_row(steam_id: int) -> HBoxContainer:
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
+	row.add_theme_constant_override("separation", 4)
 
-	var swatch := Label.new()
-	swatch.text = CREW_SWATCH
-	swatch.add_theme_font_size_override("font_size", CREW_FONT_SIZE)
-	swatch.add_theme_color_override("font_color", SessionManager.color(steam_id))
-	swatch.add_theme_color_override("font_outline_color", Color.BLACK)
-	swatch.add_theme_constant_override("outline_size", 4)
-	row.add_child(swatch)
+	row.add_child(_row_label(CREW_SWATCH, SessionManager.color(steam_id)))
 
 	var player := SessionManager.player(steam_id)
-	var name_label := Label.new()
 	var shown_name := String(player.get("name", "..."))
 	if SettingsManager.streamer_mode:
 		shown_name = ColorManager.display_name_for(steam_id)
-	name_label.text = shown_name
 	if bool(player.get("is_host", false)):
-		name_label.text += tr(CREW_HOST_MARK)
-	name_label.add_theme_font_size_override("font_size", CREW_FONT_SIZE)
-	name_label.add_theme_color_override("font_color", Color.WHITE)
-	name_label.add_theme_color_override("font_outline_color", Color.BLACK)
-	name_label.add_theme_constant_override("outline_size", 4)
+		shown_name += tr(CREW_HOST_MARK)
+	var name_label := _row_label(shown_name, Color.WHITE)
 	# The name takes whatever width is going, which is what pins the ping to the
 	# right-hand edge however long or short the names turn out to be.
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(name_label)
 
-	var ping := Label.new()
-	ping.text = _ping_text(steam_id)
-	ping.add_theme_font_size_override("font_size", CREW_FONT_SIZE)
-	ping.add_theme_color_override("font_color", _ping_color(steam_id))
-	ping.add_theme_color_override("font_outline_color", Color.BLACK)
-	ping.add_theme_constant_override("outline_size", 4)
+	var ping := _row_label(_ping_text(steam_id), _ping_color(steam_id))
 	ping.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	row.add_child(ping)
 
 	return row
+
+
+## One of the three labels a crew row is made of. Built from the shared scene
+## rather than from a bare `Label`, so the font, the outline and the spacing are
+## the ones the rest of the interface uses and not Godot's defaults.
+func _row_label(text: String, color: Color) -> BigFontOutlinedLabel:
+	var label := ROW_LABEL.instantiate() as BigFontOutlinedLabel
+	label.font_size = CREW_FONT_SIZE
+	label.text = text
+	label.add_theme_color_override("font_color", color)
+	return label
 
 
 ## The ping as a player reads it. Our own row and a solo run both come back

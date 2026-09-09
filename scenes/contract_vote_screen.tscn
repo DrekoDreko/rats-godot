@@ -1,9 +1,10 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene format=3 uid="uid://b483s7xy3a8ur"]
 
-[ext_resource type="Script" path="res://scripts/ui/contract_vote_screen.gd" id="1_screen"]
+[ext_resource type="Script" uid="uid://b51ly7ujlak0u" path="res://scripts/ui/contract_vote_screen.gd" id="1_screen"]
 [ext_resource type="FontFile" uid="uid://b3vvnk0rcn80q" path="res://assets/fonts/matchup.ttf" id="2_font"]
 [ext_resource type="PackedScene" uid="uid://r6380qbonva8" path="res://scenes/black_button.tscn" id="3_button"]
 [ext_resource type="PackedScene" path="res://scenes/check_option.tscn" id="4_check"]
+[ext_resource type="PackedScene" uid="uid://b4wetum1hnqtu" path="res://scenes/big_font_outlined_label.tscn" id="5_big_font"]
 
 [sub_resource type="FontVariation" id="FontVariation_vote"]
 base_font = ExtResource("2_font")
@@ -14,9 +15,13 @@ spacing_bottom = -1
 default_font = SubResource("FontVariation_vote")
 default_font_size = 16
 
-[sub_resource type="ButtonGroup" id="ButtonGroup_time"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_ievoj"]
 
-[node name="ContractVoteScreen" type="Control"]
+[sub_resource type="ButtonGroup" id="ButtonGroup_qk438"]
+
+[sub_resource type="ButtonGroup" id="ButtonGroup_6bnd3"]
+
+[node name="ContractVoteScreen" type="Control" unique_id=1968316100]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -26,7 +31,7 @@ grow_vertical = 2
 theme = SubResource("Theme_vote")
 script = ExtResource("1_screen")
 
-[node name="Dim" type="ColorRect" parent="."]
+[node name="Dim" type="ColorRect" parent="." unique_id=666270317]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -35,76 +40,79 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0, 0, 0, 0.72)
 
-[node name="Center" type="CenterContainer" parent="."]
+[node name="Margin" type="MarginContainer" parent="." unique_id=1886925243]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 6
+
+[node name="Center" type="CenterContainer" parent="Margin" unique_id=1886925242]
+layout_mode = 2
 mouse_filter = 2
 
-[node name="Rows" type="VBoxContainer" parent="Center"]
+[node name="Rows" type="VBoxContainer" parent="Margin/Center" unique_id=1307013241]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 4
 alignment = 1
 
-[node name="Title" type="Label" parent="Center/Rows"]
+[node name="Title" parent="Margin/Center/Rows" unique_id=1726344411 instance=ExtResource("5_big_font")]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 6
-theme_override_font_sizes/font_size = 42
-horizontal_alignment = 1
+font_size = 16
 text = "CONTRACT_VOTE_TITLE"
+horizontal_alignment = 1
 
-[node name="CardsRow" type="HBoxContainer" parent="Center/Rows"]
+[node name="CardsRow" type="HBoxContainer" parent="Margin/Center/Rows" unique_id=921466140]
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 6
 alignment = 1
 
-[node name="TimeRow" type="HBoxContainer" parent="Center/Rows"]
+[node name="ContractVoteCard" parent="Margin/Center/Rows/CardsRow" unique_id=1198769042 instance_placeholder="res://scenes/contract_vote_card.tscn"]
 layout_mode = 2
-theme_override_constants/separation = 14
+
+[node name="TimeRow" type="HBoxContainer" parent="Margin/Center/Rows" unique_id=1185947577]
+layout_mode = 2
+theme_override_constants/separation = 8
 alignment = 1
 
-[node name="Time3" parent="Center/Rows/TimeRow" instance=ExtResource("4_check")]
+[node name="Time3" parent="Margin/Center/Rows/TimeRow" unique_id=218298498 instance=ExtResource("4_check")]
 layout_mode = 2
 toggle_mode = true
-button_group = SubResource("ButtonGroup_time")
+button_group = SubResource("ButtonGroup_ievoj")
 text = "CONTRACT_VOTE_3MIN"
 
-[node name="Time5" parent="Center/Rows/TimeRow" instance=ExtResource("4_check")]
+[node name="Time5" parent="Margin/Center/Rows/TimeRow" unique_id=1301558084 instance=ExtResource("4_check")]
 layout_mode = 2
 toggle_mode = true
-button_group = SubResource("ButtonGroup_time")
+button_group = SubResource("ButtonGroup_qk438")
 text = "CONTRACT_VOTE_5MIN"
 
-[node name="Time10" parent="Center/Rows/TimeRow" instance=ExtResource("4_check")]
+[node name="Time10" parent="Margin/Center/Rows/TimeRow" unique_id=117859755 instance=ExtResource("4_check")]
 layout_mode = 2
 toggle_mode = true
-button_group = SubResource("ButtonGroup_time")
+button_group = SubResource("ButtonGroup_6bnd3")
 text = "CONTRACT_VOTE_10MIN"
 
-[node name="Rate" type="Label" parent="Center/Rows"]
+[node name="Rate" parent="Margin/Center/Rows" unique_id=1913454699 instance=ExtResource("5_big_font")]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 5
-theme_override_font_sizes/font_size = 29
-horizontal_alignment = 1
+font_size = 16
 text = "CONTRACT_VOTE_RATE"
+horizontal_alignment = 1
 
-[node name="Start" parent="Center/Rows" instance=ExtResource("3_button")]
+[node name="Start" parent="Margin/Center/Rows" unique_id=474499444 instance=ExtResource("3_button")]
 layout_mode = 2
 size_flags_horizontal = 4
 text = "CONTRACT_VOTE_START"
 
-[node name="Hint" type="Label" parent="Center/Rows"]
+[node name="Hint" parent="Margin/Center/Rows" unique_id=107852741 instance=ExtResource("5_big_font")]
 layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 0.6)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 15
+font_color = Color(1, 1, 1, 0.6)
+font_size = 16
 horizontal_alignment = 1
 autowrap_mode = 2

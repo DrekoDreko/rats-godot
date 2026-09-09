@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://cbaw6ypunj51i"]
+[gd_scene format=3 uid="uid://ii1wfwg7nxtc"]
 
 [ext_resource type="Script" uid="uid://dv7ft2urn67w2" path="res://scripts/steam/lobby_screen.gd" id="1_lobby"]
 [ext_resource type="FontFile" uid="uid://b3vvnk0rcn80q" path="res://assets/fonts/matchup.ttf" id="2_font"]
@@ -22,10 +22,10 @@ border_width_bottom = 1
 border_color = Color(0.55, 0.55, 0.55, 0.75)
 
 [sub_resource type="StyleBoxFlat" id="Style_button_normal"]
-content_margin_left = 8.0
-content_margin_top = 6.0
-content_margin_right = 8.0
-content_margin_bottom = 6.0
+content_margin_left = 5.0
+content_margin_top = 3.0
+content_margin_right = 5.0
+content_margin_bottom = 3.0
 bg_color = Color(0, 0, 0, 0.39215687)
 border_width_left = 1
 border_width_top = 1
@@ -34,10 +34,10 @@ border_width_bottom = 1
 border_color = Color(0.55, 0.55, 0.55, 0.45)
 
 [sub_resource type="StyleBoxFlat" id="Style_button_pressed"]
-content_margin_left = 8.0
-content_margin_top = 6.0
-content_margin_right = 8.0
-content_margin_bottom = 6.0
+content_margin_left = 5.0
+content_margin_top = 3.0
+content_margin_right = 5.0
+content_margin_bottom = 3.0
 bg_color = Color(0, 0, 0, 0.5882353)
 border_width_left = 1
 border_width_top = 1
@@ -46,10 +46,10 @@ border_width_bottom = 1
 border_color = Color(0.55, 0.55, 0.55, 0.45)
 
 [sub_resource type="StyleBoxFlat" id="Style_button_hover"]
-content_margin_left = 8.0
-content_margin_top = 6.0
-content_margin_right = 8.0
-content_margin_bottom = 6.0
+content_margin_left = 5.0
+content_margin_top = 3.0
+content_margin_right = 5.0
+content_margin_bottom = 3.0
 bg_color = Color(0, 0, 0, 0.47058824)
 border_width_left = 1
 border_width_top = 1
@@ -58,10 +58,10 @@ border_width_bottom = 1
 border_color = Color(0.55, 0.55, 0.55, 0.45)
 
 [sub_resource type="StyleBoxFlat" id="Style_button_disabled"]
-content_margin_left = 8.0
-content_margin_top = 6.0
-content_margin_right = 8.0
-content_margin_bottom = 6.0
+content_margin_left = 5.0
+content_margin_top = 3.0
+content_margin_right = 5.0
+content_margin_bottom = 3.0
 bg_color = Color(0, 0, 0, 0.19607843)
 border_width_left = 1
 border_width_top = 1
@@ -70,10 +70,10 @@ border_width_bottom = 1
 border_color = Color(0.55, 0.55, 0.55, 0.45)
 
 [sub_resource type="StyleBoxFlat" id="Style_field"]
-content_margin_left = 6.0
-content_margin_top = 6.0
-content_margin_right = 6.0
-content_margin_bottom = 6.0
+content_margin_left = 4.0
+content_margin_top = 3.0
+content_margin_right = 4.0
+content_margin_bottom = 3.0
 bg_color = Color(0, 0, 0, 0.5882353)
 border_width_left = 1
 border_width_top = 1
@@ -122,23 +122,23 @@ layout_mode = 1
 anchors_preset = 4
 anchor_top = 0.5
 anchor_bottom = 0.5
-offset_left = 12.0
-offset_top = -110.0
-offset_right = 232.0
-offset_bottom = 110.0
+offset_left = 10.0
+offset_top = -70.0
+offset_right = 190.0
+offset_bottom = 70.0
 grow_vertical = 2
 theme_override_styles/panel = SubResource("Style_lobby_panel")
 
 [node name="Margin" type="MarginContainer" parent="Center/Panel" unique_id=1422415690]
 layout_mode = 2
-theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 8
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 5
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 5
 
 [node name="Rows" type="VBoxContainer" parent="Center/Panel/Margin" unique_id=1383071040]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
 [node name="TitleRow" type="HBoxContainer" parent="Center/Panel/Margin/Rows" unique_id=1081735381]
 layout_mode = 2
@@ -147,11 +147,11 @@ theme_override_constants/separation = 6
 [node name="Title" parent="Center/Panel/Margin/Rows/TitleRow" unique_id=2026019936 instance=ExtResource("3_big_font")]
 layout_mode = 2
 size_flags_horizontal = 3
-font_size = 32
+font_size = 16
 text = "MENU_FIND_LOBBY"
 
 [node name="Close" type="Button" parent="Center/Panel/Margin/Rows/TitleRow" unique_id=1400363772]
-custom_minimum_size = Vector2(30, 26)
+custom_minimum_size = Vector2(18, 16)
 layout_mode = 2
 size_flags_vertical = 4
 theme_override_styles/normal = SubResource("Style_button_normal")
@@ -173,7 +173,7 @@ theme_override_styles/focus = SubResource("Style_field")
 placeholder_text = "LOBBY_CODE_PLACEHOLDER"
 
 [node name="Join" type="Button" parent="Center/Panel/Margin/Rows/JoinRow" unique_id=120588383]
-custom_minimum_size = Vector2(48, 0)
+custom_minimum_size = Vector2(36, 0)
 layout_mode = 2
 theme_override_styles/normal = SubResource("Style_button_normal")
 theme_override_styles/pressed = SubResource("Style_button_pressed")
@@ -190,7 +190,7 @@ theme_override_styles/disabled = SubResource("Style_button_disabled")
 text = "LOBBY_REFRESH"
 
 [node name="Lobbies" type="ItemList" parent="Center/Panel/Margin/Rows" unique_id=157212441]
-custom_minimum_size = Vector2(0, 70)
+custom_minimum_size = Vector2(0, 48)
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_styles/panel = SubResource("Style_list")
@@ -205,6 +205,6 @@ theme_override_styles/disabled = SubResource("Style_button_disabled")
 text = "LOBBY_LEAVE"
 
 [node name="Status" parent="Center/Panel/Margin/Rows" unique_id=254418973 instance=ExtResource("3_big_font")]
-custom_minimum_size = Vector2(0, 14)
+custom_minimum_size = Vector2(0, 10)
 layout_mode = 2
 autowrap_mode = 2

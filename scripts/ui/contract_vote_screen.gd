@@ -37,13 +37,13 @@ const RATE_SPECIES: RatSpecies = preload("res://resources/species/common_rat.tre
 ## `CanvasLayer` in the scene and hiding the layer hides the lot.
 @export var hud_path: NodePath = ^"../../HUD"
 
-@onready var _cards: HBoxContainer = $Center/Rows/CardsRow
-@onready var _time_3: Button = $Center/Rows/TimeRow/Time3
-@onready var _time_5: Button = $Center/Rows/TimeRow/Time5
-@onready var _time_10: Button = $Center/Rows/TimeRow/Time10
-@onready var _rate: Label = $Center/Rows/Rate
-@onready var _start: Button = $Center/Rows/Start
-@onready var _hint: Label = $Center/Rows/Hint
+@onready var _cards: HBoxContainer = $Margin/Center/Rows/CardsRow
+@onready var _time_3: Button = $Margin/Center/Rows/TimeRow/Time3
+@onready var _time_5: Button = $Margin/Center/Rows/TimeRow/Time5
+@onready var _time_10: Button = $Margin/Center/Rows/TimeRow/Time10
+@onready var _rate: BigFontOutlinedLabel = $Margin/Center/Rows/Rate
+@onready var _start: Button = $Margin/Center/Rows/Start
+@onready var _hint: BigFontOutlinedLabel = $Margin/Center/Rows/Hint
 
 ## Every card on screen, by the job it stands for. Built once — the board
 ## does not change while the game is running (`ContractManager.contracts`) —
@@ -100,7 +100,7 @@ func _ready() -> void:
 		_open()
 
 
-## Puts the screen's green line round the START button.
+## Puts the screen's line colour round the START button.
 ##
 ## The button is the black slab the menu already uses
 ## (`scenes/black_button.tscn`), and the only thing this screen wants changed
@@ -110,8 +110,8 @@ func _ready() -> void:
 ## stop matching the menu the day the slab is restyled.
 ##
 ## The duplicate is not optional: a scene's sub-resources are shared between
-## every instance of it, so writing on the stylebox we are given would put a
-## green edge on every black button in the game.
+## every instance of it, so writing on the stylebox we are given would put an
+## outlined edge on every black button in the game.
 func _outline_start() -> void:
 	for state in ["normal", "hover", "pressed", "disabled"]:
 		var style := _start.get_theme_stylebox(state) as StyleBoxFlat

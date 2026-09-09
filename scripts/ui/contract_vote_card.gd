@@ -13,22 +13,26 @@ extends Button
 ## The size a rat-type dot is drawn at. There are no icons for the breeds yet
 ## (`Contract.rat_types` is a list of ids and nothing more), so a dot is a
 ## plain hollow circle until there is an icon to put on it.
-const DOT_SIZE := 13.0
+const DOT_SIZE := 7.0
 
-## The green the whole vote screen is drawn in.
-const LINE_COLOR := Color(0.42, 0.74, 0.49)
+## The line colour the whole vote screen is drawn in: the same off-white the
+## rest of the game's black-and-white interfaces outline themselves with, so the
+## contract sheets read as part of the same set as the menus and the shop.
+## `check_option.gd` and `contract_vote_screen.gd` both draw from this one, so
+## the sheets, their boxes and their tick-boxes can never drift apart.
+const LINE_COLOR := Color(0.85, 0.85, 0.85)
 
 ## How much the card leans out of the row while the mouse is on it. The row
-## leaves 16px between cards (`contract_vote_screen.tscn`), and a card 200px
-## wide grows 12 of those, so it never touches its neighbour. Growing by
+## leaves 6px between cards (`contract_vote_screen.tscn`), and a card 96px
+## wide grows 6 of those, so it never touches its neighbour. Growing by
 ## `scale` and not by size is the point: a container lays its children out by
 ## size, so a card that grew by size would shove the other two sideways.
 const HOVER_SCALE := 1.06
 const HOVER_TIME := 0.1
 
-@onready var _name: Label = $Content/Name
-@onready var _count: Label = $Content/Count
-@onready var _votes: Label = $Content/Votes
+@onready var _name: BigFontOutlinedLabel = $Content/Name
+@onready var _count: BigFontOutlinedLabel = $Content/Count
+@onready var _votes: BigFontOutlinedLabel = $Content/Votes
 @onready var _dots: VBoxContainer = $Content/Dots
 @onready var _face: Panel = $Content/Face
 @onready var _face_photo: TextureRect = $Content/Face/Photo

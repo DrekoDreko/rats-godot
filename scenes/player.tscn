@@ -42,6 +42,9 @@ fov = 80.0
 near = 0.03
 far = 500.0
 
+[node name="AudioListener3D" type="AudioListener3D" parent="Head/Camera"]
+current = true
+
 [node name="ViewModel" parent="Head/Camera" unique_id=1298374651 instance=ExtResource("9_view_model")]
 
 [node name="Interact" type="RayCast3D" parent="Head/Camera" unique_id=2081203818]

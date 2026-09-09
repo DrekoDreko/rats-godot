@@ -1,23 +1,54 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene format=3 uid="uid://bchgd2vjllflu"]
 
-[ext_resource type="Script" path="res://scripts/game_post_process_wrapper.gd" id="1_script"]
-[ext_resource type="Material" path="res://materials/ps1_postprocess.tres" id="2_material"]
-[ext_resource type="PackedScene" path="res://scenes/menu.tscn" id="3_initial_scene"]
+[ext_resource type="Script" uid="uid://c1d0bg6cxlt35" path="res://scripts/game_post_process_wrapper.gd" id="1_script"]
+[ext_resource type="Material" uid="uid://cq8yv3n5xrlp2" path="res://materials/ps1_postprocess.tres" id="2_ps1_material"]
+[ext_resource type="PackedScene" uid="uid://bslld2ban48a7" path="res://scenes/menu.tscn" id="3_initial_scene"]
 
-[node name="GamePostProcessWrapper" type="SubViewportContainer"]
+[node name="GamePostProcessWrapper" type="Control" unique_id=415531518]
+process_mode = 3
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-texture_filter = 1
-material = ExtResource("2_material")
-stretch = true
-process_mode = 3
 script = ExtResource("1_script")
 initial_scene = ExtResource("3_initial_scene")
 
-[node name="Viewport" type="SubViewport" parent="."]
+[node name="GameViewport" type="SubViewportContainer" parent="." unique_id=807988351]
+texture_filter = 1
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+stretch = true
+
+[node name="Viewport" type="SubViewport" parent="GameViewport" unique_id=1823876328]
 own_world_3d = true
-size = Vector2i(640, 360)
+handle_input_locally = false
+audio_listener_enable_2d = true
+audio_listener_enable_3d = true
+size = Vector2i(480, 270)
 render_target_update_mode = 4
+
+[node name="PostProcessLayer" type="CanvasLayer" parent="GameViewport/Viewport" unique_id=198843377]
+layer = 100
+
+[node name="Effects" type="Control" parent="GameViewport/Viewport/PostProcessLayer" unique_id=198843378]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 640.0
+offset_bottom = 360.0
+mouse_filter = 2
+
+[node name="PS1Effect" type="ColorRect" parent="GameViewport/Viewport/PostProcessLayer/Effects" unique_id=198843375]
+material = ExtResource("2_ps1_material")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2

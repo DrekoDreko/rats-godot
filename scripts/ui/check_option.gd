@@ -9,8 +9,10 @@ extends Button
 ## the button's own `text`, so the pressed, hovered and disabled colours the
 ## theme already knows about keep working.
 
-## The green the whole vote screen is drawn in.
-const LINE_COLOR := Color(0.42, 0.74, 0.49)
+## The line colour the vote screen is drawn in. Taken from the card rather than
+## written out again here: a box that disagreed with the sheet beside it would
+## be the one thing on the screen that looked like a mistake.
+const LINE_COLOR := ContractVoteCard.LINE_COLOR
 
 @onready var _box: Panel = $Box
 
