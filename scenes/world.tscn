@@ -1154,27 +1154,6 @@ volume_db = -6.0
 
 [node name="HUD" parent="." instance=ExtResource("29_hud_game")]
 
-[node name="GrabPrompt" parent="HUD" unique_id=1493470611 instance=ExtResource("27_big_font")]
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -150.0
-offset_top = 36.0
-offset_right = 150.0
-offset_bottom = 56.0
-grow_horizontal = 2
-grow_vertical = 2
-font_color = Color(0.94, 0.86, 0.36, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 5
-font_size = 16
-text = "HUD_GRAB_PROMPT"
-horizontal_alignment = 1
-vertical_alignment = 1
-script = ExtResource("30_hud_grab")
-
 [node name="HUD_Phase" parent="." unique_id=1677183090 instance=ExtResource("20_hud_phase")]
 
 [node name="ResultScreen" parent="." unique_id=2047533472 instance=ExtResource("22_result")]
