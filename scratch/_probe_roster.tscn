@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scratch/_probe_roster.gd" id="1_rig"]
+
+[node name="Rig" type="Node"]
+script = ExtResource("1_rig")

@@ -1,6 +1,6 @@
 extends ProgressBar
-## The player's flesh on screen: a bar that drains, spanning the belt's three
-## slots and sitting right over them.
+## The player's flesh on screen: a bar that drains, spanning the whole belt and
+## sitting right over it.
 ##
 ## Like every other piece of this HUD it only mirrors what the player already
 ## knows (`player.gd`): the count lives there, so a bandage, a bite or a respawn

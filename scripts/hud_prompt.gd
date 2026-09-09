@@ -7,6 +7,9 @@ extends BigFontOutlinedLabel
 ## nothing in front of him, and with a rat kicking in his hands, the player
 ## announces null and the line leaves the screen.
 
+var _interactable: Interactable
+var _seated := false
+
 func _ready() -> void:
 	super._ready()
 	hide()
@@ -31,10 +34,26 @@ func _ready() -> void:
 	if player == null:
 		return
 	player.interactable_changed.connect(_on_interactable_changed)
+	player.seated_changed.connect(_on_seated_changed)
+	_on_seated_changed(player.is_seated())
 
 func _on_interactable_changed(interactable: Interactable) -> void:
-	if interactable == null:
+	_interactable = interactable
+	_refresh()
+
+
+func _on_seated_changed(seated: bool) -> void:
+	_seated = seated
+	_refresh()
+
+
+func _refresh() -> void:
+	if _seated:
+		text = tr("HUD_INTERACT_PROMPT") % tr("PROMPT_STAND_UP")
+		show()
+		return
+	if _interactable == null:
 		hide()
 		return
-	text = tr("HUD_INTERACT_PROMPT") % tr(interactable.prompt)
+	text = tr("HUD_INTERACT_PROMPT") % tr(_interactable.prompt)
 	show()

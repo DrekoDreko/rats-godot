@@ -21,6 +21,12 @@ var _spots: Array[Marker3D] = []
 
 
 func _ready() -> void:
+	# Found by group by whoever needs to know where the crew comes in — the same
+	# handle `house.gd` gives the traps and the rats containers, and for the same
+	# reason: the benches instance `world.tscn` under the root without ever making
+	# it `current_scene`, and a path off `current_scene` misses them.
+	add_to_group("house_spawns")
+
 	for child in get_children():
 		var marker := child as Marker3D
 		if marker != null:

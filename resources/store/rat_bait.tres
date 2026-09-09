@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="StoreItem" load_steps=2 format=3]
+
+[ext_resource type="Script" uid="uid://bt727w2lnn8sn" path="res://scripts/economy/store_item.gd" id="1_item"]
+
+[resource]
+script = ExtResource("1_item")
+id = "rat_bait"
+display_name = "Isca de Rato"
+description = "Deixe no chão onde quiser. Eles vêm."
+kind = 3
+weapon_node = "RatBait"
+preview_height = 0.25
+price = 40
+amount = 2

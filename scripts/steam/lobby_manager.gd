@@ -444,8 +444,8 @@ func _local_players() -> Array[Dictionary]:
 ## before there was a wire at all.
 ##
 ## The fallback of last resort is the one the stations in the van already used
-## (`ColorStation._our_steam_id`, `ReadyStation._our_steam_id`) and is worth
-## keeping in one place now rather than three: **a crew of one is us**, whatever
+## (`ReadyStation._our_steam_id`) and is worth keeping in one place now rather
+## than three: **a crew of one is us**, whatever
 ## number he is filed under. It is what makes a bench work, where the crew is
 ## seeded by hand under invented accounts, and it can never be wrong — a lone man
 ## in the van has nobody else to be.

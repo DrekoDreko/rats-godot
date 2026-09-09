@@ -1,6 +1,6 @@
 extends Control
 class_name Minimap
-## A fixed top-down view of the current house.
+## A round top-down dial of the current house, in the top corner of the HUD.
 ##
 ## The ground shape comes from the same NavigationMesh the rats use, filtered to
 ## the height of the node in the `minimap_floor` group. Player positions come
@@ -14,6 +14,10 @@ const MAP_PADDING := 5.0
 const PLAYER_MARKER_RADIUS := 4.5
 const FLOOR_HEIGHT_TOLERANCE := 0.35
 const MAP_ZOOM := 3.0
+## How many sides the dial is cut with. It is both the shape the ground is
+## clipped against and the circle that is drawn, so that the edge of the floor
+## and the ring around it are the same curve to the pixel.
+const DIAL_SIDES := 32
 
 @export var navigation_path: NodePath = ^"../../Navigation"
 @export var players_path: NodePath = ^"../../Players"
@@ -38,13 +42,22 @@ func _ready() -> void:
 	_player = get_node_or_null(player_path) as Node3D
 	_floor = get_tree().get_first_node_in_group("minimap_floor") as Node3D
 
+	# The same HUD hangs over the road as over the house, and on the road there
+	# is no house to draw. An empty dial is not a map, so it is not shown at all.
+	if _navigation == null:
+		hide()
+		set_process(false)
+		return
+
 	LobbyManager.members_changed.connect(_on_members_changed)
 	LobbyManager.lobby_left.connect(_on_lobby_left)
 	SessionManager.player_joined.connect(_on_session_changed)
 	SessionManager.player_left.connect(_on_session_changed)
 	SessionManager.player_changed.connect(_on_session_changed)
+	PhaseManager.phase_changed.connect(_on_phase_changed)
 	_refresh_members()
 	_update_navigation()
+	_update_visibility()
 	queue_redraw()
 
 
@@ -56,8 +69,12 @@ func _process(_delta: float) -> void:
 	queue_redraw()
 
 
+## The dial is round, so everything drawn in it is cut to the same circle rather
+## than to the control's rectangle: `clip_contents` only knows about the box, and
+## a floor spilling into the corners would be a floor outside the map.
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), BACKGROUND_COLOR)
+	var dial := _dial()
+	draw_colored_polygon(dial, BACKGROUND_COLOR)
 	var viewer_position := _viewer_position()
 	var viewer_yaw := _viewer_yaw()
 
@@ -66,14 +83,34 @@ func _draw() -> void:
 			var screen_polygon := PackedVector2Array()
 			for point in polygon:
 				screen_polygon.append(_map_to_screen(point, viewer_position, viewer_yaw))
-			draw_colored_polygon(screen_polygon, WALKABLE_COLOR)
+			# A room reaching past the rim comes back as its clipped pieces, and
+			# one lying wholly outside comes back as none.
+			for piece in Geometry2D.intersect_polygons(screen_polygon, dial):
+				draw_colored_polygon(piece, WALKABLE_COLOR)
 
 	for marker in _markers():
 		_draw_player_marker(
 			marker["position"], marker["yaw"], marker["color"], viewer_position, viewer_yaw
 		)
 
-	draw_rect(Rect2(Vector2.ZERO, size), BORDER_COLOR, false, 1.0)
+	draw_arc(size * 0.5, _dial_radius(), 0.0, TAU, DIAL_SIDES, BORDER_COLOR, 1.0)
+
+
+## The rim, as a polygon: what the ground is clipped against and what the ring is
+## drawn along. Half a side is taken off the radius so the drawn circle sits on
+## the clipped edge instead of a hair outside it.
+func _dial() -> PackedVector2Array:
+	var center := size * 0.5
+	var radius := _dial_radius()
+	var points := PackedVector2Array()
+	for i in DIAL_SIDES:
+		var angle := TAU * float(i) / float(DIAL_SIDES)
+		points.append(center + Vector2(cos(angle), sin(angle)) * radius)
+	return points
+
+
+func _dial_radius() -> float:
+	return maxf(1.0, minf(size.x, size.y) * 0.5 - 1.0)
 
 
 func _draw_player_marker(
@@ -88,6 +125,10 @@ func _draw_player_marker(
 	var center := _map_to_screen(
 		Vector2(world_position.x, world_position.z), viewer_position, viewer_yaw
 	)
+	# A crewmate further out than the dial reaches is off the map, and half an
+	# arrowhead poking through the rim reads as one still on it.
+	if center.distance_to(size * 0.5) > _dial_radius() - PLAYER_MARKER_RADIUS:
+		return
 	# The map rotates with the viewer. Subtracting the viewer yaw keeps each
 	# marker's own facing direction correct inside that rotating frame.
 	draw_set_transform(center, viewer_yaw - yaw, Vector2.ONE)
@@ -215,3 +256,18 @@ func _on_lobby_left() -> void:
 func _on_session_changed(_steam_id: int) -> void:
 	_refresh_members()
 	queue_redraw()
+
+
+## The dial is off once the rats are loose. A corner map of the house would
+## tell a hiding crew exactly where a strangled man last stood without them
+## ever having to look away from the doorway — reading the house is the
+## terminal's job now (`scripts/session/store_terminal.gd`), which asks a man
+## to actually leave the hunt to check it. The survey keeps the dial: nothing
+## is loose yet, and a man walking the house for holes still wants to know
+## where he is in it.
+func _on_phase_changed(_previous: Phase.Type, _current: Phase.Type) -> void:
+	_update_visibility()
+
+
+func _update_visibility() -> void:
+	visible = PhaseManager.current() != Phase.Type.HUNT

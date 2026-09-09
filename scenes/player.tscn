@@ -9,6 +9,8 @@
 [ext_resource type="PackedScene" path="res://scenes/traps/glue_trap.tscn" id="7_glue_scene"]
 [ext_resource type="Script" path="res://scripts/weapons/explosive_cheese_weapon.gd" id="8_cheese"]
 [ext_resource type="PackedScene" path="res://scenes/traps/explosive_cheese.tscn" id="9_cheese_scene"]
+[ext_resource type="Script" path="res://scripts/weapons/bait_weapon.gd" id="11_bait"]
+[ext_resource type="PackedScene" path="res://scenes/traps/bait_pile.tscn" id="12_bait_scene"]
 [ext_resource type="PackedScene" uid="uid://cspc7qlhbpj7i" path="res://scenes/player_model.tscn" id="8_model"]
 [ext_resource type="PackedScene" uid="uid://ck8y2v1rw4mqn" path="res://scenes/player_view_model.tscn" id="9_view_model"]
 [ext_resource type="Script" uid="uid://bxw3rm1vg0arj" path="res://scripts/weapons/melee_weapon.gd" id="10_melee"]
@@ -97,6 +99,14 @@ stock_id = "explosive_cheese"
 trap_scene = ExtResource("9_cheese_scene")
 display_name = "Explosive Cheese"
 cooldown = 0.6
+
+[node name="RatBait" type="Node3D" parent="Head"]
+transform = Transform3D(1, 0, 0, 0, 0.574, -0.819, 0, 0.819, 0.574, 0.3, -0.28, -0.35)
+script = ExtResource("11_bait")
+stock_id = "rat_bait"
+trap_scene = ExtResource("12_bait_scene")
+display_name = "Bait"
+cooldown = 0.5
 
 [node name="CapturePoint" type="Node3D" parent="Head" unique_id=276718476]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.05, -0.6)

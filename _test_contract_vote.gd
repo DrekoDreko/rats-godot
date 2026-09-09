@@ -95,6 +95,7 @@ func _boot() -> bool:
 	_session.register_player(ANA, "Ana", true)
 	_session.register_player(BRUNO, "Bruno")
 	_session.register_player(CARLOS, "Carlos")
+	_check(_session.bank_balance == 300, "the three $100 contributions form one $300 bank")
 	return false
 
 
@@ -145,7 +146,7 @@ func _step_a_second_vote_replaces_the_first() -> bool:
 ## something else.
 func _step_the_most_votes_wins() -> bool:
 	var winner: Contract = _contract.at(1)
-	var loser: Contract = _contract.at(2)
+	var loser: Contract = _contract.at(0)
 
 	# Ana already voted for `winner` in the step above. Bruno and Carlos back
 	# a different job, so the board reads one vote apiece before the third
@@ -179,6 +180,7 @@ func _step_settling_the_vote() -> bool:
 
 	_contract.settle_vote()
 	_check(_signed == [winner.id], "settling the vote signs the job that won %s" % [_signed])
+	_check(_session.bank_balance == 100, "the $200 contract leaves $100 in the team bank")
 	_check(not _contract.voting_open, "and the vote is closed")
 	_check(_closed == 1, "said once (%d)" % _closed)
 	_check(not _ready_mgr.blocked, "and the crew is let go again")

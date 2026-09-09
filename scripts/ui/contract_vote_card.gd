@@ -13,14 +13,14 @@ extends Button
 ## The size a rat-type dot is drawn at. There are no icons for the breeds yet
 ## (`Contract.rat_types` is a list of ids and nothing more), so a dot is a
 ## plain hollow circle until there is an icon to put on it.
-const DOT_SIZE := 13.0
+const DOT_SIZE := 7.0
 
 ## The green the whole vote screen is drawn in.
 const LINE_COLOR := Color(0.42, 0.74, 0.49)
 
 ## How much the card leans out of the row while the mouse is on it. The row
-## leaves 16px between cards (`contract_vote_screen.tscn`), and a card 200px
-## wide grows 12 of those, so it never touches its neighbour. Growing by
+## leaves 12px between cards (`contract_vote_screen.tscn`), and a card 150px
+## wide grows 9 of those, so it never touches its neighbour. Growing by
 ## `scale` and not by size is the point: a container lays its children out by
 ## size, so a card that grew by size would shove the other two sideways.
 const HOVER_SCALE := 1.06
@@ -37,6 +37,7 @@ const HOVER_TIME := 0.1
 
 ## The job this card stands for, filled in by `setup`.
 var contract_id := ""
+var contract_price := 0
 
 ## The growing or shrinking under way, kept only so that turning back halfway
 ## does not leave two tweens fighting over `scale`.
@@ -58,12 +59,15 @@ func _ready() -> void:
 ## drawn, and a node cannot be handed an argument on the way in.
 func setup(contract: Contract) -> void:
 	contract_id = contract.id
+	contract_price = contract.price
 	# The photograph is cut to the card's shape and drawn behind the writing.
 	# Only the frame is guaranteed: a job without a picture keeps the plain
 	# card, which is what every card looked like before there were any.
 	_photo.texture = contract.photo
 	_name.text = contract.client_name
-	_count.text = tr("CONTRACT_VOTE_RATS") % contract.infestation
+	var cost_text := tr("CONTRACT_VOTE_FREE") if contract.price == 0 \
+		else tr("CONTRACT_VOTE_COST") % contract.price
+	_count.text = "%s\n%s" % [tr("CONTRACT_VOTE_RATS") % contract.infestation, cost_text]
 
 	for dot in _dots.get_children():
 		dot.queue_free()
@@ -86,9 +90,11 @@ func setup(contract: Contract) -> void:
 ## Steam has not fetched yet gets the grey square, and asking is what starts the
 ## fetch. The face that lands afterwards arrives as `avatar_ready`, which the
 ## screen answers by calling this again (`contract_vote_screen.gd`).
-func refresh(vote_count: int, is_mine: bool) -> void:
+func refresh(vote_count: int, is_mine: bool, affordable := true) -> void:
 	_votes.text = tr("CONTRACT_VOTE_COUNT") % vote_count
 	_mine.visible = is_mine
+	disabled = not affordable
+	tooltip_text = "" if affordable else tr("CONTRACT_VOTE_NEEDS") % contract_price
 
 	_face.visible = is_mine
 	if is_mine:

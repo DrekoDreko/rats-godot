@@ -1,0 +1,43 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/traps/bait_pile.gd" id="1_bait"]
+
+[sub_resource type="StandardMaterial3D" id="Material_food"]
+shading_mode = 0
+albedo_color = Color(0.85, 0.7, 0.28, 1)
+
+[sub_resource type="BoxMesh" id="Mesh_scrap"]
+material = SubResource("Material_food")
+size = Vector3(0.11, 0.07, 0.11)
+
+[sub_resource type="StandardMaterial3D" id="Material_crumb"]
+shading_mode = 0
+albedo_color = Color(0.63, 0.5, 0.2, 1)
+
+[sub_resource type="BoxMesh" id="Mesh_crumb"]
+material = SubResource("Material_crumb")
+size = Vector3(0.05, 0.035, 0.05)
+
+[node name="BaitPile" type="Node3D"]
+script = ExtResource("1_bait")
+stock_id = "rat_bait"
+
+[node name="Scrap1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, 0)
+mesh = SubResource("Mesh_scrap")
+
+[node name="Scrap2" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.79, 0, 0.61, 0, 1, 0, -0.61, 0, 0.79, 0.11, 0.025, -0.07)
+mesh = SubResource("Mesh_scrap")
+
+[node name="Crumb1" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.7, 0, -0.71, 0, 1, 0, 0.71, 0, 0.7, -0.12, 0.014, 0.05)
+mesh = SubResource("Mesh_crumb")
+
+[node name="Crumb2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.05, 0.014, -0.13)
+mesh = SubResource("Mesh_crumb")
+
+[node name="Crumb3" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.87, 0, 0.49, 0, 1, 0, -0.49, 0, 0.87, 0.14, 0.014, 0.13)
+mesh = SubResource("Mesh_crumb")

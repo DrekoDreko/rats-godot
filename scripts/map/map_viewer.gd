@@ -2,15 +2,21 @@ class_name MapViewer
 extends Control
 ## Tactical blueprint viewer and collaborative pin planner.
 ##
-## Opened by the van's map table (`MapTable`), and only there: the plan is
-## studied in the van before the shift, never carried into the house.
+## The map page of the terminal (`scripts/ui/terminal_screen.gd`), drawn on
+## the same monitor the shop is — never a window of its own any more, so the
+## crew can still read the plan from the hunt and not only on the road.
 ##
 ## **Navigation & Interaction:**
 ## - Left Click on the blueprint: places a strategy pin at that location.
 ## - Right Click on a placed pin: removes that pin.
 ## - Left Mouse Drag / WASD / Arrow Keys: pans the map around.
-## - Mouse Wheel / +/-: zooms smoothly between MIN_ZOOM (1.0x) and MAX_ZOOM (3.5x).
-## - Esc / E: closes the viewer.
+## - Mouse Wheel: zooms smoothly between MIN_ZOOM (1.0x) and MAX_ZOOM (3.5x).
+##
+## **It does not close itself.** Esc and `E` used to shut this page directly;
+## now that it lives inside the terminal's `SubViewport`, those keys never
+## reach it — the terminal reads them from outside, the same way it always has
+## for the shop (`scripts/session/store_terminal.gd`), and closes whichever
+## page happens to be showing.
 
 signal closed()
 
@@ -60,19 +66,6 @@ func _ready() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
-		return
-
-	# The way out is `E`, and Esc by its key and not by its action: `cancel` is
-	# bound to the right mouse button too, and over the plan that button means
-	# "take that pin off" (`_handle_right_click_remove`). Asking for the action
-	# here would shut the viewer on every attempt to remove a pin, and the
-	# removal below would never be reached at all.
-	var closing := event.is_action_pressed("interact")
-	if event is InputEventKey and event.pressed and (event as InputEventKey).keycode == KEY_ESCAPE:
-		closing = true
-	if closing:
-		close()
-		get_viewport().set_input_as_handled()
 		return
 
 	if event is InputEventMouseButton:

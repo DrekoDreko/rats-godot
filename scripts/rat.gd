@@ -11,7 +11,8 @@ extends CharacterBody3D
 
 signal died(rat: Node3D, death_type: Death.Type)
 
-enum State { WANDERING, IDLE, FLEEING, HIDING, CAPTURED, DEAD }
+## The order is the wire format (`sync_state`), so anything new goes on the end.
+enum State { WANDERING, IDLE, FLEEING, HIDING, CAPTURED, DEAD, SPRAYING }
 
 ## The beats of the capture, from the grab until the dead body is stowed at the
 ## waist.
@@ -105,6 +106,17 @@ const FEAR_PENALTY := 40.0
 const FEAR_CROSSING_PENALTY := 30.0
 ## How far a foul spot's reach goes when it does not say (`fear_radius`).
 const DEFAULT_FEAR_RADIUS := 4.0
+## How far a baited heap of rubbish pulls from when it does not say
+## (`lure_radius`). It is the mirror of the line above: ground the rats want.
+const DEFAULT_LURE_RADIUS := 22.0
+## How often a rat picking somewhere new to stroll makes for the food rather
+## than for a spot of its own choosing. Not one, on purpose — a house where
+## every animal walked straight to the bait would be a house with one room in it,
+## and the crew would never have to look anywhere else.
+const LURE_PULL := 0.65
+## How wide a circle round the food a rat is content to end up in. The animals
+## mill about the heap rather than stack up on a single point.
+const LURE_SPREAD := 2.5
 ## How often the map's foul spots are re-read. They do not move and are not made
 ## often, so the rat reads them on a slow clock and every decision it makes in
 ## between uses the list it already has.
@@ -112,6 +124,62 @@ const FEAR_REFRESH := 0.5
 ## How many times the wander re-rolls a destination that turned out to be foul
 ## before giving up and standing still for a moment.
 const WANDER_TRIES := 4
+
+# --- Bolting through the walls ----------------------------------------------
+#
+# A hole is one mouth of a run through the walls and the far one is somewhere
+# else in the house (`scripts/house/rat_hole.gd`). A cornered rat that reaches
+# one is gone: it dives in and comes out at the other end, which is the single
+# most useful thing the crew can have learned during the survey and the single
+# most infuriating thing to watch if they did not.
+
+## How far a fleeing rat will go out of its way for a hole. Shorter than the
+## hideout search (`COVER_RADIUS`): bolting is what it does when a way out is
+## right there, not a thing it crosses the house for.
+const BOLT_RADIUS := 12.0
+## How long after coming out of a hole before it will dive into another one. It
+## is what stops a rat that is frightened at both ends of a run from spending the
+## hunt flickering between them.
+const BOLT_COOLDOWN := 6.0
+## How much further from the hunters the far mouth has to be before the run is
+## worth taking. A hole that puts the animal down beside the man chasing it is
+## not an escape.
+const BOLT_GAIN := 4.0
+
+# --- Spraying ---------------------------------------------------------------
+#
+# What one breed does instead of only running (`RatSpecies.sprays`). Cornered, it
+# stops, turns, and gets the man in the face. It is the only thing in the game
+# that hurts the player on purpose, and it is built to be *dodgeable*: the animal
+# plants itself and plays its attack for a third of a second before anything
+# lands, which is the whole of the counterplay — back off, or wear it.
+
+## How close a hunter has to be before it stops running and turns on him. Inside
+## its own `panic_radius`, so a rat only ever sprays somebody who is already on
+## top of it.
+const SPRAY_RANGE := 2.6
+## How far the spray carries, and how wide it opens, as a half-angle in degrees.
+## Shorter than the range it triggers at: closing the last stride is what makes it
+## land, and a man who reads the wind-up and steps back is out of it.
+const SPRAY_REACH := 2.2
+const SPRAY_ANGLE := 38.0
+## How long it plants itself before the spray lands, and how long it stands there
+## afterwards. The first number is the dodge window and the only reason this is
+## fair; the second is what stops the animal spraying and bolting in one motion.
+const SPRAY_WINDUP := 0.35
+const SPRAY_RECOVER := 0.45
+## How long before it can do it again. Long: being sprayed twice in a corner is
+## not a fight, it is a tax.
+const SPRAY_COOLDOWN := 7.0
+## What a faceful costs. Heavier than standing on an old streak, because this one
+## came looking for you.
+const SPRAY_DAMAGE := 12
+## How far in front of its feet the mark lands.
+const SPRAY_MARK_REACH := 0.5
+## The noise it makes: shorter and louder than a streak's, because this one is
+## under pressure.
+const SPRAY_SOUND_TIME := 0.3
+const SPRAY_SOUND_LOUDNESS := 95.0
 ## Time pushing against a corner before shaking sideways.
 const STUCK_TIME := 0.6
 ## Duration of the sidestep that unwedges the rat from the corner.
@@ -282,6 +350,20 @@ const BLEND := 0.15
 ## What species a rat is when somebody drops one on the map without saying which.
 const DEFAULT_SPECIES := preload("res://resources/species/common_rat.tres")
 
+## Every breed the house can put out, in the order their index crosses the wire
+## (`sync_species`). The **order is the wire format**: a breed inserted in the
+## middle rather than appended would repaint every rat already in flight on a
+## guest as something else, and pay for it at the wrong price.
+##
+## It exists because a species is a `Resource` and a resource cannot cross a
+## wire. What crosses is where it sits in this list — the same trick `sync_fur`
+## plays with the coats — and it has to cross at all because the price of the
+## animal is read off it (`_pay_reward`), on whichever machine ends up paying.
+const SPECIES: Array[RatSpecies] = [
+	preload("res://resources/species/common_rat.tres"),
+	preload("res://resources/species/sprayer_rat.tres"),
+]
+
 ## How fast a watched rat closes on where the wire last said it was, per second.
 ## A rate and not a duration, so that the easing comes out the same whatever the
 ## frame rate at either end.
@@ -327,6 +409,18 @@ var _idle_duration := 1.0
 var _desired_speed := 0.0
 var _previous_position := Vector3.ZERO
 var _cover_query := PhysicsShapeQueryParameters3D.new()
+## The hole this flight is running for, or null for a flight that is only looking
+## for something to hide behind. Set by `_pick_bolt_hole` and spent by
+## `_dive_into` the moment the animal arrives.
+var _bolt_hole: RatHole
+## What is left of the wait before it will use another hole. See `BOLT_COOLDOWN`.
+var _bolt_time := 0.0
+## What is left of the wait before it can spray again. See `SPRAY_COOLDOWN`.
+var _spray_time := 0.0
+## Whether this spray has already landed. The state runs on past the moment it
+## fires — the animal stands there recovering — so the shot needs a latch of its
+## own rather than a timer comparison that is true on every frame after it.
+var _sprayed := false
 
 var _capture_phase := Capture.POUNCE
 var _capture_time := 0.0
@@ -427,6 +521,15 @@ var sync_state := State.WANDERING
 ## on the host and crosses on the spawn so that a rat is the same animal on every
 ## screen. `-1` is a rat whose species has no furs to roll.
 var sync_fur := -1
+## What breed it is, as an index into `SPECIES`. Decided by the house that put it
+## out (`house.gd::_spawn_rats_if_needed`) and crossed on the spawn, because the
+## breed is what the animal is *worth* — and the man who gets paid for it is very
+## often sitting at a machine that never rolled it.
+##
+## It is applied before the coat is (`_on_synchronized`): the fur index counts
+## into the species' own list of furs, so a rat painted before its breed is known
+## is a rat painted out of the wrong book.
+var sync_species := 0
 ## The hideout crouch, which is a scale on the model and not a position: a rat
 ## squeezed under a crate on the host should be squeezed under it everywhere.
 var sync_crouched := false
@@ -496,6 +599,10 @@ func _ready() -> void:
 
 	# Ours to think for, which is the host's rat and every rat in a solo game.
 	_size = species.roll_size()
+	# The breed is already on the node — the house wrote it before adding the
+	# animal — and what is worked out here is only where it sits in `SPECIES`, so
+	# that the guests can be told which one it is.
+	sync_species = maxi(0, SPECIES.find(species))
 	sync_fur = _roll_fur_index()
 	_apply_fur(sync_fur)
 	# It may be too early: the freshly baked mesh has not answered the server's
@@ -550,6 +657,8 @@ func _physics_process(delta: float) -> void:
 		return
 
 	_state_time += delta
+	_bolt_time = maxf(0.0, _bolt_time - delta)
+	_spray_time = maxf(0.0, _spray_time - delta)
 	# The map's bad ground, re-read on its own slow clock. Everything below —
 	# the state it talks itself into, the hideout it picks, the way it walks
 	# there — reads the list this leaves behind.
@@ -568,6 +677,8 @@ func _physics_process(delta: float) -> void:
 			_process_flee(delta)
 		State.HIDING:
 			_process_hide(delta)
+		State.SPRAYING:
+			_process_spray(delta)
 
 	_apply_gravity(delta)
 	move_and_slide()
@@ -994,6 +1105,16 @@ func _is_authority() -> bool:
 			or api.multiplayer_peer is OfflineMultiplayerPeer:
 		return true
 	return is_multiplayer_authority()
+
+## Whether there is anybody to say anything to. An `rpc` with no wire under it is
+## an error in the log for a call that would have run here anyway — the same
+## question `trap.gd` and the session autoloads ask before their own
+## announcements.
+func _on_the_wire() -> bool:
+	var api := multiplayer
+	if api == null or not api.has_multiplayer_peer():
+		return false
+	return not api.multiplayer_peer is OfflineMultiplayerPeer
 
 ## Who we are, as the wire counts people. One with no wire at all: a solo hunt
 ## has a single pair of hands and they may as well be numbered like the host's,
@@ -1432,10 +1553,20 @@ func _change_state(new_state: State) -> void:
 		State.FLEEING:
 			_clear_target()
 			_search_time = 0.0
+			_bolt_hole = null
 		State.HIDING:
 			_clear_target()
 			velocity.x = 0.0
 			velocity.z = 0.0
+		State.SPRAYING:
+			_clear_target()
+			velocity.x = 0.0
+			velocity.z = 0.0
+			_sprayed = false
+			# Played here and not in `_process_spray`, so the wind-up the player
+			# is being asked to read starts on the frame the decision is made.
+			animator.speed_scale = 1.0
+			animator.play(ANIM_ATTACK, BLEND)
 
 func _process_wander(delta: float) -> void:
 	_target_time += delta
@@ -1453,12 +1584,33 @@ func _process_idle(delta: float) -> void:
 		_change_state(State.WANDERING)
 
 func _process_flee(delta: float) -> void:
+	# Cornered beats cover. A breed that sprays would rather turn round than keep
+	# looking for somewhere to sit, and it is asked every frame rather than on the
+	# search clock: the man is a stride away and a third of a second late is a
+	# rat that has already been grabbed.
+	if _should_spray():
+		_change_state(State.SPRAYING)
+		return
+
 	_search_time -= delta
 	if _search_time <= 0.0:
 		_search_time = SEARCH_INTERVAL
-		_search_hideout()
+		# A way out of the room beats a corner to sit in. The hideout search is
+		# only asked once there is no hole worth running for — it is the more
+		# expensive of the two by a long way, and a rat that has found a hole is
+		# not going to use what it comes back with.
+		_bolt_hole = _pick_bolt_hole()
+		if _bolt_hole != null:
+			_set_target(_bolt_hole.mouth())
+		else:
+			_search_hideout()
 
 	if _has_target and agent.is_navigation_finished():
+		# The hole first: a rat that has arrived at one is gone through it, and
+		# what it does next it does from the far end of the house.
+		if _bolt_hole != null:
+			_dive_into(_bolt_hole)
+			return
 		# It reached the hideout: if the player cannot reach it with his eyes, it
 		# keeps still.
 		if not _sees_player() and _player_distance() > panic_radius:
@@ -1480,6 +1632,250 @@ func _process_flee(delta: float) -> void:
 func _process_hide(delta: float) -> void:
 	_move(Vector3.ZERO, 0.0, delta)
 	model.scale = model.scale.lerp(CROUCH_SCALE, minf(delta * 8.0, 1.0))
+
+# --- Spraying --------------------------------------------------------------
+
+## Whether this animal, right now, would rather turn round than run. A breed that
+## does it at all, off its cooldown, with a hunter inside `SPRAY_RANGE` and
+## nothing solid in between.
+##
+## The wall check matters more than it looks: without it a rat sprays through the
+## crate it is hiding behind, and the man on the other side loses flesh to an
+## animal he cannot see.
+func _should_spray() -> bool:
+	if species == null or not species.sprays or _spray_time > 0.0:
+		return false
+	var hunter := _get_player()
+	if hunter == null:
+		return false
+	if _flat_distance(hunter.global_position, global_position) > SPRAY_RANGE:
+		return false
+	return not _blocked(global_position + Vector3.UP * EYE_HEIGHT,
+		hunter.global_position + Vector3.UP * EYE_HEIGHT)
+
+
+## Planted, turning, and then the spray. Three beats: it faces him while the
+## attack plays, it fires once at `SPRAY_WINDUP`, and it stands there for
+## `SPRAY_RECOVER` afterwards before going back to running.
+##
+## It keeps turning through the wind-up on purpose. A rat that locked its aim the
+## instant it stopped could be walked around; one that tracks has to be *backed
+## away from*, which is the answer the fight is meant to teach.
+func _process_spray(delta: float) -> void:
+	_move(Vector3.ZERO, 0.0, delta)
+	var hunter := _get_player()
+	if hunter != null:
+		var facing := _direction_to(hunter.global_position)
+		if not facing.is_zero_approx():
+			_turn_to(facing, delta)
+
+	if not _sprayed and _state_time >= SPRAY_WINDUP:
+		_sprayed = true
+		_let_fly()
+		return
+	if _state_time >= SPRAY_WINDUP + SPRAY_RECOVER:
+		_spray_time = SPRAY_COOLDOWN
+		_change_state(State.FLEEING)
+
+
+## The moment it fires. **Host only** — this is reached from the state machine,
+## which only ever runs on the machine thinking for the animal — and its whole job
+## is to say so to everybody, because what follows has to happen on four screens
+## at once.
+##
+## Off the wire an `rpc` would be an error in the log for a call that is already
+## here, so the announcement is made plainly instead. Same code down either road,
+## which is what keeps solo from being a second set of rules.
+func _let_fly() -> void:
+	var facing := -global_basis.z
+	facing.y = 0.0
+	if facing.is_zero_approx():
+		facing = Vector3.FORWARD
+	facing = facing.normalized()
+	var from := global_position
+	if _on_the_wire():
+		_spray_at.rpc(from, facing)
+	else:
+		_spray_at(from, facing)
+	# The mark it leaves is a node, so it is the host's alone to make. Just in
+	# front of its feet, lying the way the spray went.
+	ClueManager.mark(from + facing * SPRAY_MARK_REACH, facing)
+
+
+## The spray landing, on every machine at once (`call_local`).
+##
+## **Each machine tests its own player and hurts him locally, and that is the
+## whole design.** Flesh is a single-player concern here — the same rule
+## `RatStreak` keeps — so what crosses the wire is only *that a rat sprayed, from
+## here, that way*. Four machines each answer "was I in it" about the one man they
+## are responsible for, and nobody's wound travels.
+##
+## The cone is written out rather than borrowed. `Weapon._rat_in_sights` is the
+## only cone in the project and it is bound to the player's camera, his exports
+## and the `rats` group; three lines here are cheaper than making that general.
+@rpc("authority", "call_local", "reliable")
+func _spray_at(from: Vector3, facing: Vector3) -> void:
+	var sender := multiplayer.get_remote_sender_id()
+	if sender != 0 and sender != get_multiplayer_authority():
+		push_warning("Rat: a spray from peer %d, which does not own this animal — ignored."
+			% sender)
+		return
+	_play_spray_sound(from)
+
+	var player := get_tree().get_first_node_in_group("player") as Node3D
+	if player == null or not player.has_method("take_damage"):
+		return
+	if player.has_method("is_dead") and player.is_dead():
+		return
+	var to_player := player.global_position - from
+	to_player.y = 0.0
+	var distance := to_player.length()
+	if distance > SPRAY_REACH or distance < 0.01:
+		return
+	if facing.dot(to_player / distance) < cos(deg_to_rad(SPRAY_ANGLE)):
+		return
+	if _blocked(from + Vector3.UP * EYE_HEIGHT, player.global_position):
+		return
+	player.take_damage(SPRAY_DAMAGE)
+	# And on the lens. The bar draining says he was hurt; this says by what.
+	if player.has_method("splash"):
+		player.splash()
+
+
+## The hiss, where it happened. Built on the same generator the streaks use
+## (`RatStreak.build_hiss`) so a spray and the mark it leaves sound like the same
+## fluid — louder and shorter, because this one is under pressure.
+func _play_spray_sound(from: Vector3) -> void:
+	var noise := AudioStreamPlayer3D.new()
+	noise.stream = RatStreak.build_hiss(SPRAY_SOUND_TIME, SPRAY_SOUND_LOUDNESS)
+	noise.unit_size = 5.0
+	noise.max_distance = 16.0
+	var parent := get_parent()
+	if parent == null:
+		return
+	parent.add_child(noise)
+	noise.global_position = from
+	noise.finished.connect(noise.queue_free)
+	noise.play()
+
+# --- Bolting ---------------------------------------------------------------
+#
+# The one thing a rat can do that no amount of cornering answers: go into the
+# wall here and come out of it over there. The two mouths are a `RatHole` and its
+# partner (`scripts/house/rat_hole.gd`), the run between them is not walked, and
+# the whole of it costs one teleport.
+#
+# It is deliberately not a hiding place. A rat that dove into a hole and stayed
+# in it would be a rat the crew could never finish the shift over, so what comes
+# out of the far end is the same animal in the same flight, looking for somewhere
+# to hide from wherever it now finds itself.
+
+## The hole worth running for, or null. The nearest one in reach whose far mouth
+## actually buys the animal something: a run that puts it down beside the man
+## chasing it is not an escape, and a run it cannot reach on foot is not a run.
+func _pick_bolt_hole() -> RatHole:
+	if _bolt_time > 0.0:
+		return null
+	var eyes := _hunter_eyes()
+	if eyes.is_empty():
+		return null
+	var here := _closest_eye_distance(global_position, eyes)
+	var best: RatHole = null
+	var best_distance := BOLT_RADIUS
+	for node in get_tree().get_nodes_in_group("rat_holes"):
+		var hole := node as RatHole
+		if hole == null:
+			continue
+		var far_end := hole.linked()
+		if far_end == null:
+			continue
+		# Every measurement is taken at the mouth — the pace of floor in front of
+		# the slit — and never at the hole itself, which is in the wall
+		# (`RatHole.mouth`). A rat sent to the plaster is a rat sent somewhere it
+		# cannot stand, and a path to it comes back empty.
+		var stand: Vector3 = hole.mouth()
+		var distance := _flat_distance(stand, global_position)
+		if distance >= best_distance:
+			continue
+		# Running *towards* the hunter to reach the hole is worse than standing
+		# still, and so is coming out beside him at the other end.
+		if _closest_eye_distance(stand, eyes) < panic_radius:
+			continue
+		if _closest_eye_distance(far_end.mouth(), eyes) < here + BOLT_GAIN:
+			continue
+		if _path_to(stand).is_empty():
+			continue
+		best = hole
+		best_distance = distance
+	return best
+
+
+## Into the wall and out of it somewhere else. The far mouth is snapped onto the
+## mesh before the body is put there: a hole is modelled in the skirting board
+## and its origin can sit a finger inside the wall, which is a rat that arrives
+## with nowhere to walk.
+##
+## The flight is not ended by this, only moved. `_search_time` is knocked to zero
+## so the animal looks for cover from where it now stands rather than carrying on
+## towards a hideout it picked in another room.
+func _dive_into(hole: RatHole) -> void:
+	_bolt_hole = null
+	_bolt_time = BOLT_COOLDOWN
+	_clear_target()
+	_search_time = 0.0
+	var far_end := hole.linked()
+	if far_end == null:
+		return
+	var out := _navigable_point(far_end.mouth())
+	if out == INVALID_POINT:
+		out = far_end.mouth()
+	global_position = out
+	velocity = Vector3.ZERO
+	# Where it stands is the one thing the watchers have no other way of
+	# learning, and a teleport is further than the easing will ever cover
+	# (`SNAP_DISTANCE`), so it lands on their screens as the jump it is.
+	_publish()
+
+
+## How far the nearest hunter is from a point, flat. Null answer is `INF`, which
+## every comparison above reads as "nobody near it".
+func _closest_eye_distance(point: Vector3, eyes: Array[Vector3]) -> float:
+	var closest := INF
+	for eye in eyes:
+		closest = minf(closest, _flat_distance(point, eye))
+	return closest
+
+# --- Food ------------------------------------------------------------------
+#
+# The mirror of the fear below: ground the rats *want*. A heap of rubbish the
+# crew emptied a tub of bait into joins the `lures` group
+# (`scripts/house/garbage_pile.gd`), and from then on it is where the animals
+# drift back to whenever nothing more urgent is happening.
+#
+# It is a preference and deliberately not a command. A frightened rat ignores it
+# entirely — the flight never asks — and even a calm one only makes for it most
+# of the time (`LURE_PULL`), because a house where every animal walked straight
+# to the bait would be a house the crew only has to look at one corner of.
+
+## The baited heap this rat can smell, or null. The nearest one whose own reach
+## covers where the animal is standing: a tub of food in the alley outside is not
+## something a rat in the back bedroom is going to notice.
+func _nearest_lure() -> Node3D:
+	var nearest: Node3D = null
+	var best := INF
+	for node in get_tree().get_nodes_in_group("lures"):
+		var lure := node as Node3D
+		if lure == null:
+			continue
+		var reach := DEFAULT_LURE_RADIUS
+		if lure.has_method("lure_radius"):
+			reach = lure.lure_radius()
+		var distance := _flat_distance(lure.global_position, global_position)
+		if distance > reach or distance >= best:
+			continue
+		best = distance
+		nearest = lure
+	return nearest
 
 # --- Fear ------------------------------------------------------------------
 #
@@ -1757,6 +2153,22 @@ func _hideout_still_works(eyes: Array[Vector3]) -> bool:
 	return _hidden_from_all(_target, eyes)
 
 func _pick_wander_target() -> void:
+	# The food first, when there is any. A baited heap of rubbish is the one
+	# thing in the house that draws a calm rat somewhere in particular — every
+	# other destination it has is a die roll — and it is what makes the tub the
+	# crew emptied during the survey worth what it cost.
+	if randf() < LURE_PULL:
+		var food := _nearest_lure()
+		if food != null:
+			var spread := Vector3(randf_range(-1.0, 1.0), 0.0, randf_range(-1.0, 1.0))
+			if spread.is_zero_approx():
+				spread = Vector3.FORWARD
+			var at := _navigable_point(
+				food.global_position + spread.normalized() * randf() * LURE_SPREAD)
+			if at != INVALID_POINT and _fear_at(at, _fear_cache) <= 0.0:
+				_set_target(at)
+				return
+
 	for attempt in WANDER_TRIES:
 		var direction := Vector3(randf_range(-1.0, 1.0), 0.0, randf_range(-1.0, 1.0))
 		if direction.is_zero_approx():
@@ -2140,6 +2552,14 @@ func _draw_remote(delta: float) -> void:
 ## (`_update_animation`) — the speed decides, not the state — with the one
 ## addition that a rat the host has killed topples where it stands.
 func _draw_remote_animation() -> void:
+	# Same trap as `_update_animation`, from the other side of the wire: a watched
+	# sprayer is publishing a speed of zero, so it would be drawn standing about
+	# while it is actually winding up to spray somebody.
+	if sync_state == State.SPRAYING:
+		if animator.current_animation != ANIM_ATTACK:
+			animator.speed_scale = 1.0
+			animator.play(ANIM_ATTACK, BLEND)
+		return
 	if sync_state == State.DEAD:
 		if animator.current_animation != ANIM_DEATH:
 			animator.speed_scale = 1.0
@@ -2295,6 +2715,11 @@ func _on_synchronized() -> void:
 	_seen = true
 	global_position = sync_position
 	rotation.y = sync_yaw
+	# The breed first, then the coat off the breed's own list of furs. A guest
+	# that painted before adopting would read the index into whatever species the
+	# scene happened to be dressed with.
+	if sync_species >= 0 and sync_species < SPECIES.size():
+		species = SPECIES[sync_species]
 	_apply_fur(sync_fur)
 	visible = true
 
@@ -2342,6 +2767,13 @@ func _apply_fur(index: int) -> void:
 ## The animation follows the speed, not the state: wandering it trots, fleeing it
 ## bolts, and standing still or hidden it goes back to the idle.
 func _update_animation() -> void:
+	# A spraying rat is standing perfectly still, and the clip is picked below off
+	# how fast it is going — so without this the attack it was told to play is
+	# swapped for the idle on the very next frame and the wind-up the player is
+	# supposed to read never appears. `_change_state` owns the animation while the
+	# animal is planted.
+	if _state == State.SPRAYING:
+		return
 	var flat_speed := Vector2(velocity.x, velocity.z).length()
 	if flat_speed < IDLE_SPEED:
 		_play_idle()

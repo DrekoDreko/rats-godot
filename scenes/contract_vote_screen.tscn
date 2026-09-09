@@ -46,26 +46,26 @@ mouse_filter = 2
 
 [node name="Rows" type="VBoxContainer" parent="Center"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 6
 alignment = 1
 
 [node name="Title" type="Label" parent="Center/Rows"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 6
-theme_override_font_sizes/font_size = 42
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 32
 horizontal_alignment = 1
 text = "CONTRACT_VOTE_TITLE"
 
 [node name="CardsRow" type="HBoxContainer" parent="Center/Rows"]
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 12
 alignment = 1
 
 [node name="TimeRow" type="HBoxContainer" parent="Center/Rows"]
 layout_mode = 2
-theme_override_constants/separation = 14
+theme_override_constants/separation = 10
 alignment = 1
 
 [node name="Time3" parent="Center/Rows/TimeRow" instance=ExtResource("4_check")]
@@ -90,21 +90,22 @@ text = "CONTRACT_VOTE_10MIN"
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 5
-theme_override_font_sizes/font_size = 29
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 16
 horizontal_alignment = 1
 text = "CONTRACT_VOTE_RATE"
 
 [node name="Start" parent="Center/Rows" instance=ExtResource("3_button")]
 layout_mode = 2
 size_flags_horizontal = 4
+theme_override_font_sizes/font_size = 16
 text = "CONTRACT_VOTE_START"
 
 [node name="Hint" type="Label" parent="Center/Rows"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 0.6)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 15
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 16
 horizontal_alignment = 1
 autowrap_mode = 2

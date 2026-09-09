@@ -25,12 +25,6 @@ extends Control
 
 const CARD_SCENE := preload("res://scenes/contract_vote_card.tscn")
 
-## The species the rate line prices a rat off. Only one exists in the game
-## today (`resources/species/common_rat.tres`); this line is a preview of what
-## a rat is worth at the booked length, not a promise about which species
-## turns up.
-const RATE_SPECIES: RatSpecies = preload("res://resources/species/common_rat.tres")
-
 ## The van's own HUD — the crosshair and the prompt line, both of them
 ## instructions for a man who is holding his own legs. Named rather than reached
 ## by group, the same as the pay slip does it (`result_screen.gd`): it is one
@@ -83,6 +77,7 @@ func _ready() -> void:
 	ContractManager.voting_closed.connect(_on_voting_closed)
 	ContractManager.vote_changed.connect(_on_vote_changed)
 	ContractManager.hunt_time_set.connect(_on_hunt_time_set)
+	ContractManager.request_refused.connect(_on_refused)
 	# A Steam picture almost never arrives in time to be drawn with the vote it
 	# belongs to — Steam answers on a callback, seconds later, and until then
 	# the card carries the grey square. `SteamAvatars` says when one lands and
@@ -91,6 +86,7 @@ func _ready() -> void:
 	SteamAvatars.avatar_ready.connect(_on_avatar_ready)
 	SessionManager.player_joined.connect(_on_crew_changed)
 	SessionManager.player_left.connect(_on_crew_changed)
+	SessionManager.bank_changed.connect(_on_bank_changed)
 
 	# A newcomer can arrive with the vote already under way — the welcome
 	# packet adopts it before this scene is even loaded (`JoinGate.adopt_votes`)
@@ -188,7 +184,9 @@ func _refresh_all() -> void:
 	var mine: String = ContractManager.votes.get(LobbyManager.our_crew_id(), "")
 	for contract_id in _card_of:
 		_card_of[contract_id].refresh(
-			ContractManager.votes_for(contract_id), contract_id == mine)
+			ContractManager.votes_for(contract_id),
+			contract_id == mine,
+			ContractManager.can_afford(contract_id))
 	_refresh_time_buttons()
 	_refresh_rate()
 	_refresh_start()
@@ -207,7 +205,7 @@ func _refresh_time_buttons() -> void:
 
 
 func _refresh_rate() -> void:
-	var per_rat := roundi(RATE_SPECIES.base_value * HuntTime.multiplier(ContractManager.hunt_time()))
+	var per_rat := HuntTime.reward(ContractManager.hunt_time())
 	_rate.text = tr("CONTRACT_VOTE_RATE") % per_rat
 
 
@@ -234,6 +232,17 @@ func _refresh_start() -> void:
 func _on_vote_changed(_steam_id: int, _contract_id: String) -> void:
 	if visible:
 		_refresh_all()
+
+
+func _on_bank_changed(_balance: int) -> void:
+	if visible:
+		_refresh_all()
+
+
+func _on_refused(reason: String) -> void:
+	if visible:
+		_hint.text = reason
+		_hint.show()
 
 
 func _on_hunt_time_set(_value: HuntTime.Type) -> void:

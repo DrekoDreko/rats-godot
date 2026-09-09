@@ -1,0 +1,82 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://scripts/house/rat_hole.gd" id="1_hole"]
+
+[sub_resource type="StandardMaterial3D" id="Material_dark"]
+transparency = 0
+shading_mode = 0
+albedo_color = Color(0.02, 0.02, 0.03, 1)
+cull_mode = 2
+
+[sub_resource type="QuadMesh" id="Mesh_slit_low"]
+material = SubResource("Material_dark")
+size = Vector2(0.44, 0.17)
+
+[sub_resource type="QuadMesh" id="Mesh_slit_mid"]
+material = SubResource("Material_dark")
+size = Vector2(0.3, 0.09)
+
+[sub_resource type="QuadMesh" id="Mesh_slit_top"]
+material = SubResource("Material_dark")
+size = Vector2(0.16, 0.05)
+
+[sub_resource type="StandardMaterial3D" id="Material_plaster"]
+shading_mode = 0
+albedo_color = Color(0.47, 0.46, 0.44, 1)
+
+[sub_resource type="BoxMesh" id="Mesh_rubble"]
+material = SubResource("Material_plaster")
+size = Vector3(0.09, 0.03, 0.07)
+
+[sub_resource type="QuadMesh" id="Mesh_mote"]
+size = Vector2(0.08, 0.08)
+
+[sub_resource type="StandardMaterial3D" id="Material_mote"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(0.85, 0.75, 0.45, 0.65)
+billboard_mode = 3
+
+[node name="RatHole" type="Node3D"]
+script = ExtResource("1_hole")
+
+[node name="SlitLow" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.085, -0.012)
+mesh = SubResource("Mesh_slit_low")
+
+[node name="SlitMid" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.215, -0.012)
+mesh = SubResource("Mesh_slit_mid")
+
+[node name="SlitTop" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.285, -0.012)
+mesh = SubResource("Mesh_slit_top")
+
+[node name="Rubble1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.15, 0, -0.11)
+mesh = SubResource("Mesh_rubble")
+
+[node name="Rubble2" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.86, 0, 0.51, 0, 1, 0, -0.51, 0, 0.86, 0.12, 0, -0.08)
+mesh = SubResource("Mesh_rubble")
+
+[node name="Rubble3" type="MeshInstance3D" parent="."]
+transform = Transform3D(0.64, 0, -0.77, 0, 1, 0, 0.77, 0, 0.64, -0.02, 0, -0.19)
+mesh = SubResource("Mesh_rubble")
+
+[node name="Highlight" type="CPUParticles3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.14, -0.22)
+visible = false
+material_override = SubResource("Material_mote")
+emitting = false
+amount = 8
+lifetime = 1.6
+preprocess = 0.5
+mesh = SubResource("Mesh_mote")
+emission_shape = 1
+emission_sphere_radius = 0.25
+gravity = Vector3(0, 0.15, 0)
+initial_velocity_min = 0.05
+initial_velocity_max = 0.2
+scale_amount_min = 0.03
+scale_amount_max = 0.06

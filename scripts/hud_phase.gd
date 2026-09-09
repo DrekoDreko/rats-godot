@@ -1,6 +1,6 @@
 extends CanvasLayer
-## The shift on screen: which phase the crew is in, how long is left of it, who
-## is ready and what colour each of them is wearing.
+## The shift on screen: which phase the crew is in, how long is left of it and
+## how many of them have said they are ready.
 ##
 ## The same strip in the van, on the road and in the house. It is one scene
 ## (`scenes/hud_phase.tscn`) dropped into each of them rather than three copies
@@ -23,13 +23,16 @@ extends CanvasLayer
 ## **PSX.** The whole HUD is drawn at 960x540, so a letter is 8 px, the colours
 ## are flat and there is a hard black outline behind every line instead of a
 ## shadow or a gradient — the same dress the money, the belt and the prompt in
-## `world.tscn` already wear.
-
-## The size of a letter on a 960x540 screen, matching the rest of the HUD.
-const FONT_SIZE := 8
-## The black every line is outlined against, and how thick it is drawn.
-const OUTLINE_COLOR := Color(0, 0, 0, 1)
-const OUTLINE_SIZE := 5
+## `scenes/hud_game.tscn` already wear.
+##
+## **The clock leads.** It is the line a player looks up for, so it is on top and
+## twice the height of everything around it; the phase's own name sits under it
+## in the small text the rest of the strip is written in.
+##
+## **Who they are is not here.** The names, the colours and the tallies are the
+## scoreboard's (`scripts/ui/scoreboard.gd`), which a player holds Tab for. A
+## column of four names standing in the corner of every screen is four names
+## nobody reads.
 
 ## The last stretch of a phase, in seconds: the number blinks and a beep goes off
 ## once a second through it.
@@ -45,10 +48,6 @@ const NORMAL_COLOR := Color(1, 1, 1, 1)
 const WARNING_BLINKS := 2.0
 const WARNING_MIN_ALPHA := 0.35
 
-## What a name in the side column is worth before its player has said he is
-## ready — dimmed rather than greyed, so that a crew colour is still a crew
-## colour while its man is still deciding.
-const WAITING_ALPHA := 0.45
 ## What the multiplier line reads in, by how steep the bet is — the same three
 ## colours the clipboard and the wall sheet write it in, because it is the same
 ## number and a player should recognise it from the van.
@@ -57,11 +56,6 @@ const WAGER_COLOR := {
 	HuntTime.Type.MEDIUM: Color("ffb229"),
 	HuntTime.Type.SHORT: Color("ff4b3a"),
 }
-
-## The mark beside a name, ready and not. Two characters of the same width, so
-## that a man going ready does not shuffle the column he is in.
-const READY_MARK := "*"
-const WAITING_MARK := "-"
 
 ## The beep of the last ten seconds, built rather than loaded: there is no audio
 ## in the project yet, and a square wave at a few hundred hertz is what a PSX
@@ -76,13 +70,7 @@ const BEEP_DB := -14.0
 @onready var _clock_label: Label = $Panel/Margin/Rows/Clock
 @onready var _wager_label: Label = $Panel/Margin/Rows/Wager
 @onready var _ready_label: Label = $Panel/Margin/Rows/Ready
-@onready var _crew_rows: VBoxContainer = $Crew/Margin/Rows
 @onready var _beep: AudioStreamPlayer = $Beep
-
-## One line per player in the crew, in the order they walked in. Rebuilt only
-## when the crew itself changes; a colour or a ready flag repaints the line that
-## is already there.
-var _crew_labels: Array[Label] = []
 
 ## Which whole second the last beep went off on, or -1 for none. It is what keeps
 ## the beep to one a second rather than one a frame.
@@ -100,15 +88,13 @@ func _ready() -> void:
 
 	PhaseManager.phase_changed.connect(_on_phase_changed)
 	PhaseManager.timer_updated.connect(_on_timer_updated)
-	SessionManager.player_joined.connect(_on_crew_added)
-	SessionManager.player_left.connect(_on_crew_removed)
-	SessionManager.player_changed.connect(_on_player_changed)
-	SettingsManager.streamer_mode_changed.connect(func(_enabled: bool) -> void: _rebuild_crew())
+	SessionManager.player_joined.connect(_on_crew_changed)
+	SessionManager.player_left.connect(_on_crew_changed)
+	SessionManager.player_changed.connect(_on_crew_changed)
 
 	# The shift started before this scene existed — the van is already parked and
 	# the crew is already in it — so what is on screen first is read straight off
 	# the autoloads rather than waited for.
-	_rebuild_crew()
 	_draw_phase()
 	_draw_clock(PhaseManager.seconds_left)
 
@@ -118,6 +104,7 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	var beat := absf(sin(Time.get_ticks_msec() / 1000.0 * PI * WARNING_BLINKS))
 	_clock_label.modulate.a = WARNING_MIN_ALPHA + (1.0 - WARNING_MIN_ALPHA) * beat
+
 
 # --- The strip --------------------------------------------------------------
 
@@ -141,10 +128,10 @@ func _draw_phase() -> void:
 ## and a warning that is always there is not one.
 func _draw_wager() -> void:
 	var booked: HuntTime.Type = SessionManager.hunt_time
-	if PhaseManager.current() != Phase.Type.HUNT or HuntTime.multiplier(booked) <= 1.0:
+	if PhaseManager.current() != Phase.Type.HUNT:
 		_wager_label.hide()
 		return
-	_wager_label.text = tr("HUD_WAGER") % int(HuntTime.multiplier(booked))
+	_wager_label.text = tr("HUD_WAGER") % HuntTime.reward(booked)
 	_wager_label.add_theme_color_override("font_color",
 		WAGER_COLOR.get(booked, NORMAL_COLOR))
 	_wager_label.show()
@@ -250,93 +237,21 @@ func _build_beep() -> AudioStreamWAV:
 	wave.data = data
 	return wave
 
-# --- The crew list ----------------------------------------------------------
-
-## One line per player, from scratch. It is only run when the crew itself grows
-## or shrinks — a colour changing repaints the line that is already there instead
-## of tearing the column down and building it again.
-func _rebuild_crew() -> void:
-	for label in _crew_labels:
-		label.queue_free()
-	_crew_labels.clear()
-	for steam_id in SessionManager.players:
-		var label := _new_crew_label()
-		# Added below the freed ones rather than after them: `queue_free` only
-		# takes effect at the end of the frame, and a name left in the column
-		# until then would push the new list down the screen and back up again.
-		_crew_rows.add_child(label)
-		_crew_labels.append(label)
-		_paint_crew_line(label, steam_id)
-
-
-## Repaints one player's line, wherever it is in the column. Falls back to
-## rebuilding when the name is not on screen yet, which is the join whose
-## `player_changed` beat its `player_joined` in.
-func _repaint(steam_id: int) -> void:
-	var at := SessionManager.players.keys().find(steam_id)
-	if at == -1 or at >= _crew_labels.size():
-		_rebuild_crew()
-		return
-	_paint_crew_line(_crew_labels[at], steam_id)
-
-
-## A name in its own colour, with a mark for whether its man has said he is
-## ready. The colour is read from `SessionManager` every time and never kept
-## here: the colour station writes there, and a copy in the HUD would be the one
-## place it could go stale.
-func _paint_crew_line(label: Label, steam_id: int) -> void:
-	var player := SessionManager.player(steam_id)
-	var is_ready := bool(player.get("ready", false))
-	var shown_name := ColorManager.display_name_for(steam_id) if SettingsManager.streamer_mode \
-		else String(player.get("name", "?")).to_upper()
-	label.text = "%s %s" % [READY_MARK if is_ready else WAITING_MARK, shown_name]
-	var color: Color = player.get("color", Color.WHITE)
-	color.a = 1.0 if is_ready else WAITING_ALPHA
-	label.add_theme_color_override("font_color", color)
-
-
-## A blank line, dressed the way every other line of this HUD is. The rows are
-## built in code rather than in the scene because there is one per player, and
-## how many players there are is not known until they walk in.
-func _new_crew_label() -> Label:
-	var label := Label.new()
-	label.add_theme_font_size_override("font_size", FONT_SIZE)
-	label.add_theme_color_override("font_outline_color", OUTLINE_COLOR)
-	label.add_theme_constant_override("outline_size", OUTLINE_SIZE)
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return label
-
 # --- What wakes it up -------------------------------------------------------
 
 ## A phase change redraws the whole strip: the name, the clock and the show of
-## hands all moved, and the ready flags were cleared on the way through — which
-## the crew column has to hear about even though no player signal carries it.
+## hands all moved, and the ready flags were cleared on the way through.
 func _on_phase_changed(_previous: Phase.Type, _current: Phase.Type) -> void:
 	_stop_warning()
 	_draw_phase()
 	_draw_clock(PhaseManager.seconds_left)
-	var crew := SessionManager.players.keys()
-	for i in mini(crew.size(), _crew_labels.size()):
-		_paint_crew_line(_crew_labels[i], crew[i])
 
 
 func _on_timer_updated(seconds_left: float) -> void:
 	_draw_clock(seconds_left)
 
 
-func _on_crew_added(_steam_id: int) -> void:
-	_rebuild_crew()
-	_draw_ready()
-
-
-func _on_crew_removed(_steam_id: int) -> void:
-	_rebuild_crew()
-	_draw_ready()
-
-
-## Colour, ready, money or bag — one signal for all of them, so the line is
-## repainted and the counter asked again whichever of them it was.
-func _on_player_changed(steam_id: int) -> void:
-	_repaint(steam_id)
+## Somebody joined, left, or went ready — the counter is the only thing here that
+## any of those can move, so all three come to the same place.
+func _on_crew_changed(_steam_id: int) -> void:
 	_draw_ready()

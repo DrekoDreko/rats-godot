@@ -1,9 +1,11 @@
 extends BigFontOutlinedLabel
 ## Shows how many rats are still loose on the map.
+##
+## One number and no word beside it: the rat's head next to it in the HUD says
+## what is being counted (`scenes/hud_game.tscn`).
 
 const INTERVAL := 0.2
 
-var _total := 0
 var _time := 0.0
 
 func _ready() -> void:
@@ -32,6 +34,4 @@ func _process(delta: float) -> void:
 	_update()
 
 func _update() -> void:
-	var alive := get_tree().get_nodes_in_group("rats").size()
-	_total = maxi(_total, alive)
-	text = tr("HUD_RATS") % [alive, _total]
+	text = tr("HUD_RATS") % get_tree().get_nodes_in_group("rats").size()

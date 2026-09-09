@@ -22,7 +22,13 @@ const DEFAULT_LANGUAGE := "en"
 ## are not already on a refresh loop of their own listen for this to redraw.
 signal streamer_mode_changed(enabled: bool)
 
-var fullscreen := true
+## The game opens in a window, and stays in one until the player asks for
+## anything else on the settings screen. A window is the mode you can get out
+## of: a first run that seizes the whole screen at 640x360 on a monitor that
+## does not want it is a first run with nowhere to click. The choice is saved
+## either way (`user://settings.cfg`), so this default is only ever read once,
+## on a machine that has not answered yet.
+var fullscreen := false
 var sfx_volume := 1.0
 var music_volume := 1.0
 var voice_volume := 1.0

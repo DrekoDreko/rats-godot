@@ -61,7 +61,7 @@ mouse_filter = 2
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_bottom = 28.0
+offset_bottom = 40.0
 grow_horizontal = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 8
@@ -78,8 +78,8 @@ theme_override_constants/separation = 16
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9, 0.94, 0.98, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 8
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 18
 text = "NO CONTRACT SIGNED"
 
 [node name="Info" type="Label" parent="Header/Margin/HBox"]
@@ -87,16 +87,16 @@ layout_mode = 2
 size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.68, 0.76, 0.86, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 8
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 14
 text = "STUDY THE CLIPBOARD FIRST"
 
 [node name="PinsCount" type="Label" parent="Header/Margin/HBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 8
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 14
 text = "PINS: 0/3"
 horizontal_alignment = 2
 
@@ -106,7 +106,7 @@ anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -24.0
+offset_top = -30.0
 grow_horizontal = 2
 grow_vertical = 0
 theme_override_constants/margin_left = 12
@@ -117,9 +117,9 @@ theme_override_constants/margin_bottom = 8
 layout_mode = 2
 theme_override_colors/font_color = Color(0.72, 0.78, 0.88, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 4
-theme_override_font_sizes/font_size = 8
-text = "LMB: PLACE PIN (MAX 3)  |  RMB: REMOVE PIN  |  DRAG/ARROWS: PAN  |  WHEEL: ZOOM  |  E/ESC: CLOSE"
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 13
+text = "LMB: PLACE PIN (MAX 3)  |  RMB: REMOVE PIN  |  DRAG/ARROWS: PAN  |  WHEEL: ZOOM"
 horizontal_alignment = 1
 
 [node name="Audio" type="AudioStreamPlayer" parent="."]

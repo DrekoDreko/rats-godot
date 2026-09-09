@@ -636,7 +636,66 @@ def _setup_materials():
     nt_v.links.new(bsdf_v.outputs["BSDF"], out_v.inputs["Surface"])
     mats["vinyl"] = m_vin
 
-    # MAT_Van_Plastic (Dashboard hardware)
+    # MAT_Seat_Leather (PBR leather for bucket seats)
+    m_lth = bpy.data.materials.get("MAT_Seat_Leather") or bpy.data.materials.new("MAT_Seat_Leather")
+    m_lth.use_nodes = True
+    nt_l = m_lth.node_tree
+    nt_l.nodes.clear()
+    out_l = nt_l.nodes.new("ShaderNodeOutputMaterial")
+    bsdf_l = nt_l.nodes.new("ShaderNodeBsdfPrincipled")
+    bsdf_l.inputs["Roughness"].default_value = 0.42
+    if "Coat Weight" in bsdf_l.inputs:
+        bsdf_l.inputs["Coat Weight"].default_value = 0.25
+        bsdf_l.inputs["Coat Roughness"].default_value = 0.25
+
+    models_dir = os.path.dirname(TEXTURE_PATH)
+    alb_path = os.path.join(models_dir, "seat_leather_albedo.png")
+    if os.path.exists(alb_path):
+        i_alb = bpy.data.images.load(alb_path, check_existing=True)
+        t_alb = nt_l.nodes.new("ShaderNodeTexImage")
+        t_alb.image = i_alb
+        nt_l.links.new(t_alb.outputs["Color"], bsdf_l.inputs["Base Color"])
+    else:
+        bsdf_l.inputs["Base Color"].default_value = (0.025, 0.025, 0.028, 1.0)
+
+    norm_path = os.path.join(models_dir, "seat_leather_normal.png")
+    if os.path.exists(norm_path):
+        i_norm = bpy.data.images.load(norm_path, check_existing=True)
+        i_norm.colorspace_settings.name = 'Non-Color'
+        t_norm = nt_l.nodes.new("ShaderNodeTexImage")
+        t_norm.image = i_norm
+        n_map = nt_l.nodes.new("ShaderNodeNormalMap")
+        n_map.inputs["Strength"].default_value = 0.8
+        nt_l.links.new(t_norm.outputs["Color"], n_map.inputs["Color"])
+        nt_l.links.new(n_map.outputs["Normal"], bsdf_l.inputs["Normal"])
+
+    nt_l.links.new(bsdf_l.outputs["BSDF"], out_l.inputs["Surface"])
+    mats["leather"] = m_lth
+
+    # MAT_Seat_Trim
+    m_strim = bpy.data.materials.get("MAT_Seat_Trim") or bpy.data.materials.new("MAT_Seat_Trim")
+    m_strim.use_nodes = True
+    nt_st = m_strim.node_tree
+    nt_st.nodes.clear()
+    out_st = nt_st.nodes.new("ShaderNodeOutputMaterial")
+    bsdf_st = nt_st.nodes.new("ShaderNodeBsdfPrincipled")
+    bsdf_st.inputs["Base Color"].default_value = (0.04, 0.04, 0.045, 1.0)
+    bsdf_st.inputs["Roughness"].default_value = 0.70
+    nt_st.links.new(bsdf_st.outputs["BSDF"], out_st.inputs["Surface"])
+    mats["seat_trim"] = m_strim
+
+    # MAT_Seat_RedAccent
+    m_sred = bpy.data.materials.get("MAT_Seat_RedAccent") or bpy.data.materials.new("MAT_Seat_RedAccent")
+    m_sred.use_nodes = True
+    nt_sr = m_sred.node_tree
+    nt_sr.nodes.clear()
+    out_sr = nt_sr.nodes.new("ShaderNodeOutputMaterial")
+    bsdf_sr = nt_sr.nodes.new("ShaderNodeBsdfPrincipled")
+    bsdf_sr.inputs["Base Color"].default_value = (0.85, 0.05, 0.05, 1.0)
+    bsdf_sr.inputs["Roughness"].default_value = 0.35
+    nt_sr.links.new(bsdf_sr.outputs["BSDF"], out_sr.inputs["Surface"])
+    mats["seat_red"] = m_sred
+
     m_pls = bpy.data.materials.get("MAT_Van_Plastic") or bpy.data.materials.new("MAT_Van_Plastic")
     m_pls.use_nodes = True
     nt_p = m_pls.node_tree
@@ -1760,41 +1819,272 @@ def _build_cab_interior(root, col, mats):
     me_ct.materials.append(mats["bumper"])    # 0 boot, grips
     me_ct.materials.append(mats["chrome"])    # 1 levers
 
-    # --- Seats ---
+    # --- Seats (Low-poly leather bucket seats) ---
+    def _build_bucket_seat_bm(bm, sx, cy, cz, is_driver, scale=0.976):
+        def add_v(x, y, z):
+            return bm.verts.new((sx + x * scale, cy + y * scale, cz + z * scale))
+
+        def add_box(pos, size, mat_idx):
+            px, py, pz = pos
+            sx_b, sy_b, sz_b = size
+            hx, hy, hz = sx_b*0.5, sy_b*0.5, sz_b*0.5
+            v = [
+                add_v(px - hx, py - hy, pz - hz),
+                add_v(px + hx, py - hy, pz - hz),
+                add_v(px + hx, py + hy, pz - hz),
+                add_v(px - hx, py + hy, pz - hz),
+                add_v(px - hx, py - hy, pz + hz),
+                add_v(px + hx, py - hy, pz + hz),
+                add_v(px + hx, py + hy, pz + hz),
+                add_v(px - hx, py + hy, pz + hz),
+            ]
+            faces = [
+                bm.faces.new((v[3], v[2], v[1], v[0])),
+                bm.faces.new((v[4], v[5], v[6], v[7])),
+                bm.faces.new((v[0], v[1], v[5], v[4])),
+                bm.faces.new((v[2], v[3], v[7], v[6])),
+                bm.faces.new((v[1], v[2], v[6], v[5])),
+                bm.faces.new((v[3], v[0], v[4], v[7])),
+            ]
+            for f in faces:
+                f.material_index = mat_idx
+            return faces
+
+        # 1. BASE RAILS & PEDESTAL (Dark trim - 1)
+        for rx in (-0.17, 0.17):
+            add_box((rx, 0.05, 0.02), (0.045, 0.58, 0.035), 1)
+        add_box((0.0, 0.03, 0.08), (0.38, 0.48, 0.09), 1)
+        add_box((0.0, 0.05, 0.13), (0.50, 0.56, 0.05), 1)
+
+        # 2. CUSHION (SQUAB) - Leather (0)
+        xs = [-0.27, -0.21, -0.12, 0.0, 0.12, 0.21, 0.27]
+        ys = [-0.22, -0.06, 0.12, 0.14, 0.28, 0.35, 0.38]
+        cushion_z = [
+            [0.17, 0.23, 0.20, 0.19, 0.20, 0.23, 0.17],
+            [0.18, 0.27, 0.23, 0.21, 0.23, 0.27, 0.18],
+            [0.18, 0.265, 0.215, 0.198, 0.215, 0.265, 0.18],
+            [0.18, 0.27, 0.238, 0.222, 0.238, 0.27, 0.18],
+            [0.17, 0.265, 0.245, 0.232, 0.245, 0.265, 0.17],
+            [0.15, 0.21, 0.195, 0.190, 0.195, 0.21, 0.15],
+            [0.13, 0.14, 0.14, 0.14, 0.14, 0.14, 0.13]
+        ]
+        cushion_grid = []
+        for r in range(7):
+            row_verts = []
+            for c in range(7):
+                v = add_v(xs[c], ys[r], cushion_z[r][c])
+                row_verts.append(v)
+            cushion_grid.append(row_verts)
+
+        for r in range(6):
+            for c in range(6):
+                f = bm.faces.new((cushion_grid[r][c], cushion_grid[r][c+1], cushion_grid[r+1][c+1], cushion_grid[r+1][c]))
+                f.material_index = 0
+                f.smooth = True
+
+        for r in range(6):
+            f = bm.faces.new((cushion_grid[r][0], add_v(-0.27, ys[r], 0.13), add_v(-0.27, ys[r+1], 0.13), cushion_grid[r+1][0]))
+            f.material_index = 0
+            f.smooth = True
+
+        for r in range(6):
+            f = bm.faces.new((cushion_grid[r][6], cushion_grid[r+1][6], add_v(0.27, ys[r+1], 0.13), add_v(0.27, ys[r], 0.13)))
+            f.material_index = 0
+            f.smooth = True
+
+        for c in range(6):
+            f = bm.faces.new((cushion_grid[6][c], cushion_grid[6][c+1], add_v(xs[c+1], ys[6], 0.11), add_v(xs[c], ys[6], 0.11)))
+            f.material_index = 0
+            f.smooth = True
+
+        # 3. BACKREST - Leather (0)
+        theta = 0.19
+        sin_t, cos_t = math.sin(theta), math.cos(theta)
+        fwd_y, fwd_z = cos_t, sin_t
+        up_y, up_z = -sin_t, cos_t
+        b_y0 = -0.16
+        b_z0 = 0.22
+
+        ts = [0.00, 0.14, 0.27, 0.30, 0.44, 0.54, 0.62, 0.68]
+        back_grid, back_rear_grid = [], []
+
+        for r, t in enumerate(ts):
+            if t <= 0.40:
+                w_scale, shoulder_drop = 1.0, 0.0
+            elif t <= 0.54:
+                w_scale, shoulder_drop = 0.95, 0.005
+            elif t <= 0.62:
+                w_scale, shoulder_drop = 0.88, 0.020
+            else:
+                w_scale, shoulder_drop = 0.78, 0.045
+
+            b_xs = [x * w_scale for x in [-0.25, -0.20, -0.11, 0.0, 0.11, 0.20, 0.25]]
+            row_f, row_b = [], []
+            for c in range(7):
+                cur_drop = shoulder_drop * ((abs(b_xs[c]) / 0.25)**2)
+                cy_t = b_y0 + up_y * (t - cur_drop)
+                cz_t = b_z0 + up_z * (t - cur_drop)
+
+                if c in (0, 6):
+                    fwd_dist = 0.040
+                elif c in (1, 5):
+                    fwd_dist = 0.088 if t < 0.55 else 0.050
+                elif c in (2, 4):
+                    fwd_dist = 0.026
+                else:
+                    fwd_dist = 0.022
+
+                if r == 2 and c in (2, 3, 4):
+                    fwd_dist -= 0.022
+                elif r == 3 and c in (2, 3, 4):
+                    fwd_dist += 0.004
+
+                row_f.append(add_v(b_xs[c], cy_t + fwd_y * fwd_dist, cz_t + fwd_z * fwd_dist))
+                rear_dist = -0.090 if c in (1, 2, 3, 4, 5) else -0.060
+                row_b.append(add_v(b_xs[c], cy_t + fwd_y * rear_dist, cz_t + fwd_z * rear_dist))
+
+            back_grid.append(row_f)
+            back_rear_grid.append(row_b)
+
+        for r in range(7):
+            for c in range(6):
+                f = bm.faces.new((back_grid[r][c], back_grid[r][c+1], back_grid[r+1][c+1], back_grid[r+1][c]))
+                f.material_index = 0
+                f.smooth = True
+
+        for r in range(7):
+            for c in range(6):
+                f = bm.faces.new((back_rear_grid[r][c], back_rear_grid[r+1][c], back_rear_grid[r+1][c+1], back_rear_grid[r][c+1]))
+                f.material_index = 0
+                f.smooth = True
+
+        for r in range(7):
+            f = bm.faces.new((back_grid[r][0], back_rear_grid[r][0], back_rear_grid[r+1][0], back_grid[r+1][0]))
+            f.material_index = 0
+            f.smooth = True
+
+        for r in range(7):
+            f = bm.faces.new((back_grid[r][6], back_grid[r+1][6], back_rear_grid[r+1][6], back_rear_grid[r][6]))
+            f.material_index = 0
+            f.smooth = True
+
+        for c in range(6):
+            f = bm.faces.new((back_grid[7][c], back_grid[7][c+1], back_rear_grid[7][c+1], back_rear_grid[7][c]))
+            f.material_index = 0
+            f.smooth = True
+
+        # 4. HEADREST (Chrome posts 3, Leather cushion 0)
+        t_top = ts[-1]
+        t_hr_base = 0.74
+        for post_x in (-0.07, 0.07):
+            p0_y = b_y0 + up_y * (t_top - 0.03)
+            p0_z = b_z0 + up_z * (t_top - 0.03)
+            p1_y = b_y0 + up_y * t_hr_base
+            p1_z = b_z0 + up_z * t_hr_base
+            r_post = 0.009
+            ring0, ring1 = [], []
+            for i in range(6):
+                ang = i * (2.0 * math.pi / 6.0)
+                ring0.append(add_v(post_x + r_post * math.cos(ang), p0_y + r_post * math.sin(ang) * fwd_y, p0_z + r_post * math.sin(ang) * fwd_z))
+                ring1.append(add_v(post_x + r_post * math.cos(ang), p1_y + r_post * math.sin(ang) * fwd_y, p1_z + r_post * math.sin(ang) * fwd_z))
+            for i in range(6):
+                j = (i + 1) % 6
+                f = bm.faces.new((ring0[i], ring0[j], ring1[j], ring1[i]))
+                f.material_index = 3
+                f.smooth = True
+
+        hr_ts = [0.73, 0.76, 0.83, 0.88, 0.91]
+        hr_widths = [0.22, 0.27, 0.27, 0.24, 0.17]
+        hr_depths = [0.10, 0.14, 0.14, 0.12, 0.06]
+        hr_rings = []
+        for r_idx in range(len(hr_ts)):
+            ht, hw, hd = hr_ts[r_idx], hr_widths[r_idx] * 0.5, hr_depths[r_idx] * 0.5
+            h_cy, h_cz = b_y0 + up_y * ht, b_z0 + up_z * ht
+            oct_pts = [
+                (-hw * 0.65, hd), (hw * 0.65, hd),
+                (hw, hd * 0.5), (hw, -hd * 0.5),
+                (hw * 0.65, -hd), (-hw * 0.65, -hd),
+                (-hw, -hd * 0.5), (-hw, hd * 0.5)
+            ]
+            hr_rings.append([add_v(ox, h_cy + fwd_y * of, h_cz + fwd_z * of) for ox, of in oct_pts])
+
+        for r_idx in range(len(hr_rings) - 1):
+            r0, r1 = hr_rings[r_idx], hr_rings[r_idx + 1]
+            for i in range(8):
+                j = (i + 1) % 8
+                f = bm.faces.new((r0[i], r0[j], r1[j], r1[i]))
+                f.material_index = 0
+                f.smooth = True
+
+        f_bot = bm.faces.new(list(reversed(hr_rings[0])))
+        f_bot.material_index = 0
+        f_bot.smooth = True
+        f_top = bm.faces.new(hr_rings[-1])
+        f_top.material_index = 0
+        f_top.smooth = True
+
+        # 5. RECLINER KNOB (Trim 1)
+        outboard_x = -0.285 if is_driver else 0.285
+        hinge_y, hinge_z = -0.15, 0.22
+        knob_r, knob_thick = 0.040, 0.020
+        knob_sign = -1.0 if is_driver else 1.0
+
+        k_inner, k_outer = [], []
+        for i in range(8):
+            ang = i * (2.0 * math.pi / 8.0)
+            k_inner.append(add_v(outboard_x, hinge_y + knob_r * math.cos(ang), hinge_z + knob_r * math.sin(ang)))
+            k_outer.append(add_v(outboard_x + knob_sign * knob_thick, hinge_y + knob_r * math.cos(ang), hinge_z + knob_r * math.sin(ang)))
+
+        for i in range(8):
+            j = (i + 1) % 8
+            if is_driver:
+                f = bm.faces.new((k_inner[i], k_inner[j], k_outer[j], k_outer[i]))
+            else:
+                f = bm.faces.new((k_inner[j], k_inner[i], k_outer[i], k_outer[j]))
+            f.material_index = 1
+            f.smooth = True
+
+        f_kcap = bm.faces.new(k_outer if not is_driver else list(reversed(k_outer)))
+        f_kcap.material_index = 1
+        add_box((outboard_x + knob_sign * 0.010, hinge_y + 0.05, hinge_z + 0.01), (0.016, 0.065, 0.022), 1)
+
+        # 6. SEATBELT BUCKLE (Trim 1, Red 2)
+        inboard_x = 0.265 if is_driver else -0.265
+        add_box((inboard_x, -0.12, 0.16), (0.015, 0.035, 0.14), 1)
+        add_box((inboard_x, -0.04, 0.26), (0.038, 0.032, 0.060), 1)
+        add_box((inboard_x, -0.04, 0.291), (0.028, 0.022, 0.006), 2)
+
+        # 7. UV MAPPING
+        bm.normal_update()
+        uv_layer = bm.loops.layers.uv.verify()
+        scale_uv = 4.0
+        for f in bm.faces:
+            n = f.normal
+            ax, ay, az = abs(n.x), abs(n.y), abs(n.z)
+            for l in f.loops:
+                p = l.vert.co
+                if az > ax and az > ay:
+                    u = (p.x - sx) * scale_uv
+                    v = (p.y - cy) * scale_uv
+                elif ax > ay:
+                    u = (p.y - cy) * scale_uv
+                    v = (p.z - cz) * scale_uv
+                else:
+                    u = (p.x - sx) * scale_uv
+                    v = (p.z - cz) * scale_uv
+                l[uv_layer].uv = (u, v)
+
     for s_name, sx in [("Driver", drv_x), ("Passenger", pas_x)]:
         obj_st, me_st = _create_mesh_obj(f"Cab_Seat_{s_name}", col, root)
         bm_st = bmesh.new()
-
-        # Pedestal and slide rails
-        _add_cube(bm_st, size=(0.38, 0.44, 0.16), pos=(sx, 0.92, floor_top + 0.08))
-        for rail_x in (sx - 0.16, sx + 0.16):
-            _add_cube(bm_st, size=(0.05, 0.52, 0.04), pos=(rail_x, 0.92, floor_top + 0.02))
-        _mark_faces(bm_st, 0, 1)
-        n = len(bm_st.faces)
-
-        # Seat pan with side bolsters
-        _add_cube(bm_st, size=(0.48, 0.52, 0.13), pos=(sx, 0.92, floor_top + 0.225))
-        for bol_x in (sx - 0.23, sx + 0.23):
-            _add_cube(bm_st, size=(0.08, 0.52, 0.10), pos=(bol_x, 0.92, floor_top + 0.29))
-
-        # Reclined backrest with bolsters
-        add_oriented_box(bm_st, (sx, 0.70, floor_top + 0.27), (sx, 0.58, floor_top + 0.85), 0.46, 0.15)
-        for bol_x in (sx - 0.205, sx + 0.205):
-            add_oriented_box(bm_st, (bol_x, 0.70, floor_top + 0.28), (bol_x, 0.585, floor_top + 0.82), 0.090, 0.190)
-
-        # Headrest
-        add_oriented_box(bm_st, (sx, 0.565, floor_top + 0.89), (sx, 0.545, floor_top + 1.05), 0.26, 0.14)
-        _mark_faces(bm_st, n, 0)
-        n = len(bm_st.faces)
-        for post_x in (sx - 0.08, sx + 0.08):
-            add_oriented_box(bm_st, (post_x, 0.585, floor_top + 0.84), (post_x, 0.575, floor_top + 0.92), 0.018, 0.018)
-        _mark_faces(bm_st, n, 1)
-
+        _build_bucket_seat_bm(bm_st, sx, 0.856, floor_top, is_driver=(s_name == "Driver"))
         bm_st.normal_update()
         bm_st.to_mesh(me_st)
         bm_st.free()
-        me_st.materials.append(mats["vinyl"])     # 0 upholstery
-        me_st.materials.append(mats["bumper"])    # 0 frame
+        me_st.materials.append(mats["leather"])    # 0
+        me_st.materials.append(mats["seat_trim"])  # 1
+        me_st.materials.append(mats["seat_red"])   # 2
+        me_st.materials.append(mats["chrome"])     # 3
 
     # --- Cab door trim panels (also closes off the body backfaces) ---
     for d_name, dx in [("L", -card_x), ("R", card_x)]:

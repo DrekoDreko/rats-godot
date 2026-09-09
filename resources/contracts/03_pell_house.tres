@@ -16,4 +16,5 @@ photo = ExtResource("3_photo")
 infestation = 24
 rat_types = Array[String](["common", "runner", "biter"])
 reward = 900
+price = 500
 difficulty = 5

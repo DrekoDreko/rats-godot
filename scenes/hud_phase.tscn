@@ -1,17 +1,17 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/hud_phase.gd" id="1_hud_phase"]
+[ext_resource type="FontFile" uid="uid://b3vvnk0rcn80q" path="res://assets/fonts/matchup.ttf" id="2_matchup"]
 
 [sub_resource type="LabelSettings" id="Label_hud_phase"]
 font_size = 8
 
-[sub_resource type="StyleBoxFlat" id="Style_hud_phase"]
-bg_color = Color(0, 0, 0, 0.55)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.55, 0.55, 0.55, 0.75)
+[sub_resource type="StyleBoxEmpty" id="Style_hud_phase"]
+
+[sub_resource type="FontVariation" id="Font_hud_clock"]
+base_font = ExtResource("2_matchup")
+spacing_top = -4
+spacing_bottom = -1
 
 [node name="HUDPhase" type="CanvasLayer" groups=["hud_phase"]]
 layer = 2
@@ -42,16 +42,6 @@ layout_mode = 2
 mouse_filter = 2
 theme_override_constants/separation = 1
 
-[node name="Phase" type="Label" parent="Panel/Margin/Rows"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 5
-text = "PHASE_LOBBY"
-label_settings = SubResource("Label_hud_phase")
-horizontal_alignment = 1
-
 [node name="Clock" type="Label" parent="Panel/Margin/Rows"]
 visible = false
 layout_mode = 2
@@ -60,7 +50,18 @@ theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
 theme_override_font_sizes/font_size = 16
+theme_override_fonts/font = SubResource("Font_hud_clock")
 text = "0:00"
+horizontal_alignment = 1
+
+[node name="Phase" type="Label" parent="Panel/Margin/Rows"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+text = "PHASE_LOBBY"
+label_settings = SubResource("Label_hud_phase")
 horizontal_alignment = 1
 
 [node name="Wager" type="Label" parent="Panel/Margin/Rows"]
@@ -83,31 +84,6 @@ theme_override_constants/outline_size = 5
 text = "HUD_READY"
 label_settings = SubResource("Label_hud_phase")
 horizontal_alignment = 1
-
-[node name="Crew" type="MarginContainer" parent="."]
-anchors_preset = 6
-anchor_left = 1.0
-anchor_top = 0.5
-anchor_right = 1.0
-anchor_bottom = 0.5
-offset_left = -120.0
-offset_top = -40.0
-offset_bottom = 40.0
-grow_horizontal = 0
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="Margin" type="MarginContainer" parent="Crew"]
-layout_mode = 2
-mouse_filter = 2
-theme_override_constants/margin_right = 16
-
-[node name="Rows" type="VBoxContainer" parent="Crew/Margin"]
-layout_mode = 2
-size_flags_vertical = 4
-mouse_filter = 2
-alignment = 1
-theme_override_constants/separation = 2
 
 [node name="Beep" type="AudioStreamPlayer" parent="."]
 volume_db = -14.0

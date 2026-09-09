@@ -1,0 +1,45 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/house/rat_streak.gd" id="1_streak"]
+
+[sub_resource type="StandardMaterial3D" id="Material_piss"]
+shading_mode = 0
+albedo_color = Color(0.75, 0.68, 0.24, 1)
+
+[sub_resource type="StandardMaterial3D" id="Material_dry"]
+shading_mode = 0
+albedo_color = Color(0.58, 0.52, 0.18, 1)
+
+[sub_resource type="BoxMesh" id="Mesh_line_long"]
+size = Vector3(0.085, 0.012, 0.44)
+
+[sub_resource type="BoxMesh" id="Mesh_line_mid"]
+size = Vector3(0.07, 0.012, 0.36)
+
+[sub_resource type="BoxMesh" id="Mesh_line_short"]
+size = Vector3(0.075, 0.012, 0.3)
+
+[node name="RatStreak" type="Node3D"]
+script = ExtResource("1_streak")
+
+[node name="Stain" type="Node3D" parent="."]
+
+[node name="LineA" type="MeshInstance3D" parent="Stain"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.003, 0)
+mesh = SubResource("Mesh_line_long")
+material_override = SubResource("Material_piss")
+
+[node name="LineB" type="MeshInstance3D" parent="Stain"]
+transform = Transform3D(0.9925, 0, 0.1219, 0, 1, 0, -0.1219, 0, 0.9925, -0.09, 0.005, 0.04)
+mesh = SubResource("Mesh_line_mid")
+material_override = SubResource("Material_piss")
+
+[node name="LineC" type="MeshInstance3D" parent="Stain"]
+transform = Transform3D(0.9945, 0, -0.1045, 0, 1, 0, 0.1045, 0, 0.9945, 0.1, 0.007, -0.05)
+mesh = SubResource("Mesh_line_short")
+material_override = SubResource("Material_dry")
+
+[node name="Hiss" type="AudioStreamPlayer3D" parent="."]
+unit_size = 4.0
+max_distance = 12.0
+volume_db = -6.0

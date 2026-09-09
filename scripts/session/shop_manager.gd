@@ -3,19 +3,16 @@ extends Node
 ## money he does not have, and nobody but the host decides whether he had it.
 ##
 ## **The host holds the till.** A player at the shelf does not buy anything; he
-## *asks* to (`request_buy`), the host looks at what is in that man's pocket, and
+## *asks* to (`request_buy`), the host looks at the shared team bank, and
 ## either the purchase is written on every machine at once (`_apply`) or the man
 ## who asked hears a buzzer and nobody else hears anything (`_refuse`). It is the
 ## same round trip the colour panel and the clipboard take, and it is here for a
 ## sharper reason than either: money is the one thing in the van a tampered
 ## client would actually want to lie about, and a client that never writes its
-## own balance cannot.
+## the shared balance cannot.
 ##
-## **Every purse is its own.** The card asks for money per player, and that is
-## what `SessionManager` already holds — one `money` and one `inventory` per
-## Steam ID, keyed by the id that survives the scene change. Two men buying in
-## the same second are two entries being written, and neither of them can take
-## the other's money because the host debits the asker and nobody else.
+## **The money is shared; the item is personal.** The host debits one crew bank
+## and puts the purchased item in the requesting player's inventory.
 ##
 ## **The catalogue is read off disk, not registered.** Every machine scans
 ## `resources/store/` on the way up and sorts what it finds, so all of them have
@@ -31,7 +28,7 @@ extends Node
 ## `E` as the van pulled up — is turned down by the host instead of quietly
 ## crediting a box nobody can carry.
 ##
-## **What it stores is nothing.** The purse and the bag live on `SessionManager`
+## **What it stores is nothing.** The bank and the bags live on `SessionManager`
 ## like everything else that outlives the van, and the box of traps the weapons
 ## actually spend from lives on `Stock`. This only decides what goes into them.
 
@@ -234,7 +231,7 @@ func _apply(steam_id: int, item_id: String) -> void:
 	if item == null or not SessionManager.has_player(steam_id):
 		return
 
-	SessionManager.set_money(steam_id, SessionManager.money(steam_id) - item.price)
+	SessionManager.set_bank_balance(SessionManager.bank_balance - item.price)
 	SessionManager.add_item(steam_id, item_id)
 
 	# The box on the belt is this machine's own, and only this machine's man

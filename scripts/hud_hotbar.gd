@@ -13,11 +13,19 @@ extends HBoxContainer
 ## spending the last one empties the square again, which is the same square it
 ## was before the first purchase.
 ##
-## The hands are on no square. They were never bought, they cannot run out, and
-## `Q` is what brings them back (`scripts/weapons/inventory.gd`); with them out
-## the belt simply has nothing framed.
+## The hands sit on a square of their own, ahead of the bought ones and set
+## apart from them by a gap. They are still on no *slot* — they were never
+## bought, they cannot run out and the belt reads `Inventory.HANDS_INDEX` while
+## they are out — so their square is dressed once in the scene and never filled
+## from the inventory. It is framed like any other when they are the ones in
+## hand, which is the whole reason it is drawn: `Q` is a key the player has to
+## be told about (`scripts/weapons/inventory.gd`).
 ##
-## The two frames are built here instead of being dressed in `world.tscn`
+## A square on the belt is a `Cell` with its key written under it, so what the
+## screen shows is the box *and* the key that reaches it. The cell is what gets
+## framed and filled; the letter below it never changes.
+##
+## The two frames are built here instead of being dressed in the HUD scene
 ## because they are a pair: the picked one has to grow *outwards*
 ## (`expand_margin`) by exactly what its border gained, or whatever sits inside
 ## the square would shift a pixel every time the player swapped slots.
@@ -30,8 +38,17 @@ const PICKED_BORDER_COLOR := Color(1, 1, 1, 1)
 const BORDER := 1
 const PICKED_BORDER := 2
 
-## The cells, in the order they sit on the belt.
-@onready var _slots: Array[PanelContainer] = _gather_slots()
+## The square the hands are drawn on, and the one node under a square that the
+## frame and the contents go on.
+const HANDS_SLOT := "SlotHands"
+const CELL := "Cell"
+
+## The bought squares, in the order they sit on the belt. The hands' square is
+## not among them: nothing on the inventory is ever put into it.
+@onready var _slots: Array[Control] = _gather_slots()
+## The hands' square, or null in a belt drawn without one.
+@onready var _hands_cell: PanelContainer = get_node_or_null(
+	"%s/%s" % [HANDS_SLOT, CELL]) as PanelContainer
 
 var _normal: StyleBoxFlat
 var _picked: StyleBoxFlat
@@ -97,9 +114,10 @@ func _fill(inventory: Inventory) -> void:
 		var weapon := inventory.weapon_in(i)
 		if weapon != null and not weapon.available():
 			weapon = null
-		var icon: TextureRect = slot.get_node("Icon")
-		var label: BigFontOutlinedLabel = slot.get_node("Name")
-		var count: BigFontOutlinedLabel = slot.get_node("Count")
+		var cell := slot.get_node(CELL)
+		var icon: TextureRect = cell.get_node("Icon")
+		var label: BigFontOutlinedLabel = cell.get_node("Name")
+		var count: BigFontOutlinedLabel = cell.get_node("Count")
 		icon.texture = null if weapon == null else _icon_for(weapon)
 		icon.visible = icon.texture != null
 		# No picture for this weapon yet: its name stands in for one. An empty
@@ -222,19 +240,31 @@ func _bounds_of(node: Node3D, so_far := Transform3D.IDENTITY) -> AABB:
 	return bounds
 
 ## Frames the square in hand. With the hands out the index is no slot
-## (`Inventory.HANDS_INDEX`) and nothing gets framed, which is exactly right:
-## what the player is holding is not on the belt.
+## (`Inventory.HANDS_INDEX`), and it is their own square at the head of the belt
+## that lights up instead of one of the bought ones.
 func _highlight(index: int) -> void:
 	for i in _slots.size():
-		_slots[i].add_theme_stylebox_override("panel", _picked if i == index else _normal)
+		_cell(_slots[i]).add_theme_stylebox_override(
+			"panel", _picked if i == index else _normal)
+	if _hands_cell != null:
+		_hands_cell.add_theme_stylebox_override(
+			"panel", _picked if index == Inventory.HANDS_INDEX else _normal)
 
-func _gather_slots() -> Array[PanelContainer]:
-	var found: Array[PanelContainer] = []
+## The bought squares, found by the `Cell` under each of them. The hands' square
+## and the gap that sets it apart are skipped: neither is a slot the inventory
+## can put anything on.
+func _gather_slots() -> Array[Control]:
+	var found: Array[Control] = []
 	for child in get_children():
-		var slot := child as PanelContainer
-		if slot != null:
+		var slot := child as Control
+		if slot == null or slot.name == HANDS_SLOT:
+			continue
+		if slot.get_node_or_null(CELL) is PanelContainer:
 			found.append(slot)
 	return found
+
+func _cell(slot: Control) -> PanelContainer:
+	return slot.get_node(CELL) as PanelContainer
 
 func _on_weapon_changed(index: int, _weapon: Weapon) -> void:
 	_highlight(index)

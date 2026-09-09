@@ -1,6 +1,7 @@
 extends VBoxContainer
 ## The wallet on screen: what the player has to his name, and a passing notice of
-## the last animal delivered.
+## the last animal delivered. The gem beside it in the HUD is what says the
+## number is money (`scenes/hud_game.tscn`), so the line itself is only the sum.
 ##
 ## It is the balance and not the shift's takings. The house opens on whatever was
 ## left after the shopping in the van, because the bank pays it out of

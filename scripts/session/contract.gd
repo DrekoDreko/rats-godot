@@ -55,6 +55,8 @@ extends Resource
 @export var rat_types: Array[String] = []
 ## What the job pays when the house is cleared.
 @export var reward := 250
+## Amount withdrawn from the shared bank when the crew signs this job.
+@export var price := 0
 ## How hard it is, one to five. It is what the board sorts on and what the row
 ## of pips on the sheet is drawn from — a number rather than a word so that
 ## three contracts can be put in order without anybody writing the order down.

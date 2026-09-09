@@ -15,7 +15,7 @@ const BLINKS := 6.0
 
 ## The crosshair, which leaves the screen while the hands are busy. It is a path
 ## and not a direct node reference: an exported node only wires itself up in a
-## scene saved by the editor, and the `world.tscn` HUD is written by hand.
+## scene saved by the editor, and the `hud_game.tscn` HUD is written by hand.
 @export var crosshair_path := NodePath("../Crosshair")
 
 @onready var button: BigFontOutlinedLabel = $VBoxContainer/Button

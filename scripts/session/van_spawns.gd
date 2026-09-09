@@ -89,9 +89,16 @@ func count() -> int:
 ## van was built without any markers at all — a spawn point that answers
 ## nothing would drop the player through the floor.
 func spot_of(steam_id: int) -> Vector3:
+	return seat_transform_of(steam_id).origin
+
+
+## The complete seat placement. Position alone is insufficient here: the two
+## benches face each other, so a player on the right must also face the opposite
+## way from a player on the left.
+func seat_transform_of(steam_id: int) -> Transform3D:
 	if _spots.is_empty():
-		return global_position
-	return _spots[_seat_of(steam_id)].global_position
+		return global_transform
+	return _spots[_seat_of(steam_id)].global_transform
 
 
 ## Which marker falls to a Steam ID: his place in the crew, wrapped round if
@@ -112,10 +119,20 @@ func _place_player() -> void:
 	var player := get_tree().get_first_node_in_group("player")
 	if player == null:
 		return
+	var seat := seat_transform_of(_our_steam_id())
+	if not _spots.is_empty() and _spots[_seat_of(_our_steam_id())] is VanSeat:
+		var bench := _spots[_seat_of(_our_steam_id())] as VanSeat
+		player.set_spawn(bench.standing_position())
+		player.sit_at(bench.global_transform)
+		return
 	# `set_spawn` and not the position directly, so that a player who falls out
 	# of the world comes back to his own spot in the van rather than to wherever
 	# the player scene happened to be saved.
-	player.set_spawn(spot_of(_our_steam_id()))
+	player.global_basis = seat.basis.orthonormalized()
+	player.set_spawn(seat.origin)
+	# The road opens with everybody secured on a bench. Player owns the lock and
+	# the E press that releases it; this node only owns the scene's initial state.
+	player.set_seated(PhaseManager.current() == Phase.Type.TRAVEL)
 
 
 ## Puts the belt where the phase says it should be: barred in the parked van,

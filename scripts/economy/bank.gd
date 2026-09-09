@@ -2,13 +2,9 @@ extends Node
 ## The one purse, and the two moments it moves: the money is taken out of the
 ## bank on the doorstep and put back in on the pay slip.
 ##
-## **There is one balance, and the player sees the same number everywhere.** The
-## shop in the van spends `SessionManager.money`, which is per Steam ID and
-## written only by the host; the house spends and fills `Wallet`, which is this
-## machine's own and is what the HUD and the traps talk to. Those are two
-## different purses with two different owners, and before this node existed they
-## never spoke: a crew earned all night into the wallet and arrived back at the
-## shelf with the hundred dollars it started the evening on.
+## **There is one team balance, and everybody sees the same number.** The van
+## spends `SessionManager.bank_balance`; inside a house every machine mirrors it
+## in `Wallet` so the HUD, rat rewards and material costs stay synchronized.
 ##
 ## This is the bridge, and it is deliberately only two calls wide:
 ##
@@ -28,13 +24,9 @@ extends Node
 ## kind of thing that happens. Writing the whole number is idempotent and needs
 ## no latch to protect it.
 ##
-## **The host writes, everybody asks.** The same round trip the shelf takes
-## (`ShopManager.request_buy` -> `_request` -> `_handle_request` -> `_apply`),
-## and here for the same reason: a client that never writes its own balance
-## cannot write itself a fortune. What it *can* do is report one, and that is not
-## guarded — the same trust `Wallet._receive` already places in the peers being
-## the players. A man who wanted to cheat here has been able to do worse since
-## the first rat was paid for.
+## **Only the host settles.** Rat rewards and in-house costs already reached the
+## host's wallet, so clients never report an amount that could replace the crew's
+## authoritative balance.
 
 ## Somebody's balance was written. `steam_id` is whose. Nothing draws off this
 ## today — the shelf redraws on `SessionManager.player_changed` like everything
@@ -68,7 +60,7 @@ func withdraw() -> void:
 	var steam_id := _our_steam_id()
 	if steam_id == 0:
 		return
-	Wallet.set_balance(SessionManager.money(steam_id))
+	Wallet.set_balance(SessionManager.bank_balance)
 
 
 ## What the shift closes on: what is left in the wallet, plus what the client pays
@@ -86,6 +78,8 @@ func closing_balance() -> int:
 ## number, so that the pay slip and the HUD behind it are already showing what the
 ## shelf in the van is about to show — the answer does not wait on the wire.
 func settle() -> void:
+	if not PhaseManager.is_host():
+		return
 	var steam_id := _our_steam_id()
 	if steam_id == 0:
 		return
@@ -104,10 +98,9 @@ func settle() -> void:
 func request_deposit(steam_id: int, amount: int) -> void:
 	if steam_id == 0:
 		return
-	if PhaseManager.is_host():
-		_handle_request(steam_id, amount, _our_peer_id())
+	if not PhaseManager.is_host():
 		return
-	_request.rpc_id(HOST_PEER, steam_id, amount)
+	_handle_request(steam_id, amount, _our_peer_id())
 
 # --- The wire ---------------------------------------------------------------
 
@@ -157,7 +150,7 @@ func _apply(steam_id: int, amount: int) -> void:
 		return
 	if not SessionManager.has_player(steam_id):
 		return
-	SessionManager.set_money(steam_id, amount)
+	SessionManager.set_bank_balance(amount)
 	balance_settled.emit(steam_id, amount)
 
 # --- What wakes it up -------------------------------------------------------
@@ -205,22 +198,7 @@ func _on_the_wire() -> bool:
 ## no wire at all, which is a machine with nobody to lie to. The same shape as
 ## `ShopManager._may_speak_for`, and for the same reason.
 func _may_speak_for(from_peer: int, steam_id: int) -> bool:
-	if from_peer == 0 or not multiplayer.has_multiplayer_peer():
-		return true
-	if from_peer == _our_peer_id():
-		# Ourselves, and asked of the same helper the request was built with
-		# (`_our_steam_id`). The two have to be one question or they can answer
-		# differently: `steam_id_of_peer` reads the Steam account behind the peer,
-		# while `our_crew_id` falls back to the only man in a one-man crew — and a
-		# bench, or a game whose introduction has not landed, is exactly where
-		# those two part company. Turning our own deposit away over that would
-		# cost a shift's pay for a disagreement about a name nobody else uses.
-		return steam_id == _our_steam_id()
-	var owner_id := LobbyManager.steam_id_of_peer(from_peer)
-	# A peer whose introduction has not landed yet has no Steam ID to check
-	# against. Refusing him would lose him a shift's pay over a packet that is
-	# already on its way, which is a worse bug than the one being guarded against.
-	return owner_id == 0 or owner_id == steam_id
+	return (from_peer == 0 or from_peer == HOST_PEER) and steam_id == _our_steam_id()
 
 
 ## Our own peer id, or zero with no wire to have one on — asking Godot for an id

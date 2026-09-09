@@ -51,8 +51,8 @@ const INVITE_SLOT_SCENE := preload("res://scenes/menu_invite_slot.tscn")
 @onready var _play: Button = $UI/MarginContainer/Center/Play
 @onready var _public: Button = $UI/MarginContainer/Center/PublicLobbies
 @onready var _settings: Button = $UI/MarginContainer/Center/Settings
+@onready var _quit: Button = $UI/MarginContainer/Center/Quit
 @onready var _status: BigFontOutlinedLabel = $UI/MarginContainer/Center/StatusLabel
-@onready var _color_popup: ColorPopup = $UI/ColorPopup
 @onready var _modal: Control = $UI/LobbyModal
 @onready var _settings_modal: Control = $UI/SettingsMenu
 
@@ -74,6 +74,7 @@ func _ready() -> void:
 	_play.pressed.connect(_on_play_pressed)
 	_public.pressed.connect(_on_public_pressed)
 	_settings.pressed.connect(_settings_modal.show)
+	_quit.pressed.connect(_on_quit_pressed)
 
 	_modal.hide()
 	if _modal.has_signal("close_requested"):
@@ -89,7 +90,6 @@ func _ready() -> void:
 	NetworkGuard.host_disconnected.connect(_on_host_disconnected)
 	LobbyManager.peer_identified.connect(_on_peer_identified)
 
-	ColorManager.request_refused.connect(_on_refused)
 	ReadyManager.request_refused.connect(_on_refused)
 	SessionManager.player_changed.connect(_on_player_changed)
 	SessionManager.player_joined.connect(_on_player_changed)
@@ -189,6 +189,19 @@ func _on_play_pressed() -> void:
 func _on_public_pressed() -> void:
 	_modal.show()
 
+
+## Out of the game altogether, the same way `pause_menu.gd` leaves it: the lobby
+## is handed back before the process goes, so the crew sees a clean departure
+## rather than a peer that stops answering.
+##
+## The tree is taken hold of first because `leave_lobby` can send `NetworkGuard`
+## off to change the scene, which frees this node — and a `get_tree()` asked
+## afterwards comes back null, which would be a quit button that does not quit.
+func _on_quit_pressed() -> void:
+	var tree := get_tree()
+	LobbyManager.leave_lobby()
+	tree.quit()
+
 # --- Drawing ----------------------------------------------------------------
 
 ## Everything that depends on who is here and what they have chosen. Cheap
@@ -247,12 +260,8 @@ func _refresh_cards(crew: Array[Dictionary]) -> void:
 			_card_of[steam_id] = card
 			_cards.add_child(card)
 			card.setup(steam_id, _display_name(steam_id, String(player["name"])))
-			card.color_pressed.connect(_on_card_color_pressed)
 		else:
 			card.set_player_name(_display_name(steam_id, String(player["name"])))
-		# Written every time and not only on the way in: which crew entry is ours
-		# is a question whose answer moves when the crew changes shape.
-		card.is_ours = steam_id == LobbyManager.our_crew_id()
 		card.refresh()
 		_place_card(steam_id)
 
@@ -422,15 +431,11 @@ func _on_avatar_ready(steam_id: int, texture: ImageTexture) -> void:
 		card.set_photo(texture)
 
 
-## The host turned a request down — a colour already worn, a signature from
-## somebody who may not sign. It is shown rather than swallowed: a button that
-## does nothing and says nothing is indistinguishable from a broken one.
+## The host turned a signature down — somebody who may not sign. It is shown
+## rather than swallowed: a button that does nothing and says nothing is
+## indistinguishable from a broken one.
 func _on_refused(reason: String) -> void:
 	_say(reason, ERROR_COLOR)
-
-
-func _on_card_color_pressed() -> void:
-	_color_popup.open()
 
 
 ## A player's Steam name, or his crew colour instead of it under Streamer

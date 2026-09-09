@@ -56,6 +56,14 @@ signal capture_finished(killed: bool)
 ## `Inventory.HANDS_INDEX` with the hands out — no square to frame. It is what
 ## the hotbar listens to.
 signal weapon_changed(index: int, weapon: Weapon)
+## Something got him in the face. It is not a wound — the wound comes through
+## `damaged` like every other — it is what the wound was *by*, and the only thing
+## that listens is the splatter on the lens (`scripts/hud_splatter.gd`).
+##
+## Bare, like `squeezed`: there is one thing in the game that sprays and one thing
+## that draws it, and a strength nobody varies is a parameter nobody reads.
+signal splashed()
+
 ## The flesh changed, wound or bandage alike. It is what the health bar listens
 ## to, and it goes out on the healing at respawn too, so nothing on screen is
 ## left showing a corpse's health.
@@ -76,6 +84,9 @@ signal hold_started(interactable: Interactable)
 signal hold_progress(fraction: float)
 ## Finger up, eyes away, or the job done. `completed` tells the two apart.
 signal hold_finished(completed: bool)
+## Entered or left a fixed seat. The van sets the opening state; only this
+## character decides when local input releases it.
+signal seated_changed(seated: bool)
 
 @export_group("Movement")
 @export var walk_speed := 6.0
@@ -123,6 +134,9 @@ const MIN_HEIGHT := -20.0
 ## How fast the sway settles back to nothing once he stops, in fractions of the
 ## way per second. Quick enough not to be a drift, slow enough not to be a snap.
 const BOB_SETTLE := 8.0
+## Eye height while riding, relative to the standing head. The body animation
+## bends the visible legs; this moves the first-person view to the same height.
+const SEATED_HEAD_SCALE := 0.44
 
 ## How much of the animal's own fighting the hands follow, and how far they are
 ## allowed to be carried by it, in metres.
@@ -219,6 +233,9 @@ var _held_rat: Node3D
 ## seconds. It is what keeps the body holding the carcass for the length of the
 ## stowing — see `_on_weapon_stowing` and `arms_state`.
 var _arms_busy := 0.0
+## Fixed to a van bench. Looking remains available, but movement, weapons and
+## world interaction wait until the player presses Interact to stand.
+var _seated := false
 
 func _ready() -> void:
 	_start_position = global_position
@@ -378,12 +395,19 @@ func _unhandled_input(event: InputEvent) -> void:
 	# closes it is the screen's own business, and it never reaches this far.
 	if _ui_open:
 		return
+	if _seated and event.is_action_pressed("interact"):
+		set_seated(false)
+		get_viewport().set_input_as_handled()
+		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		# The whole body turns horizontally; only the head looks up and down.
 		var motion := (event as InputEventMouseMotion).relative
 		var yaw := -motion.x * mouse_sensitivity
 		var before := head.rotation.x
-		rotation.y += yaw
+		if _seated:
+			head.rotation.y = clampf(head.rotation.y + yaw, -PI * 0.42, PI * 0.42)
+		else:
+			rotation.y += yaw
 		head.rotation.x = clampf(
 			head.rotation.x - motion.y * mouse_sensitivity,
 			deg_to_rad(-MAX_PITCH),
@@ -398,6 +422,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		# was asked for: against the limit, looking further up is no turn at all,
 		# and arms that swung anyway would drift while the view stood still.
 		_look += Vector2(yaw, head.rotation.x - before)
+	elif _seated:
+		return
 	# Before the mouse toggle, because the two share Esc: a strip of glue half
 	# laid is the first thing Esc can mean, and only once there is none of it
 	# does the key go back to meaning what it usually means. The belt answers
@@ -472,7 +498,10 @@ func _physics_process(delta: float) -> void:
 	_update_crouch(delta)
 	var busy := inventory.is_busy()
 
-	if is_on_floor():
+	if _seated:
+		velocity = Vector3.ZERO
+		_air_time = 0.0
+	elif is_on_floor():
 		_air_time = 0.0
 	else:
 		_air_time += delta
@@ -481,7 +510,8 @@ func _physics_process(delta: float) -> void:
 	# With the hands full there is no jumping: holding the rat is work enough. Nor
 	# from down on his knees — pressing jump while crouched only lets go of the
 	# crouch, and the jump belongs to whoever is standing when he presses it.
-	if not busy and not _ui_open and not is_crouching() and Input.is_action_just_pressed("jump") and _air_time <= COYOTE_TIME:
+	if not busy and not _seated and not _ui_open and not is_crouching() \
+			and Input.is_action_just_pressed("jump") and _air_time <= COYOTE_TIME:
 		velocity.y = sqrt(2.0 * gravity * jump_height)
 		_air_time = COYOTE_TIME + 1.0
 
@@ -491,7 +521,8 @@ func _physics_process(delta: float) -> void:
 	velocity.x = move_toward(velocity.x, target.x, rate * delta)
 	velocity.z = move_toward(velocity.z, target.z, rate * delta)
 
-	move_and_slide()
+	if not _seated:
+		move_and_slide()
 
 	# The tail of a kill: his arms are still carrying the body down to his belt
 	# for a moment after the hands report themselves free (`arms_state`).
@@ -551,7 +582,7 @@ func _target_speed(busy: bool) -> float:
 
 ## Movement direction on the XZ plane, relative to where the character faces.
 func _desired_direction() -> Vector3:
-	if _ui_open:
+	if _ui_open or _seated:
 		return Vector3.ZERO
 	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	if input == Vector2.ZERO:
@@ -605,7 +636,7 @@ func _update_bob(delta: float) -> void:
 ## the speed all follow the same fraction, so at no point is he a short body
 ## with a tall head or a crouching body running.
 func _update_crouch(delta: float) -> void:
-	var wanted := not _ui_open and Input.is_action_pressed("crouch")
+	var wanted := not _seated and not _ui_open and Input.is_action_pressed("crouch")
 	if not wanted and _crouch > 0.0 and _is_blocked_above():
 		wanted = true
 	var target := 1.0 if wanted else 0.0
@@ -625,7 +656,8 @@ func _apply_crouch() -> void:
 	var shape := collision.shape as CapsuleShape3D
 	shape.height = height
 	collision.position.y = _stand_collision_y - (_stand_height - height) * 0.5
-	head.position.y = lerpf(_stand_head, _stand_head * CROUCH_SCALE, _crouch)
+	var head_scale := SEATED_HEAD_SCALE if _seated else lerpf(1.0, CROUCH_SCALE, _crouch)
+	head.position.y = _stand_head * head_scale
 	# And the arms travel with it. They hang off the camera, which the line above
 	# has just brought down, but the crouch *animation* lowers them a second time
 	# on top of that — so without this they leave the bottom of his own screen
@@ -650,6 +682,44 @@ func _is_blocked_above() -> bool:
 func is_crouching() -> bool:
 	return _crouch > 0.0
 
+
+## Places the character in, or releases it from, a fixed seat. Seating is an
+## opening condition supplied by the travel scene, not a general interaction:
+## after standing, the player cannot sit back down during the same trip.
+func set_seated(seated: bool) -> void:
+	if _seated == seated:
+		return
+	if _seated and not seated:
+		# The standing spawn belongs to this bench and lies in the aisle.
+		var query := PhysicsShapeQueryParameters3D.new()
+		query.shape = ceiling.shape
+		query.transform = Transform3D(Basis.IDENTITY, _start_position + Vector3.UP * _stand_collision_y)
+		query.collision_mask = collision_mask
+		query.exclude = [get_rid()]
+		if not get_world_3d().direct_space_state.intersect_shape(query, 1).is_empty():
+			return
+		global_position = _start_position
+		rotation.y += head.rotation.y
+		head.rotation.y = 0.0
+	_seated = seated
+	collision.set_deferred("disabled", seated)
+	velocity = Vector3.ZERO
+	_crouch = 0.0
+	_apply_crouch()
+	model.set_state(animation_state())
+	seated_changed.emit(_seated)
+
+
+## The marker lies on the cushion, independently of the standing respawn point.
+func sit_at(seat: Transform3D) -> void:
+	global_transform = seat.orthonormalized()
+	head.rotation = Vector3.ZERO
+	set_seated(true)
+
+
+func is_seated() -> bool:
+	return _seated
+
 ## Where the shift starts, and where a respawn brings him back to. The map puts
 ## him on his spot once, on the way in — with three other people pressing PLAY on
 ## the same starting point, somebody has to (`scripts/steam/player_avatars.gd`)
@@ -671,6 +741,10 @@ func respawn() -> void:
 	# On his feet again. Waking up back at the van still folded in half — because
 	# the ceiling he died under is nowhere near him now — would leave him low
 	# until he thought to press Ctrl and let go of it.
+	_seated = false
+	collision.set_deferred("disabled", false)
+	head.rotation.y = 0.0
+	seated_changed.emit(false)
 	_crouch = 0.0
 	_apply_crouch()
 	# And with the camera where the scene put it. Waking up mid-step would leave
@@ -713,6 +787,8 @@ func respawn() -> void:
 ## telling from a man sitting still — so the same `IDLE_SPEED` that separates
 ## standing from walking separates kneeling from creeping.
 func animation_state() -> PlayerAvatar.State:
+	if _seated:
+		return PlayerAvatar.State.SITTING
 	if not is_on_floor():
 		return PlayerAvatar.State.AIRBORNE
 	var speed := Vector2(velocity.x, velocity.z).length()
@@ -776,7 +852,7 @@ func _grip_drift() -> Vector3:
 ## screen the same way the crosshair does.
 func _update_focus() -> void:
 	var found: Interactable = null
-	if not _ui_open and not inventory.is_busy():
+	if not _seated and not _ui_open and not inventory.is_busy():
 		found = interact_ray.get_collider() as Interactable
 	if found == _focused:
 		return
@@ -873,6 +949,17 @@ func take_damage(amount: int = 1) -> void:
 	health_changed.emit(_health, max_health)
 	if _health == 0:
 		_die()
+
+## Caught a faceful. Said rather than done: what it means is the HUD's business
+## (`scripts/hud_splatter.gd`), and the wound that comes with it arrives
+## separately through `take_damage` — a spray is a hit and a mess, and the two are
+## not the same event.
+##
+## Guarded on death the same way `take_damage` is: a corpse takes no more piss.
+func splash() -> void:
+	if is_dead():
+		return
+	splashed.emit()
 
 ## Patches the player back up, never past the flesh he started the shift with.
 func heal(amount: int = 1) -> void:

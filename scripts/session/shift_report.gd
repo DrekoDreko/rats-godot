@@ -8,11 +8,13 @@ extends Node
 ## listens to that one signal and keeps the running total. The pay slip is then
 ## only a drawing of numbers that were already true.
 ##
-## **Each machine tallies its own.** The money on `Wallet` is this player's
-## money and nobody else's, and so is this. Nothing here crosses the wire: four
-## machines each keep their own slip, and each man is shown what his own hands
-## earned. A crew total would need the wire and is not what the shift pays on
-## today.
+## **Each machine tallies its own, and says only its own count out loud.** The
+## money on `Wallet` is this player's money and nobody else's, and so is
+## everything on this slip: four machines each keep their own, and each man is
+## paid what his own hands earned. The one thing that crosses the wire is the
+## bare number of rats — announced by the man who caught them, written into the
+## crew on every machine, and read by the scoreboard the players hold Tab for.
+## See the wire section at the foot of this file. Nothing is paid on it.
 ##
 ## **It survives the scene change.** The house is freed on the way back to the
 ## lobby and the pay slip is read before that happens, but the shift's opening
@@ -138,7 +140,12 @@ func species_rows() -> Array[Array]:
 	return rows
 
 
+## The end of a job, on every machine at once — `PhaseManager._clear_job` is what
+## calls it, and it runs everywhere. So the crew's counts are wiped locally here
+## rather than announced: four machines forgetting the same thing at the same
+## moment need no packet to agree.
 func reset() -> void:
+	SessionManager.reset_catches()
 	infestation = 0
 	caught = 0
 	earned = 0
@@ -160,4 +167,48 @@ func _on_catch_recorded(caught_species: RatSpecies, death_type: Death.Type, valu
 	if caught_species != null:
 		var display_name := caught_species.display_name
 		species[display_name] = species.get(display_name, 0) + 1
+	_publish_count()
 	changed.emit()
+
+# --- The one number that crosses ---------------------------------------------
+# A player wants to know how the others are doing, and no machine but his own
+# knows what his hands have taken: the rat is thought for by the host, but it is
+# paid on the machine of whoever killed it (`Wallet.credit`), and that is also
+# the only machine where `caught` above moves.
+#
+# So each man announces his own running total, and everybody writes it into the
+# crew. It is sent whole rather than as "one more", which is what makes a packet
+# that goes missing cost nothing: the next catch carries the true figure and the
+# row corrects itself.
+#
+# The sender is not taken at his word about *who* he is — the Steam ID is looked
+# up from the peer the packet actually came in on, so a machine can only ever
+# move its own number. What it says about its own count is believed, for the
+# reason `Wallet._receive` gives at length: nothing is bought with it.
+
+
+## Tells the crew what we are on, and writes it here as well.
+func _publish_count() -> void:
+	var steam_id := LobbyManager.our_crew_id()
+	if steam_id != 0:
+		SessionManager.set_catches(steam_id, caught)
+	if _on_the_wire():
+		_report_count.rpc(caught)
+
+
+## Somebody else's count, landing. `any_peer` because it is his to report and he
+## is not the host; whose it is comes off the wire and not out of the packet.
+@rpc("any_peer", "reliable")
+func _report_count(count: int) -> void:
+	var steam_id := LobbyManager.steam_id_of_peer(multiplayer.get_remote_sender_id())
+	if steam_id == 0:
+		return
+	SessionManager.set_catches(steam_id, count)
+
+
+## Whether there is anybody to send to. A solo shift has a crew of one and an
+## `rpc` on a peer that was never dialled is an error in the log for a message
+## nobody was waiting for — the same question `Wallet.credit` asks first.
+func _on_the_wire() -> bool:
+	var api := multiplayer
+	return api != null and api.multiplayer_peer != null 			and not api.multiplayer_peer is OfflineMultiplayerPeer

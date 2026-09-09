@@ -42,45 +42,19 @@ extends CanvasLayer
 ## **It is also where a player finds out who else is still here.** A man who has
 ## just watched somebody stop moving has one question, and it is not answered by
 ## the game carrying on around him: is that player gone, or is his line simply
-## bad? So the menu carries the crew with a round trip against each name — see
-## the section at the foot of this file, and `LobbyManager.ping_of_peer`, which
-## is the one place that knows what wire is underneath.
+## bad? So the menu carries the crew with a round trip against each name. The
+## list itself is `scripts/ui/crew_list.gd` and belongs to nothing here — the
+## scoreboard the crew holds Tab for draws the same rows, and a second copy of
+## them would be a second place for the crew to look different.
 
 ## The lobby *screen*, one step before the van. It is where "Sair da partida"
 ## goes, and it is the same path `NetworkGuard` sends a stranded client to.
 const LOBBY_SCENE := "res://scenes/menu.tscn"
 
-## How often the crew list is rebuilt while the menu is up, in seconds. A ping
-## is a number that wanders by a few milliseconds between one reading and the
-## next, and redrawing it sixty times a second would make it unreadable as well
-## as wasteful — half a second is fast enough that a man who has just walked out
-## is gone before it is noticed, and slow enough to read.
-const CREW_REFRESH := 0.5
-
-## The dot in front of each name, drawn in that player's colour. A filled circle
-## is the one glyph that reads as a colour swatch at eight points.
-const CREW_SWATCH := "●"
-
-## What marks the host in the list, as a translation key. It goes after the
-## name rather than before, so that the names still line up under each other.
-const CREW_HOST_MARK := "PAUSE_HOST_MARK"
-
-## What a row says where a ping would go when there is none to show — solo, or a
-## peer who has not answered his first probe. An em dash and not "0 ms", which
-## would be a lie of exactly the kind a player would believe.
-const CREW_NO_PING := "—"
-
-## Font size for a crew row. The same eight points the hint under the title
-## uses: this is a footnote to the menu, not the menu.
-const CREW_FONT_SIZE := 8
-
 @onready var _resume: Button = $Center/Panel/Margin/Rows/Resume
 @onready var _leave: Button = $Center/Panel/Margin/Rows/Leave
 @onready var _quit: Button = $Center/Panel/Margin/Rows/Quit
-## Where the crew rows are put. It is emptied and refilled rather than kept in
-## step row by row: four rows is nothing to build, and a list that is rebuilt
-## whole can never be a list that quietly disagrees with the crew.
-@onready var _crew: VBoxContainer = $Center/Panel/Margin/Rows/Crew
+@onready var _crew: CrewList = $Center/Panel/Margin/Rows/Crew
 @onready var _crew_title: Label = $Center/Panel/Margin/Rows/CrewTitle
 @onready var _crew_separator: HSeparator = $Center/Panel/Margin/Rows/CrewSeparator
 @onready var _how_to: Button = $Center/Panel/Margin/Rows/HowTo
@@ -97,11 +71,6 @@ const CREW_FONT_SIZE := 8
 ## can part company for one frame while a scene is being changed under us.
 var _open := false
 
-## What is left of the wait before the crew list is rebuilt. Counted down in
-## `_process`, which only runs while the menu is up (see `open` and `close`), so
-## a closed menu costs nothing at all.
-var _crew_countdown := 0.0
-
 
 func _ready() -> void:
 	# The menu itself must keep running while it holds the tree paused —
@@ -111,10 +80,14 @@ func _ready() -> void:
 	# immediately fatal rather than merely wrong.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	hide()
-	# Nothing to redraw while the menu is down, and `PROCESS_MODE_ALWAYS` would
-	# otherwise have this ticking through every frame of a shift for no reason.
-	# `open` turns it back on.
-	set_process(false)
+
+	# The list keeps its own count of when to redraw and stops dead while it
+	# cannot be seen, so a closed menu costs nothing. What is left here is the
+	# heading and the rule above it, which are only hidden for a crew of nobody —
+	# a bench, or a half-loaded scene. A solo player is a crew of one.
+	SessionManager.player_joined.connect(_on_crew_changed)
+	SessionManager.player_left.connect(_on_crew_changed)
+	_on_crew_changed(0)
 
 	_resume.pressed.connect(close)
 	_how_to.pressed.connect(_show_help)
@@ -171,11 +144,6 @@ func open() -> void:
 	show()
 	# Always up on the buttons, whatever page was last read.
 	_show_menu()
-	# Built once on the way up, so the list is right in the first frame the
-	# player sees rather than half a second into it.
-	_refresh_crew()
-	_crew_countdown = CREW_REFRESH
-	set_process(true)
 	get_tree().paused = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	# Focused so the menu can be driven from the keyboard, and so that a
@@ -194,7 +162,6 @@ func close() -> void:
 		return
 	_open = false
 	hide()
-	set_process(false)
 	get_tree().paused = false
 	if not _player_is_busy():
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -226,7 +193,6 @@ func close() -> void:
 func _leave_match() -> void:
 	_open = false
 	hide()
-	set_process(false)
 	var tree := get_tree()
 	tree.paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -276,7 +242,6 @@ func _on_host_disconnected(_reason: String) -> void:
 		return
 	_open = false
 	hide()
-	set_process(false)
 	get_tree().paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
@@ -292,132 +257,19 @@ func _player_is_busy() -> bool:
 	return player.is_ui_open()
 
 # --- Who else is in the shift ------------------------------------------------
-# The list is drawn off `SessionManager.players` and not off
-# `LobbyManager.list_players()`, and the difference is the whole point of it.
-# The guest list is Valve's answer to "who is in this lobby"; the crew is the
-# game's answer to "who is actually in this shift", which is the question a man
-# is asking when he opens a menu to see whether the others are still there. They
-# part company exactly when it matters — a player who joined the lobby but never
-# got through `JoinGate`, a player whose game died without Steam noticing yet.
-#
-# Nothing here is polled off a signal. `player_joined` and its brothers would
-# redraw the list on a machine whose menu is closed, and the list is worthless
-# then; the countdown below only runs while the menu is up.
 
-
-## Ticks the crew list along. Runs only while the menu is open — `open` and
-## `close` are what turn it on and off — so this is not a cost the rest of the
-## game pays.
-func _process(delta: float) -> void:
-	_crew_countdown -= delta
-	if _crew_countdown > 0.0:
-		return
-	_crew_countdown = CREW_REFRESH
-	_refresh_crew()
-
-
-## Throws the rows away and builds them again from the crew as it stands.
+## The heading and the rule above the crew, hidden together with an empty crew
+## rather than left as a labelled hole. That is the state a bench or a
+## half-loaded scene is in; a solo player is a crew of one and gets his own row.
 ##
-## An empty crew hides the whole section, heading and rule and all, rather than
-## leaving a labelled hole. That is the state a bench or a half-loaded scene is
-## in; a solo player is a crew of one and gets his own row, with no ping, which
-## is the truth about a man with no wire.
-func _refresh_crew() -> void:
-	for row in _crew.get_children():
-		row.queue_free()
-
-	var crew := SessionManager.players
-	var has_crew := not crew.is_empty()
+## The list under them looks after itself — it rebuilds on its own clock while it
+## is on screen — so all that is needed here is the question "is there anybody at
+## all", asked when somebody walks in or out.
+func _on_crew_changed(_steam_id: int) -> void:
+	var has_crew := not SessionManager.players.is_empty()
 	_crew.visible = has_crew
 	_crew_title.visible = has_crew
 	_crew_separator.visible = has_crew
-	if not has_crew:
-		return
-
-	# Sorted, and by Steam ID rather than by name: the crew is a dictionary and
-	# its order is whatever order people happened to arrive in on this machine,
-	# which is not the same order on the next one. A man should not find himself
-	# in a different place in the list on his friend's screen — and a list that
-	# reshuffles as somebody leaves is one nobody can read.
-	var ids := crew.keys()
-	ids.sort()
-	for steam_id in ids:
-		_crew.add_child(_crew_row(steam_id))
-
-
-## One line of the list: a dot in the player's colour, his name, the host mark
-## if it is his, and his ping pushed out to the right.
-##
-## The dot is a `Label` of its own so that only it carries the colour — a whole
-## row tinted red would be a row that reads as an error rather than as a man in
-## a red suit.
-func _crew_row(steam_id: int) -> HBoxContainer:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
-
-	var swatch := Label.new()
-	swatch.text = CREW_SWATCH
-	swatch.add_theme_font_size_override("font_size", CREW_FONT_SIZE)
-	swatch.add_theme_color_override("font_color", SessionManager.color(steam_id))
-	swatch.add_theme_color_override("font_outline_color", Color.BLACK)
-	swatch.add_theme_constant_override("outline_size", 4)
-	row.add_child(swatch)
-
-	var player := SessionManager.player(steam_id)
-	var name_label := Label.new()
-	var shown_name := String(player.get("name", "..."))
-	if SettingsManager.streamer_mode:
-		shown_name = ColorManager.display_name_for(steam_id)
-	name_label.text = shown_name
-	if bool(player.get("is_host", false)):
-		name_label.text += tr(CREW_HOST_MARK)
-	name_label.add_theme_font_size_override("font_size", CREW_FONT_SIZE)
-	name_label.add_theme_color_override("font_color", Color.WHITE)
-	name_label.add_theme_color_override("font_outline_color", Color.BLACK)
-	name_label.add_theme_constant_override("outline_size", 4)
-	# The name takes whatever width is going, which is what pins the ping to the
-	# right-hand edge however long or short the names turn out to be.
-	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(name_label)
-
-	var ping := Label.new()
-	ping.text = _ping_text(steam_id)
-	ping.add_theme_font_size_override("font_size", CREW_FONT_SIZE)
-	ping.add_theme_color_override("font_color", _ping_color(steam_id))
-	ping.add_theme_color_override("font_outline_color", Color.BLACK)
-	ping.add_theme_constant_override("outline_size", 4)
-	ping.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	row.add_child(ping)
-
-	return row
-
-
-## The ping as a player reads it. Our own row and a solo run both come back
-## without a number: asking a man how far he is from himself is not a question,
-## and answering "0 ms" would suggest a wire that is not there.
-func _ping_text(steam_id: int) -> String:
-	if steam_id == LobbyManager.our_steam_id():
-		return CREW_NO_PING
-	var ping := LobbyManager.ping_of_steam_id(steam_id)
-	if ping < 0:
-		return CREW_NO_PING
-	return "%d ms" % ping
-
-
-## Green, yellow or red, at the two thresholds a player would draw them at
-## himself. Grey for a row with no number, so that "we do not know" never looks
-## like "this is fine".
-func _ping_color(steam_id: int) -> Color:
-	if steam_id == LobbyManager.our_steam_id():
-		return Color(0.72, 0.72, 0.72)
-	var ping := LobbyManager.ping_of_steam_id(steam_id)
-	if ping < 0:
-		return Color(0.72, 0.72, 0.72)
-	if ping < 80:
-		return Color(0.42, 0.86, 0.42)
-	if ping < 180:
-		return Color(0.95, 0.83, 0.35)
-	return Color(0.95, 0.42, 0.42)
 
 
 # --- The two pages -----------------------------------------------------------

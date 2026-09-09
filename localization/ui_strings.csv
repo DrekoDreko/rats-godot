@@ -18,6 +18,7 @@ Left button (holding) — strangle
 1 2 3 — switch weapon
 E — use the computer
 E (holding) — clean a sprung trap ($2 to set it again)
+Tab (holding) — who else is in the match
 Esc — release the mouse","WASD / setas — mover
 Shift — correr
 Espaço — pular
@@ -27,6 +28,7 @@ Botão esquerdo (segurando) — estrangular
 1 2 3 — trocar de arma
 E — usar o computador
 E (segurando) — limpar uma armadilha disparada ($2 para armar de novo)
+Tab (segurando) — quem mais está na partida
 Esc — soltar o mouse"
 HELP_BACK,Back,Voltar
 MENU_PLAY,PLAY,JOGAR
@@ -42,6 +44,7 @@ MENU_PLAY_COUNT,PLAY  %d/%d,JOGAR  %d/%d
 MENU_CANCEL,CANCEL,CANCELAR
 MENU_READY,READY,PRONTO
 MENU_INVITE_TOOLTIP,Invite a friend,Convidar um amigo
+MENU_QUIT,QUIT GAME,SAIR DO JOGO
 LOBBY_CODE_PLACEHOLDER,LOBBY ID,ID DO LOBBY
 LOBBY_JOIN,JOIN,ENTRAR
 LOBBY_REFRESH,REFRESH LIST,ATUALIZAR LISTA
@@ -65,10 +68,13 @@ SETTINGS_LANGUAGE,Language,Idioma
 CONTRACT_VOTE_TITLE,Choose the contract,Escolha o contrato
 CONTRACT_VOTE_RATS,%d rats,%d ratos
 CONTRACT_VOTE_COUNT,%d votes,%d votos
-CONTRACT_VOTE_3MIN,3 min,3 min
-CONTRACT_VOTE_5MIN,5 min,5 min
-CONTRACT_VOTE_10MIN,10 min,10 min
+CONTRACT_VOTE_3MIN,"1:30 min","1:30 min"
+CONTRACT_VOTE_5MIN,3 min,3 min
+CONTRACT_VOTE_10MIN,5 min,5 min
 CONTRACT_VOTE_RATE,$%d/rat,$%d/rato
+CONTRACT_VOTE_FREE,FREE CONTRACT,CONTRATO GRÁTIS
+CONTRACT_VOTE_COST,$%d minimum,$%d no mínimo
+CONTRACT_VOTE_NEEDS,Team bank needs $%d.,O banco da equipe precisa de $%d.
 CONTRACT_VOTE_START,START,COMEÇAR
 CONTRACT_VOTE_PICK_ONE,Pick a job.,Escolha um contrato.
 CONTRACT_VOTE_WAITING_HOST,Waiting for the crew leader to confirm.,Aguardando o líder da equipe confirmar.
@@ -78,21 +84,22 @@ PHASE_TRAVEL,TRAVEL,VIAGEM
 PHASE_SURVEY,SURVEY,VISTORIA
 PHASE_HUNT,HUNT,CAÇADA
 PHASE_RESULT,RESULT,RESULTADO
-HUD_WAGER,x%d PAY,x%d PAGAMENTO
+HUD_WAGER,$%d / RAT,$%d / RATO
 HUD_READY,%d/%d READY,%d/%d PRONTOS
-HUD_RATS,Rats: %d / %d,Ratos: %d / %d
-HUD_MONEY_TOTAL,$ %d,$ %d
+HUD_RATS,%d,%d
+HUD_SLOT_HANDS,Q,Q
+HUD_MONEY_TOTAL,$%d,$%d
 HUD_MONEY_NOTICE,+$%d  %s,+$%d  %s
 HUD_INTERACT_PROMPT,E — %s,E — %s
 HUD_STRANGLE_BUTTON,CLICK,CLIQUE
 HUD_STRANGLE_INSTRUCTION,hammer to strangle,martele para estrangular
-PROMPT_STUDY_PLAN,study the plan,estude o plano
 PROMPT_USE_TERMINAL,use the terminal,use o terminal
 PROMPT_CLEAN_TRAP,clean the trap,limpe a armadilha
 PROMPT_STEP_AWAY_TABLE,step away from the table,afaste-se da mesa
 PROMPT_STEP_BACK_TERMINAL,step back from the terminal,afaste-se do terminal
 PROMPT_READY_UP,ready up,fique pronto
 PROMPT_STAND_DOWN,stand down,cancele a prontidão
+PROMPT_STAND_UP,stand up,levante-se
 DEATH_NATURAL_CAUSES,natural causes,causas naturais
 DEATH_STRANGULATION,strangulation,estrangulamento
 DEATH_POISON,poison,veneno

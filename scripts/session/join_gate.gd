@@ -379,12 +379,12 @@ func _snapshot() -> Dictionary:
 			"name": entry["name"],
 			"color": entry["color"],
 			"ready": entry["ready"],
-			"money": entry["money"],
 			"inventory": entry["inventory"],
 			"is_host": entry["is_host"],
 		})
 	return {
 		"crew": crew,
+		"bank_balance": SessionManager.bank_balance,
 		"contract": SessionManager.current_contract,
 		"hunt_time": ContractManager.hunt_time_state(),
 		"voting_open": ContractManager.voting_open,
@@ -413,9 +413,10 @@ func _apply_welcome(state: Dictionary) -> void:
 		SessionManager.register_player(steam_id, String(entry["name"]), bool(entry["is_host"]))
 		SessionManager.set_color(steam_id, entry["color"])
 		SessionManager.set_ready(steam_id, bool(entry["ready"]))
-		SessionManager.set_money(steam_id, int(entry["money"]))
 		for item_id in entry.get("inventory", []):
 			SessionManager.add_item(steam_id, String(item_id))
+	SessionManager.set_bank_balance(int(state.get(
+		"bank_balance", crew.size() * SessionManager.STARTING_MONEY)))
 
 	# Through the contract manager rather than straight onto `SessionManager`,
 	# because a signature is more than a string: it also points the phase machine

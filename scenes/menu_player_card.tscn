@@ -37,8 +37,3 @@ layout_mode = 2
 size_flags_horizontal = 4
 text = "Hello"
 
-[node name="Swatch" type="Button" parent="." unique_id=1936632405]
-custom_minimum_size = Vector2(18, 12)
-layout_mode = 2
-size_flags_horizontal = 4
-tooltip_text = "Pick your colour"

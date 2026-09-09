@@ -1,32 +1,27 @@
 [gd_scene format=3 uid="uid://3o1jdkd6gviy"]
 
-[ext_resource type="PackedScene" uid="uid://cnc3cxoy5gjim" path="res://models/box_van.glb" id="1_van"]
+[ext_resource type="PackedScene" uid="uid://dlweiu424547o" path="res://models/rats_van.glb" id="1_van"]
+[ext_resource type="Script" uid="uid://c1brx5ynxvh6i" path="res://scripts/session/van_doors.gd" id="30_doors"]
 [ext_resource type="Shader" uid="uid://bwmdy542q66bt" path="res://scripts/ps1.gdshader" id="2_kxyy5"]
 [ext_resource type="PackedScene" uid="uid://bvvcrva6c1ve" path="res://scenes/player.tscn" id="2_player"]
 [ext_resource type="PackedScene" uid="uid://bgordf5uoxh7c" path="res://scenes/ps1.tscn" id="3_75jji"]
-[ext_resource type="Script" uid="uid://bk3mtd8wq1jyf" path="res://scripts/rat_counter.gd" id="5_counter"]
 [ext_resource type="Script" uid="uid://x5twjg1fjgnu" path="res://scripts/navigation.gd" id="6_navigation"]
-[ext_resource type="Script" uid="uid://6r0t5qiq00nh" path="res://scripts/hud_strangle.gd" id="7_strangle"]
-[ext_resource type="Script" uid="uid://c7w383s5alkcq" path="res://scripts/hud_money.gd" id="8_money"]
-[ext_resource type="Script" uid="uid://m4hmg2xirspk" path="res://scripts/hud_hotbar.gd" id="9_hotbar"]
-[ext_resource type="Script" uid="uid://bss1ad1ogrub7" path="res://scripts/hud_health.gd" id="10_health"]
-[ext_resource type="Script" uid="uid://bgxxpnjqmrumj" path="res://scripts/hud_prompt.gd" id="12_prompt"]
 [ext_resource type="Script" uid="uid://bv088710brpjr" path="res://scripts/steam/player_avatars.gd" id="14_players"]
-[ext_resource type="Script" uid="uid://po783g0faobf" path="res://scripts/hud_hold.gd" id="15_hold"]
 [ext_resource type="Script" uid="uid://p2qmhsntuqfu" path="res://scripts/house/house.gd" id="16_house"]
-[ext_resource type="Script" uid="uid://c1mwm2lhfbvo5" path="res://scripts/house/rat_hole.gd" id="17_hole"]
+[ext_resource type="PackedScene" path="res://scenes/clues/rat_hole.tscn" id="17_hole"]
 [ext_resource type="Script" uid="uid://cgmykbygxdhqj" path="res://scripts/session/house_spawns.gd" id="18_spawns"]
 [ext_resource type="PackedScene" path="res://scenes/ready_station.tscn" id="19_ready"]
 [ext_resource type="PackedScene" path="res://scenes/hud_phase.tscn" id="20_hud_phase"]
-[ext_resource type="Script" uid="uid://ddlqj8ges01dg" path="res://scripts/map/map_table.gd" id="21_table"]
-[ext_resource type="PackedScene" uid="uid://b4wetum1hnqtu" path="res://scenes/big_font_outlined_label.tscn" id="27_big_font"]
-[ext_resource type="PackedScene" path="res://scenes/minimap.tscn" id="28_minimap"]
+[ext_resource type="PackedScene" path="res://scenes/hud_game.tscn" id="29_hud_game"]
 [ext_resource type="PackedScene" path="res://scenes/result_screen.tscn" id="22_result"]
 [ext_resource type="Texture2D" uid="uid://d4n0gjqdch0t2" path="res://assets/textures/floor/concrete_floor_atlas.png" id="23_floor_tex"]
 [ext_resource type="PackedScene" uid="uid://dmio8uviym8en" path="res://models/totem.glb" id="24_totem"]
 [ext_resource type="Script" uid="uid://bcvx5d4kfjqk1" path="res://scripts/session/store_terminal.gd" id="25_terminal"]
-[ext_resource type="PackedScene" path="res://scenes/store_screen.tscn" id="26_store"]
+[ext_resource type="PackedScene" path="res://scenes/terminal_screen.tscn" id="26_store"]
 [ext_resource type="PackedScene" path="res://scenes/pause_menu.tscn" id="99_pause"]
+[ext_resource type="PackedScene" path="res://scenes/scoreboard.tscn" id="98_scoreboard"]
+[ext_resource type="PackedScene" path="res://scenes/clues/garbage_pile.tscn" id="31_garbage"]
+[ext_resource type="Script" path="res://scripts/house/dropping_trail.gd" id="32_droppings"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_munwf"]
 render_priority = 0
@@ -661,55 +656,8 @@ agent_height = 0.8
 agent_radius = 0.25
 agent_max_climb = 0.2
 
-[sub_resource type="BoxShape3D" id="Shape_box_van_floor"]
-size = Vector3(3.2, 0.12, 7)
-
-[sub_resource type="BoxShape3D" id="Shape_box_van_side"]
-size = Vector3(0.12, 2.4, 7)
-
-[sub_resource type="BoxShape3D" id="Shape_box_van_end"]
-size = Vector3(3.2, 2.4, 0.12)
-
-[sub_resource type="BoxShape3D" id="Shape_box_van_roof"]
-size = Vector3(3.2, 0.12, 7)
-
 [sub_resource type="BoxShape3D" id="Shape_box_van_ramp"]
 size = Vector3(2, 0.12, 2.4)
-
-[sub_resource type="BoxShape3D" id="Shape_box_van_bench"]
-size = Vector3(0.44, 0.42, 2.4)
-
-[sub_resource type="BoxShape3D" id="Shape_totem_body"]
-size = Vector3(0.56, 1.5, 0.68)
-
-[sub_resource type="BoxShape3D" id="Shape_reach_table"]
-size = Vector3(0.72, 0.96, 0.7)
-
-[sub_resource type="StandardMaterial3D" id="Mat_table_sheet"]
-resource_local_to_scene = true
-shading_mode = 0
-texture_filter = 0
-
-[sub_resource type="QuadMesh" id="Mesh_table_sheet"]
-material = SubResource("Mat_table_sheet")
-size = Vector2(0.8, 0.55)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_iexy4"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(1, 1, 1, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.0
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 0.5
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
 
 [sub_resource type="BoxShape3D" id="Shape_reach_terminal"]
 size = Vector3(0.7, 1.2, 0.9)
@@ -1058,79 +1006,26 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.214491, 0, 22)
 
 [node name="PS1" parent="Van" unique_id=1644828936 instance=ExtResource("3_75jji")]
 
-[node name="Shell" type="StaticBody3D" parent="Van" unique_id=656369829 groups=["scenery"]]
+[node name="Doors" type="Node3D" parent="Van" unique_id=192847291]
+script = ExtResource("30_doors")
+
+[node name="Ramp" type="StaticBody3D" parent="Van" unique_id=184918294 groups=["scenery"]]
 collision_mask = 0
 
-[node name="Floor" type="CollisionShape3D" parent="Van/Shell" unique_id=585685999]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.562, 0)
-shape = SubResource("Shape_box_van_floor")
-
-[node name="SideL" type="CollisionShape3D" parent="Van/Shell" unique_id=998773326]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.66, 1.82, 0)
-shape = SubResource("Shape_box_van_side")
-
-[node name="SideR" type="CollisionShape3D" parent="Van/Shell" unique_id=1938843341]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.66, 1.82, 0)
-shape = SubResource("Shape_box_van_side")
-
-[node name="Bulkhead" type="CollisionShape3D" parent="Van/Shell" unique_id=766684695]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.82, -3.46)
-shape = SubResource("Shape_box_van_end")
-
-[node name="Roof" type="CollisionShape3D" parent="Van/Shell" unique_id=574141313]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.08, 0)
-shape = SubResource("Shape_box_van_roof")
-
-[node name="Ramp" type="CollisionShape3D" parent="Van/Shell" unique_id=1711596389]
-transform = Transform3D(1, 0, 0, 0, 0.9661, -0.2582, 0, 0.2582, 0.9661, 0, 0.2665, 4.6476)
+[node name="Collision" type="CollisionShape3D" parent="Van/Ramp" unique_id=1711596389]
+transform = Transform3D(1, 0, 0, 0, 0.9661, -0.2582, 0, 0.2582, 0.9661, 0, 0.2665, 4.45)
 shape = SubResource("Shape_box_van_ramp")
-
-[node name="BenchL" type="CollisionShape3D" parent="Van/Shell" unique_id=1960690024]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.38, 0.83, -1.4)
-shape = SubResource("Shape_box_van_bench")
-
-[node name="BenchR" type="CollisionShape3D" parent="Van/Shell" unique_id=282354128]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.38, 0.83, -1.4)
-shape = SubResource("Shape_box_van_bench")
 
 [node name="Lamps" type="Node3D" parent="Van" unique_id=787649715]
 
-[node name="Totem" parent="Van" unique_id=521614369 instance=ExtResource("24_totem")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.622, -3.05)
-
-[node name="Body" type="StaticBody3D" parent="Van/Totem" unique_id=363727602 groups=["scenery"]]
-collision_mask = 0
-
-[node name="Collision" type="CollisionShape3D" parent="Van/Totem/Body" unique_id=928380535]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0.07)
-shape = SubResource("Shape_totem_body")
-
-[node name="MapTable" type="Area3D" parent="Van" unique_id=2031069548 groups=["map_station"]]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -1.55, 1.55, 0.6)
-collision_layer = 8
-collision_mask = 0
-monitoring = false
-script = ExtResource("21_table")
-prompt = "PROMPT_STUDY_PLAN"
-
-[node name="Reach" type="CollisionShape3D" parent="Van/MapTable" unique_id=287089748]
-shape = SubResource("Shape_reach_table")
-
-[node name="PlanSurface" type="MeshInstance3D" parent="Van/MapTable" unique_id=1531959553]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.03)
-mesh = SubResource("Mesh_table_sheet")
-surface_material_override/0 = SubResource("ShaderMaterial_iexy4")
-
-[node name="Open" type="AudioStreamPlayer3D" parent="Van/MapTable" unique_id=729672593]
-unit_size = 3.0
-max_distance = 12.0
-
-[node name="Refused" type="AudioStreamPlayer3D" parent="Van/MapTable" unique_id=1858088481]
-unit_size = 3.0
-max_distance = 12.0
+[node name="Front" type="OmniLight3D" parent="Van/Lamps" unique_id=182749182]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4, 0.4)
+light_color = Color(1, 0.96, 0.88, 1)
+light_energy = 1.0
+omni_range = 6.0
 
 [node name="StoreTerminal" type="Area3D" parent="Van" unique_id=174902588 groups=["store_station"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, -2.75)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1405, -0.211)
 collision_layer = 8
 collision_mask = 0
 monitoring = false
@@ -1145,7 +1040,7 @@ unit_size = 3.0
 max_distance = 12.0
 
 [node name="Screen" type="MeshInstance3D" parent="Van/StoreTerminal" unique_id=1719331591]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00175, 0.4501, -0.0745)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00175, 0.7501, 0.15)
 mesh = SubResource("Mesh_totem_screen")
 surface_material_override/0 = SubResource("ShaderMaterial_npbic")
 
@@ -1153,11 +1048,11 @@ surface_material_override/0 = SubResource("ShaderMaterial_npbic")
 size = Vector2i(640, 507)
 render_target_update_mode = 4
 
-[node name="StoreScreen" parent="Van/StoreTerminal/Screen/Viewport" unique_id=890147873 instance=ExtResource("26_store")]
+[node name="TerminalScreen" parent="Van/StoreTerminal/Screen/Viewport" unique_id=890147873 instance=ExtResource("26_store")]
 layout_mode = 3
 
 [node name="ReadyStation" parent="Van" unique_id=613290001 instance=ExtResource("19_ready")]
-transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -1.55, 1.62, 2.35)
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -1.48, 1.62, 2.2)
 
 [node name="Spawns" type="Node3D" parent="." unique_id=335772048]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0, 27.5)
@@ -1184,7 +1079,7 @@ script = ExtResource("14_players")
 [node name="Traps" type="Node3D" parent="." unique_id=84269803]
 
 [node name="TrapSpawner" type="MultiplayerSpawner" parent="Traps" unique_id=84269804]
-_spawnable_scenes = PackedStringArray("res://scenes/traps/mousetrap.tscn", "res://scenes/traps/glue_trap.tscn", "res://scenes/traps/explosive_cheese.tscn")
+_spawnable_scenes = PackedStringArray("res://scenes/traps/mousetrap.tscn", "res://scenes/traps/glue_trap.tscn", "res://scenes/traps/explosive_cheese.tscn", "res://scenes/traps/bait_pile.tscn")
 spawn_path = NodePath("..")
 
 [node name="Rats" type="Node3D" parent="." unique_id=1730976301]
@@ -1195,35 +1090,60 @@ spawn_path = NodePath("..")
 
 [node name="RatHoles" type="Node3D" parent="." unique_id=1309894906]
 
-[node name="HoleKitchen1" type="Node3D" parent="RatHoles" unique_id=2072346131]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -29, 0.1, -22)
-script = ExtResource("17_hole")
+[node name="HoleKitchen1" parent="RatHoles" instance=ExtResource("17_hole")]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -30, 0, -22)
 hole_name = "Kitchen Pantry Crack"
+linked_hole = NodePath("../HoleBackRoom")
 
-[node name="HoleKitchen2" type="Node3D" parent="RatHoles" unique_id=663764086]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0.1, -29)
-script = ExtResource("17_hole")
+[node name="HoleKitchen2" parent="RatHoles" instance=ExtResource("17_hole")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -12, 0, -30)
 hole_name = "Kitchen Sink Pipe Hole"
+linked_hole = NodePath("../HoleLiving2")
 
-[node name="HoleLiving1" type="Node3D" parent="RatHoles" unique_id=121458224]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 29, 0.1, -18)
-script = ExtResource("17_hole")
+[node name="HoleLiving1" parent="RatHoles" instance=ExtResource("17_hole")]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 30, 0, -18)
 hole_name = "Living Room Baseboard Hole"
+linked_hole = NodePath("../HoleHallway")
 
-[node name="HoleLiving2" type="Node3D" parent="RatHoles" unique_id=761773168]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0.1, -29)
-script = ExtResource("17_hole")
+[node name="HoleLiving2" parent="RatHoles" instance=ExtResource("17_hole")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 14, 0, -30)
 hole_name = "Fireplace Hearth Flue"
 
-[node name="HoleHallway" type="Node3D" parent="RatHoles" unique_id=1452135018]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -29, 0.1, 9)
-script = ExtResource("17_hole")
+[node name="HoleHallway" parent="RatHoles" instance=ExtResource("17_hole")]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -30, 0, 9)
 hole_name = "Hallway Stair Baseboard"
 
-[node name="HoleBackRoom" type="Node3D" parent="RatHoles" unique_id=2084282109]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 29, 0.1, 16)
-script = ExtResource("17_hole")
+[node name="HoleBackRoom" parent="RatHoles" instance=ExtResource("17_hole")]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 30, 0, 16)
 hole_name = "Back Room Vent"
+
+[node name="Clues" type="Node3D" parent="."]
+
+[node name="Streaks" type="Node3D" parent="Clues" groups=["streaks_root"]]
+
+[node name="StreakSpawner" type="MultiplayerSpawner" parent="Clues/Streaks"]
+_spawnable_scenes = PackedStringArray("res://scenes/clues/rat_streak.tscn")
+spawn_path = NodePath("..")
+
+[node name="Garbage" type="Node3D" parent="Clues"]
+
+[node name="GarbageKitchen" parent="Clues/Garbage" instance=ExtResource("31_garbage")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25, 0, -26)
+
+[node name="GarbageLiving" parent="Clues/Garbage" instance=ExtResource("31_garbage")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25, 0, -25)
+
+[node name="GarbageHallway" parent="Clues/Garbage" instance=ExtResource("31_garbage")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -27, 0, 14)
+
+[node name="GarbageBackRoom" parent="Clues/Garbage" instance=ExtResource("31_garbage")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 0, 26)
+
+[node name="GarbageAlley" parent="Clues/Garbage" instance=ExtResource("31_garbage")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, 27)
+
+[node name="Droppings" type="Node3D" parent="Clues"]
+script = ExtResource("32_droppings")
 
 [node name="Geometry" type="Node3D" parent="." unique_id=646313865]
 
@@ -1232,314 +1152,12 @@ hole_name = "Back Room Vent"
 [node name="Screech" type="AudioStreamPlayer" parent="Audio" unique_id=882571525]
 volume_db = -6.0
 
-[node name="HUD" type="CanvasLayer" parent="." unique_id=1294235576]
-
-[node name="Counter" parent="HUD" unique_id=535394653 instance=ExtResource("27_big_font")]
-anchors_preset = 0
-anchor_right = 0.0
-offset_left = 16.0
-offset_top = 12.0
-offset_right = 220.0
-offset_bottom = 40.0
-grow_horizontal = 0
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 5
-text = "HUD_RATS"
-font_size = 16
-horizontal_alignment = 0
-script = ExtResource("5_counter")
-
-[node name="Money" type="VBoxContainer" parent="HUD" unique_id=741678989]
-anchors_preset = 0
-anchor_right = 0.0
-offset_left = 16.0
-offset_top = 44.0
-offset_right = 220.0
-grow_horizontal = 0
-mouse_filter = 2
-script = ExtResource("8_money")
-
-[node name="Total" parent="HUD/Money" unique_id=335423766 instance=ExtResource("27_big_font")]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 5
-text = "HUD_MONEY_TOTAL"
-font_size = 16
-horizontal_alignment = 0
-
-[node name="Notice" parent="HUD/Money" unique_id=1741915399 instance=ExtResource("27_big_font")]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.85, 0.45, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 5
-font_size = 16
-horizontal_alignment = 0
-
-[node name="Minimap" parent="HUD" unique_id=2042741872 instance=ExtResource("28_minimap")]
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -148.0
-offset_top = 12.0
-offset_right = -16.0
-offset_bottom = 144.0
-grow_horizontal = 0
-
-[node name="Health" type="ProgressBar" parent="HUD" unique_id=1871614800]
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -50.0
-offset_top = -52.0
-offset_right = 50.0
-offset_bottom = -46.0
-grow_horizontal = 2
-grow_vertical = 0
-mouse_filter = 2
-max_value = 1.0
-step = 0.0
-value = 1.0
-show_percentage = false
-script = ExtResource("10_health")
-
-[node name="Hotbar" type="HBoxContainer" parent="HUD" unique_id=1215389225]
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -60.0
-offset_top = -42.0
-offset_right = 60.0
-offset_bottom = -10.0
-grow_horizontal = 2
-grow_vertical = 0
-mouse_filter = 2
-theme_override_constants/separation = 2
-alignment = 1
-script = ExtResource("9_hotbar")
-
-[node name="Slot1" type="PanelContainer" parent="HUD/Hotbar" unique_id=182667480]
-custom_minimum_size = Vector2(32, 32)
-layout_mode = 2
-mouse_filter = 2
-
-[node name="Icon" type="TextureRect" parent="HUD/Hotbar/Slot1" unique_id=157539999]
-layout_mode = 2
-mouse_filter = 2
-expand_mode = 1
-stretch_mode = 5
-
-[node name="Name" parent="HUD/Hotbar/Slot1" unique_id=308144636 instance=ExtResource("27_big_font")]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-font_size = 16
-horizontal_alignment = 1
-vertical_alignment = 1
-text_overrun_behavior = 3
-
-[node name="Count" parent="HUD/Hotbar/Slot1" unique_id=1618658545 instance=ExtResource("27_big_font")]
-layout_mode = 2
-size_flags_horizontal = 8
-size_flags_vertical = 8
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 5
-font_size = 16
-horizontal_alignment = 2
-vertical_alignment = 2
-
-[node name="Slot2" type="PanelContainer" parent="HUD/Hotbar" unique_id=1626431349]
-custom_minimum_size = Vector2(32, 32)
-layout_mode = 2
-mouse_filter = 2
-
-[node name="Icon" type="TextureRect" parent="HUD/Hotbar/Slot2" unique_id=1632107144]
-layout_mode = 2
-mouse_filter = 2
-expand_mode = 1
-stretch_mode = 5
-
-[node name="Name" parent="HUD/Hotbar/Slot2" unique_id=1753922137 instance=ExtResource("27_big_font")]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-font_size = 16
-horizontal_alignment = 1
-vertical_alignment = 1
-text_overrun_behavior = 3
-
-[node name="Count" parent="HUD/Hotbar/Slot2" unique_id=1811160742 instance=ExtResource("27_big_font")]
-layout_mode = 2
-size_flags_horizontal = 8
-size_flags_vertical = 8
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 5
-font_size = 16
-horizontal_alignment = 2
-vertical_alignment = 2
-
-[node name="Slot3" type="PanelContainer" parent="HUD/Hotbar" unique_id=1709589]
-custom_minimum_size = Vector2(32, 32)
-layout_mode = 2
-mouse_filter = 2
-
-[node name="Icon" type="TextureRect" parent="HUD/Hotbar/Slot3" unique_id=2068386252]
-layout_mode = 2
-mouse_filter = 2
-expand_mode = 1
-stretch_mode = 5
-
-[node name="Name" parent="HUD/Hotbar/Slot3" unique_id=258176889 instance=ExtResource("27_big_font")]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-font_size = 16
-horizontal_alignment = 1
-vertical_alignment = 1
-text_overrun_behavior = 3
-
-[node name="Count" parent="HUD/Hotbar/Slot3" unique_id=1290780520 instance=ExtResource("27_big_font")]
-layout_mode = 2
-size_flags_horizontal = 8
-size_flags_vertical = 8
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 5
-font_size = 16
-horizontal_alignment = 2
-vertical_alignment = 2
-
-[node name="Crosshair" parent="HUD" unique_id=1287370853 instance=ExtResource("27_big_font")]
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -10.0
-offset_top = -14.0
-offset_right = 10.0
-offset_bottom = 14.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_colors/font_color = Color(1, 1, 1, 0.75)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 0.6)
-theme_override_constants/outline_size = 4
-text = "+"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="Strangle" type="MarginContainer" parent="HUD" unique_id=1097222269]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 12
-theme_override_constants/margin_bottom = 12
-script = ExtResource("7_strangle")
-
-[node name="VBoxContainer" type="VBoxContainer" parent="HUD/Strangle" unique_id=1761056702]
-layout_mode = 2
-size_flags_horizontal = 4
-size_flags_vertical = 8
-
-[node name="Button" parent="HUD/Strangle/VBoxContainer" unique_id=681584922 instance=ExtResource("27_big_font")]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.94, 0.86, 0.36, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 8
-font_size = 32
-text = "HUD_STRANGLE_BUTTON"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="Bar" type="ProgressBar" parent="HUD/Strangle/VBoxContainer" unique_id=602576959]
-custom_minimum_size = Vector2(300, 10)
-layout_mode = 2
-max_value = 1.0
-show_percentage = false
-
-[node name="Instruction" parent="HUD/Strangle/VBoxContainer" unique_id=1090993103 instance=ExtResource("27_big_font")]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 5
-text = "HUD_STRANGLE_INSTRUCTION"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="Hold" type="Control" parent="HUD" unique_id=2006033597]
-layout_mode = 3
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -150.0
-offset_top = -96.0
-offset_right = 150.0
-offset_bottom = -52.0
-grow_horizontal = 2
-grow_vertical = 0
-mouse_filter = 2
-script = ExtResource("15_hold")
-
-[node name="VBoxContainer" type="VBoxContainer" parent="HUD/Hold" unique_id=1947672325]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_constants/separation = 4
-alignment = 2
-
-[node name="Label" parent="HUD/Hold/VBoxContainer" unique_id=163608909 instance=ExtResource("27_big_font")]
-layout_mode = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 5
-text = "PROMPT_CLEAN_TRAP"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="Bar" type="ProgressBar" parent="HUD/Hold/VBoxContainer" unique_id=1553451398]
-custom_minimum_size = Vector2(0, 10)
-layout_mode = 2
-max_value = 1.0
-show_percentage = false
-
-[node name="Prompt" parent="HUD" unique_id=1493470610 instance=ExtResource("27_big_font")]
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -120.0
-offset_top = 16.0
-offset_right = 120.0
-offset_bottom = 32.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_colors/font_color = Color(1, 1, 1, 1)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 5
-font_size = 16
-horizontal_alignment = 1
-script = ExtResource("12_prompt")
+[node name="HUD" parent="." instance=ExtResource("29_hud_game")]
 
 [node name="HUD_Phase" parent="." unique_id=1677183090 instance=ExtResource("20_hud_phase")]
 
 [node name="ResultScreen" parent="." unique_id=2047533472 instance=ExtResource("22_result")]
+
+[node name="Scoreboard" parent="." instance=ExtResource("98_scoreboard")]
 
 [node name="PauseMenu" parent="." unique_id=1466034551 instance=ExtResource("99_pause")]

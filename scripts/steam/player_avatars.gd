@@ -260,6 +260,10 @@ func _here() -> void:
 ## nobody is moving anybody but himself, so the worst of it is two people
 ## standing together for as long as it takes one of them to walk.
 func _stand_apart() -> void:
+	# Authored seats own both the seated placement and the standing respawn.
+	# A zero-radius layout must not overwrite either when the network opens.
+	if is_zero_approx(spawn_radius):
+		return
 	var peers := multiplayer.get_peers()
 	peers.append(multiplayer.get_unique_id())
 	peers.sort()

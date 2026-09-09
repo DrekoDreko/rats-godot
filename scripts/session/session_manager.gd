@@ -23,12 +23,9 @@ extends Node
 ## same number in the van, on the road and in the house. `LobbyManager` is what
 ## ties the two together (`steam_id_of_peer`).
 ##
-## The `money` and `inventory` fields below are the crew's own purses, one per
-## Steam ID: the shelf in the van spends them (`ShopManager`) and the bank writes
-## them at the two ends of a house (`scripts/economy/bank.gd`). They are the
-## balance of record. `Wallet` and `Stock` are older, single-player and still
-## here, and they are what this machine's own man actually spends from while he
-## is in the house — the bank is what keeps the two numbers the same one.
+## Inventory belongs to each player; money belongs to the crew. `bank_balance`
+## is the one balance of record used by contracts and the van store. `Wallet`
+## mirrors that balance while the crew is inside a house.
 
 ## Somebody joined the crew.
 signal player_joined(steam_id: int)
@@ -39,6 +36,8 @@ signal player_left(steam_id: int)
 ## signal for all of them, because every listener that cares about one of these
 ## redraws the same row anyway.
 signal player_changed(steam_id: int)
+## The shared crew bank changed.
+signal bank_changed(balance: int)
 ## The contract was settled on.
 signal contract_changed(contract_id: String)
 ## How long the hunt was booked for, and so what every rat in it is worth. The
@@ -64,11 +63,14 @@ const COLORS: Array[Color] = [
 const STARTING_MONEY := 100
 
 ## The crew, by Steam ID. Each entry is a dictionary of `name`, `color`,
-## `ready`, `money`, `inventory` and `is_host` — see `_new_player`.
+## `ready`, `catches`, `inventory` and `is_host` — see `_new_player`.
 ##
 ## Read it freely; write it through the methods below, so that the change is
 ## announced. Nothing on screen polls this.
 var players: Dictionary[int, Dictionary] = {}
+
+## One shared balance for the whole crew.
+var bank_balance := 0
 
 ## The contract being worked, by id, or empty when none is signed yet. The
 ## contract resources themselves arrive with the clipboard station.
@@ -107,6 +109,7 @@ func register_player(steam_id: int, player_name: String, is_host := false) -> vo
 		player_changed.emit(steam_id)
 		return
 	players[steam_id] = _new_player(player_name, is_host)
+	set_bank_balance(bank_balance + STARTING_MONEY)
 	player_joined.emit(steam_id)
 
 
@@ -115,6 +118,10 @@ func register_player(steam_id: int, player_name: String, is_host := false) -> vo
 func remove_player(steam_id: int) -> void:
 	if not players.erase(steam_id):
 		return
+	# Before departure the contribution still belongs to that player. Once the
+	# crew is under way it has already become team money and stays in the bank.
+	if phase == Phase.Type.LOBBY:
+		set_bank_balance(bank_balance - STARTING_MONEY)
 	player_left.emit(steam_id)
 
 
@@ -244,18 +251,9 @@ func ready_counts_except(steam_id: int) -> Array[int]:
 	return [ready_total, crew_total]
 
 
-## Every purse back to what it held on the first day. The end of a run: the crew
-## goes home to the menu and whatever it made out there goes with the shift
-## (`PhaseManager._clear_shift`), so the next van pulls out on a hundred dollars
-## the way the first one did.
-##
-## A plain local write, like everything else in this file, and it does not need to
-## be anything else: `STARTING_MONEY` is a constant, so four machines running this
-## land on the same four numbers without a packet between them.
+## Rebuilds the shared bank from the current crew at the start of a new run.
 func reset_money() -> void:
-	for steam_id in players:
-		players[steam_id]["money"] = STARTING_MONEY
-		player_changed.emit(steam_id)
+	set_bank_balance(players.size() * STARTING_MONEY)
 
 
 ## Everybody back to not-ready. It runs on every phase change: being ready to
@@ -268,16 +266,46 @@ func reset_ready() -> void:
 			player_changed.emit(steam_id)
 
 
-## Sets a player's money outright. Two callers, and both of them come through the
-## host: the shelf debiting a purchase (`ShopManager._apply`) and the bank writing
-## a shift's closing balance (`Bank._apply`).
-func set_money(steam_id: int, amount: int) -> void:
-	_write(steam_id, "money", maxi(0, amount))
+## Sets the shared bank outright. Network-facing managers ensure the host owns
+## every write that represents a purchase or a completed job.
+func set_bank_balance(amount: int) -> void:
+	var settled := maxi(0, amount)
+	if settled == bank_balance:
+		return
+	bank_balance = settled
+	bank_changed.emit(bank_balance)
 
 
-## What a player has in his pocket.
+## The team balance visible to a valid crew member.
 func money(steam_id: int) -> int:
-	return int(players.get(steam_id, {}).get("money", 0))
+	return bank_balance if players.has(steam_id) else 0
+
+
+## How many rats a player has taken this job. Written by `ShiftReport`, which is
+## the one place that counts them, and read by the scoreboard the crew holds Tab
+## for (`scripts/ui/crew_list.gd`).
+##
+## It is not money and it is not checked by anybody: nothing is bought with it
+## and nothing is paid on it, so the guard the bank puts around a balance would
+## be a guard around a bragging right. See the wire section of `ShiftReport` for
+## who is allowed to say it.
+func set_catches(steam_id: int, count: int) -> void:
+	_write(steam_id, "catches", maxi(0, count))
+
+
+## How many he has taken.
+func catches(steam_id: int) -> int:
+	return int(players.get(steam_id, {}).get("catches", 0))
+
+
+## Everybody back to nought, at the end of a job. Announced per player rather
+## than in one breath, for the same reason `reset_ready` is: the rows on screen
+## are drawn one player at a time.
+func reset_catches() -> void:
+	for steam_id in players:
+		if players[steam_id]["catches"] != 0:
+			players[steam_id]["catches"] = 0
+			player_changed.emit(steam_id)
 
 
 ## Puts an item in a player's bag, by the same id the store items carry
@@ -357,6 +385,7 @@ func reset() -> void:
 	phase = Phase.Type.LOBBY
 	random_seed = 0
 	hunt_time = HuntTime.DEFAULT
+	set_bank_balance(0)
 	contract_changed.emit("")
 	hunt_time_changed.emit(hunt_time)
 
@@ -369,7 +398,7 @@ func _new_player(player_name: String, is_host: bool) -> Dictionary:
 		"name": player_name,
 		"color": first_free_color(),
 		"ready": false,
-		"money": STARTING_MONEY,
+		"catches": 0,
 		"inventory": [] as Array[String],
 		"is_host": is_host,
 	}

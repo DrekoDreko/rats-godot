@@ -3,76 +3,44 @@
 [ext_resource type="Script" uid="uid://3iy7wjg0y4ry" path="res://scripts/ui/menu_screen.gd" id="1_menu"]
 [ext_resource type="PackedScene" uid="uid://bgordf5uoxh7c" path="res://scenes/ps1.tscn" id="2_13sgg"]
 [ext_resource type="Script" uid="uid://3wh3h00cllfg" path="res://scripts/ui/menu_crew.gd" id="2_crew"]
-[ext_resource type="Script" uid="uid://uwxm7mwqg5fm" path="res://scripts/ui/color_popup.gd" id="3_color"]
-[ext_resource type="Shader" uid="uid://bwmdy542q66bt" path="res://scripts/ps1.gdshader" id="4_70i5f"]
-[ext_resource type="PackedScene" uid="uid://cbaw6ypunj51i" path="res://scenes/lobby.tscn" id="5_modal"]
+[ext_resource type="PackedScene" path="res://scenes/lobby.tscn" id="5_modal"]
 [ext_resource type="PackedScene" uid="uid://k6hnry2avdc" path="res://scenes/settings_menu.tscn" id="6_settings"]
 [ext_resource type="PackedScene" uid="uid://r6380qbonva8" path="res://scenes/black_button.tscn" id="7_i6lef"]
 [ext_resource type="PackedScene" uid="uid://b4wetum1hnqtu" path="res://scenes/big_font_outlined_label.tscn" id="8_ufwb2"]
-[ext_resource type="Texture2D" uid="uid://d4n0gjqdch0t2" path="res://assets/textures/floor/concrete_floor_atlas.png" id="9_floor_tex"]
 [ext_resource type="PackedScene" uid="uid://dyb2bu6wxtp7m" path="res://models/van_exterior.glb" id="10_van"]
-
-[sub_resource type="StandardMaterial3D" id="Mat_floor"]
-albedo_texture = ExtResource("9_floor_tex")
-uv1_scale = Vector3(5, 10, 1)
-
-[sub_resource type="PlaneMesh" id="Mesh_floor"]
-material = SubResource("Mat_floor")
-size = Vector2(40, 40)
-subdivide_width = 39
-subdivide_depth = 39
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_mj5lg"]
-render_priority = 0
-shader = ExtResource("4_70i5f")
-shader_parameter/albedo = ExtResource("9_floor_tex")
-shader_parameter/albedo_color = Color(1, 1, 1, 1)
-shader_parameter/uv_scale = Vector2(5, 10)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
+[ext_resource type="PackedScene" path="res://scenes/garage/shed_yard.tscn" id="11_yard"]
 
 [node name="Menu" type="Node3D" unique_id=2125750364]
 script = ExtResource("1_menu")
 
 [node name="PS1" parent="." unique_id=1777166207 instance=ExtResource("2_13sgg")]
 
-[node name="Floor" type="MeshInstance3D" parent="." unique_id=564645654]
-transform = Transform3D(0.99996746, 0, 0.00806902, 0, 1, 0, -0.00806902, 0, 0.99996746, -0.0012350082, -2.3841858e-07, 0.009379387)
-mesh = SubResource("Mesh_floor")
-surface_material_override/0 = SubResource("ShaderMaterial_mj5lg")
+[node name="ShedYard" parent="." unique_id=564645654 instance=ExtResource("11_yard")]
 
 [node name="Camera" type="Camera3D" parent="." unique_id=1721597996]
-transform = Transform3D(0.9999905, 0.0005873988, -0.004317632, 0, 0.9908722, 0.13480473, 0.0043574055, -0.13480344, 0.9908628, -0.96524316, 1.6588356, 5.4678407)
-fov = 45.0
+transform = Transform3D(0.882948, 0.016367, 0.469185, 0, 0.999391, -0.034899, -0.469472, 0.030814, 0.88241, 3.6, 1.35, 6.6)
+fov = 48.0
 
 [node name="Van" parent="." unique_id=1560646599 instance=ExtResource("10_van")]
-transform = Transform3D(0.9961947, 0, -0.087155744, 0, 1, 0, 0.087155744, 0, 0.9961947, -0.55, 0, -3.4)
+transform = Transform3D(0.951057, 0, -0.309017, 0, 1, 0, 0.309017, 0, 0.951057, -1.2, 0, 1.6)
 
 [node name="Crew" type="Node3D" parent="." unique_id=1560646598]
+transform = Transform3D(0.831954, 0, 0.554844, 0, 1, 0, -0.554844, 0, 0.831954, 1.6, 0, 3.6)
 script = ExtResource("2_crew")
 
 [node name="Seats" type="Node3D" parent="Crew" unique_id=767470289]
 
 [node name="Seat1" type="Marker3D" parent="Crew/Seats" unique_id=239706448]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.35, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.05, 0, 0)
 
 [node name="Seat2" type="Marker3D" parent="Crew/Seats" unique_id=1153070524]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.45, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.35, 0, 0)
 
 [node name="Seat3" type="Marker3D" parent="Crew/Seats" unique_id=218072320]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.45, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.35, 0, 0)
 
 [node name="Seat4" type="Marker3D" parent="Crew/Seats" unique_id=1849550139]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.35, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.05, 0, 0)
 
 [node name="UI" type="CanvasLayer" parent="." unique_id=1279202548]
 
@@ -129,6 +97,11 @@ layout_mode = 2
 size_flags_horizontal = 1
 text = "MENU_SETTINGS"
 
+[node name="Quit" parent="UI/MarginContainer/Center" unique_id=889182706 instance=ExtResource("7_i6lef")]
+layout_mode = 2
+size_flags_horizontal = 1
+text = "MENU_QUIT"
+
 [node name="Empty" type="Control" parent="UI/MarginContainer/Center" unique_id=889182707]
 custom_minimum_size = Vector2(0, 12)
 layout_mode = 2
@@ -156,5 +129,3 @@ visible = false
 [node name="SettingsMenu" parent="UI" unique_id=79831428 instance=ExtResource("6_settings")]
 visible = false
 
-[node name="ColorPopup" type="PopupPanel" parent="UI" unique_id=334250369]
-script = ExtResource("3_color")

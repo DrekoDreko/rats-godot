@@ -81,6 +81,10 @@ enum State {
 	## existing one would put every machine on a different reading of the same
 	## packet.
 	CROUCH_WALKING,
+	## Riding on one of the van benches. The player cannot move until leaving this
+	## state, but can still look around; the value crosses the wire so every crew
+	## member sees the same seated pose.
+	SITTING,
 }
 
 ## What his *hands* are doing, which is a separate question from what the rest

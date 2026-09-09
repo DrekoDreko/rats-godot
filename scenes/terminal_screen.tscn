@@ -1,0 +1,95 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/terminal_screen.gd" id="1_terminal"]
+[ext_resource type="PackedScene" path="res://scenes/store_screen.tscn" id="2_store"]
+[ext_resource type="PackedScene" path="res://scenes/map/map_viewer.tscn" id="3_map"]
+[ext_resource type="PackedScene" path="res://scenes/difficulty_screen.tscn" id="4_difficulty"]
+[ext_resource type="PackedScene" path="res://scenes/color_screen.tscn" id="6_color"]
+[ext_resource type="FontFile" uid="uid://b3vvnk0rcn80q" path="res://assets/fonts/matchup.ttf" id="5_font"]
+
+[sub_resource type="FontVariation" id="Font_nav"]
+base_font = ExtResource("5_font")
+spacing_top = -4
+spacing_bottom = -1
+
+[sub_resource type="StyleBoxFlat" id="Style_arrow"]
+bg_color = Color(0.05, 0.12, 0.21, 0.75)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.45, 0.72, 0.9, 0.9)
+
+[node name="TerminalScreen" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_terminal")
+
+[node name="Pages" type="Control" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="StoreScreen" parent="Pages" instance=ExtResource("2_store")]
+layout_mode = 1
+
+[node name="MapViewer" parent="Pages" instance=ExtResource("3_map")]
+layout_mode = 1
+
+[node name="DifficultyScreen" parent="Pages" instance=ExtResource("4_difficulty")]
+layout_mode = 1
+
+[node name="ColorScreen" parent="Pages" instance=ExtResource("6_color")]
+layout_mode = 1
+
+[node name="Nav" type="Control" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Left" type="Button" parent="Nav"]
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = 2.0
+offset_top = -24.0
+offset_right = 24.0
+offset_bottom = 24.0
+grow_vertical = 2
+theme_override_font_sizes/font_size = 20
+theme_override_fonts/font = SubResource("Font_nav")
+theme_override_styles/normal = SubResource("Style_arrow")
+theme_override_styles/hover = SubResource("Style_arrow")
+theme_override_styles/pressed = SubResource("Style_arrow")
+theme_override_styles/focus = SubResource("Style_arrow")
+text = "<"
+
+[node name="Right" type="Button" parent="Nav"]
+anchors_preset = 6
+anchor_left = 1.0
+anchor_right = 1.0
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_left = -24.0
+offset_top = -24.0
+offset_right = -2.0
+offset_bottom = 24.0
+grow_horizontal = 0
+grow_vertical = 2
+theme_override_font_sizes/font_size = 20
+theme_override_fonts/font = SubResource("Font_nav")
+theme_override_styles/normal = SubResource("Style_arrow")
+theme_override_styles/hover = SubResource("Style_arrow")
+theme_override_styles/pressed = SubResource("Style_arrow")
+theme_override_styles/focus = SubResource("Style_arrow")
+text = ">"

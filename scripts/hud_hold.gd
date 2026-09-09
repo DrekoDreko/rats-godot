@@ -13,7 +13,7 @@ extends Control
 
 ## The line this stands in for while the work is going on. It is a path and not a
 ## direct node reference, for the same reason the strangling prompt reaches the
-## crosshair by path: the `world.tscn` HUD is written by hand, and an exported
+## crosshair by path: the `hud_game.tscn` HUD is written by hand, and an exported
 ## node only wires itself up in a scene saved by the editor.
 @export var prompt_path := NodePath("../Prompt")
 

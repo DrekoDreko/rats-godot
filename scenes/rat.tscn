@@ -40,6 +40,9 @@ properties/5/replication_mode = 0
 properties/6/path = NodePath(".:sync_holder")
 properties/6/spawn = true
 properties/6/replication_mode = 1
+properties/7/path = NodePath(".:sync_species")
+properties/7/spawn = true
+properties/7/replication_mode = 0
 
 [node name="Rat" type="CharacterBody3D" unique_id=1668221528 groups=["rats"]]
 collision_layer = 4

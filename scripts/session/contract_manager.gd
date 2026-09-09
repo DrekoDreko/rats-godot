@@ -78,6 +78,7 @@ const REFUSAL_UNDER_WAY := "The job is under way."
 ## clipboard, which only ever offers what it was handed; it is here for a packet
 ## that arrived from a machine with a different folder on disk.
 const REFUSAL_UNKNOWN := "That job is not on the board."
+const REFUSAL_POOR := "The team bank needs $%d for that contract."
 ## And what a client is told for reaching at the hunt length. The same rule as
 ## the pen and worth the same sentence: how long the crew has in the house is the
 ## leader's call, because it is the leader who signed for the job.
@@ -177,6 +178,12 @@ func current() -> Contract:
 ## both ask.
 func is_signed() -> bool:
 	return current() != null
+
+
+## Whether the shared bank can buy a contract without going below zero.
+func can_afford(contract_id: String) -> bool:
+	var contract := find(contract_id)
+	return contract != null and SessionManager.bank_balance >= contract.price
 
 
 ## Whether this machine may sign. It is asked before the pen is even drawn, so a
@@ -378,6 +385,8 @@ func everybody_voted() -> bool:
 	for steam_id in SessionManager.players:
 		if not votes.has(steam_id):
 			return false
+		if not can_afford(votes[steam_id]):
+			return false
 	return true
 
 
@@ -399,6 +408,10 @@ func settle_vote() -> void:
 	var winner := _winning_contract()
 	if winner.is_empty():
 		return
+	if not can_afford(winner):
+		var contract := find(winner)
+		request_refused.emit(REFUSAL_POOR % contract.price)
+		return
 	_handle_request(winner, 0)
 	_close_voting.rpc()
 
@@ -411,6 +424,8 @@ func _winning_contract() -> String:
 	var best_id := ""
 	var best_votes := -1
 	for contract in contracts:
+		if not can_afford(contract.id):
+			continue
 		var count := votes_for(contract.id)
 		if count > best_votes:
 			best_votes = count
@@ -434,6 +449,9 @@ func _handle_vote(steam_id: int, contract_id: String, from_peer: int) -> void:
 	if not voting_open:
 		return
 	if find(contract_id) == null:
+		return
+	if not can_afford(contract_id):
+		_refuse_to(from_peer, REFUSAL_POOR % find(contract_id).price)
 		return
 	if not SessionManager.has_player(steam_id):
 		push_warning("ContractManager: a vote arrived for %d, who is not in the crew." % steam_id)
@@ -540,6 +558,9 @@ func _handle_request(contract_id: String, from_peer: int) -> void:
 	if find(contract_id) == null:
 		_refuse_to(from_peer, REFUSAL_UNKNOWN)
 		return
+	if not can_afford(contract_id):
+		_refuse_to(from_peer, REFUSAL_POOR % find(contract_id).price)
+		return
 	if SessionManager.current_contract == contract_id:
 		return
 	_apply.rpc(contract_id)
@@ -621,6 +642,8 @@ func _apply(contract_id: String) -> void:
 	if find(contract_id) == null:
 		push_warning("ContractManager: signed %s, which is not on our board." % contract_id)
 		return
+	var contract := find(contract_id)
+	SessionManager.set_bank_balance(SessionManager.bank_balance - contract.price)
 	_settle(contract_id)
 
 

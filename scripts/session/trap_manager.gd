@@ -2,6 +2,13 @@ extends Node
 ## What is on the floor of the house, and the one rule about it: nobody puts a
 ## trap down but the host, and everybody sees the same ones.
 ##
+## "Trap" is read loosely here and is worth saying plainly: what this owns is
+## anything a player *leaves behind him on the boards*. Two of those catch rats,
+## one explodes, and one is a handful of food that does nothing but make the
+## animals want to be near it (`SCENES`). They travel the same road because the
+## question they ask is the same one — may this man put this thing here, out of
+## which box — and the answer is the host's in every case.
+##
 ## **The host holds the floor.** A player at the boards does not put a trap down;
 ## he *asks* to (`request_place`), the host looks at where he is standing and what
 ## is in his bag, and either the trap goes down on every machine at once
@@ -80,10 +87,18 @@ const PHASES: Array[Phase.Type] = [
 ## The same two paths are registered on the spawner in `world.tscn`. A spawner
 ## refuses to replicate a scene that is not on its list, so the two have to
 ## agree — and this is the one that produces the refusal a player can read.
+## The bait is on this list too, and it is not a trap
+## (`scripts/traps/bait_pile.gd`) — it catches nothing and springs on nobody.
+## What it shares with the traps is the only thing this autoload is about: it is a
+## thing a player leaves on the floor of the house, and the floor of the house is
+## the host's. Giving it a second manager of its own would be a second copy of the
+## phase check, the reach check, the bag check and the spawner, to say the same
+## sentence about a different mesh.
 const SCENES := {
 	"mousetrap": "res://scenes/traps/mousetrap.tscn",
 	"rat_glue": "res://scenes/traps/glue_trap.tscn",
 	"explosive_cheese": "res://scenes/traps/explosive_cheese.tscn",
+	"rat_bait": "res://scenes/traps/bait_pile.tscn",
 }
 
 ## How far from the man who asked a trap may land. It is the weapon's own

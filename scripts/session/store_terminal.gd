@@ -1,12 +1,15 @@
 class_name StoreTerminal
 extends Interactable
-## The terminal in the front of the van: the totem the crew buys its kit at.
+## The terminal in the front of the van: the totem the crew buys its kit at,
+## reads the map on and checks the job sheet from.
 ##
-## **The store is a screen in the room.** The racks are not drawn over the game;
-## they are drawn *on the monitor*, in a `SubViewport` painted onto the glass of
-## the CRT (`Screen/Viewport`, holding `scenes/store_screen.tscn`). Nothing about
-## the shop is a window in front of the van — it is pixels on a machine standing
-## in it, and the van is still there around the plastic while a man shops.
+## **It is a screen in the room.** What is on it is not drawn over the game;
+## it is drawn *on the monitor*, in a `SubViewport` painted onto the glass of
+## the CRT (`Screen/Viewport`, holding `scenes/terminal_screen.tscn` — the
+## shop, the map and the job sheet as three pages leafed through with a pair
+## of arrows, see `scripts/ui/terminal_screen.gd`). Nothing about it is a
+## window in front of the van — it is pixels on a machine standing in it, and
+## the van is still there around the plastic while a man reads it.
 ##
 ## **The camera goes and the man stays.** `use()` takes his legs and his mouse,
 ## flies a camera of its own from where his eyes are to a seat right in front of
@@ -26,13 +29,24 @@ extends Interactable
 ## viewport's own pixels — and pushed in. The same goes for the keys: `E` and
 ## Esc are read here, because there is nobody inside the monitor to read them.
 ##
+## **Open on the road and in the hunt.** The map and the job sheet are wanted
+## in both — the corner dial that used to show the house during the hunt is
+## gone (`scripts/minimap.gd`), and this is what it was replaced with. The shop
+## page still sells nothing off the road; it says so on its own glass rather
+## than this station turning a man away for a page he did not ask for.
+##
 ## **The screen decides nothing about money.** This is furniture: it lights a
-## monitor and puts a screen on it, and the screen asks `ShopManager` like it
-## always did.
+## monitor and puts a screen on it, and the shop page asks `ShopManager` like
+## it always did.
 
-## What the prompt reads at the machine, and what it reads with the racks up.
+## What the prompt reads at the machine, and what it reads with the terminal up.
 const PROMPT_USE := "PROMPT_USE_TERMINAL"
 const PROMPT_LEAVE := "PROMPT_STEP_BACK_TERMINAL"
+
+## The phases the terminal answers the key in. The lobby has not left yet and
+## the result screen has already paid out — a totem in either would have
+## nothing current to show.
+const OPEN_PHASES: Array[Phase.Type] = [Phase.Type.TRAVEL, Phase.Type.HUNT]
 
 ## How long the camera takes to cross the van, each way. Long enough to read as
 ## walking up to the thing, short enough that a man buying three traps is not
@@ -74,8 +88,8 @@ var _camera: Camera3D
 ## The trip itself, so that a second one can cut the first short rather than
 ## fight it — a man who shuts the store while it is still opening.
 var _trip: Tween
-## The store, found by group the first time it is asked for.
-var _store_screen: StoreScreen
+## The terminal, found by group the first time it is asked for.
+var _terminal_screen: TerminalScreen
 ## The glass's own material, so that the monitor can be turned off without
 ## touching the one every other surface shares.
 var _glass: StandardMaterial3D
@@ -89,14 +103,14 @@ func _ready() -> void:
 	PhaseManager.phase_changed.connect(_on_phase_changed)
 
 
-## Hands on the machine. The store being shut is a refusal and not a silence:
-## the man pressed a key at a thing that plainly has a screen on it, and being
-## told "not now" is the answer.
+## Hands on the machine. A terminal with nothing current to show is a refusal
+## and not a silence: the man pressed a key at a thing that plainly has a
+## screen on it, and being told "not now" is the answer.
 func use(by: Node3D) -> void:
 	super.use(by)
 	if _user != null:
 		return
-	if not ShopManager.is_open():
+	if not OPEN_PHASES.has(PhaseManager.current()):
 		_play(_refused)
 		return
 	_open(by)
@@ -113,7 +127,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _user == null:
 		return
 	if event.is_action_pressed("interact") or event.is_action_pressed("toggle_mouse"):
-		var screen := _store()
+		var screen := _terminal()
 		if screen != null:
 			screen.close()
 		get_viewport().set_input_as_handled()
@@ -141,7 +155,7 @@ func _input(event: InputEvent) -> void:
 func _open(by: Node3D) -> void:
 	if by == null or not by.has_method("set_ui_open"):
 		return
-	var screen := _store()
+	var screen := _terminal()
 	if screen == null or _screen == null:
 		return
 
@@ -310,14 +324,14 @@ func _screen_size() -> Vector2:
 
 # --- Odds and ends ----------------------------------------------------------
 
-## The store screen, wherever the scene hung it. Found by group rather than by
-## path: it is a `CanvasLayer` living inside the monitor's viewport, and the
+## The terminal screen, wherever the scene hung it. Found by group rather than
+## by path: it is a `Control` living inside the monitor's viewport, and the
 ## group is what lets a bench stand one up somewhere else entirely.
-func _store() -> StoreScreen:
-	if _store_screen != null and is_instance_valid(_store_screen):
-		return _store_screen
-	_store_screen = get_tree().get_first_node_in_group("store_screen") as StoreScreen
-	return _store_screen
+func _terminal() -> TerminalScreen:
+	if _terminal_screen != null and is_instance_valid(_terminal_screen):
+		return _terminal_screen
+	_terminal_screen = get_tree().get_first_node_in_group("terminal_screen") as TerminalScreen
+	return _terminal_screen
 
 
 ## Where the man is looking from, in world coordinates.
@@ -346,7 +360,7 @@ func _eyes_camera(man: Node3D = null) -> Camera3D:
 func _on_phase_changed(_previous: Phase.Type, _current: Phase.Type) -> void:
 	if _user == null:
 		return
-	var screen := _store()
+	var screen := _terminal()
 	if screen != null:
 		screen.close()
 

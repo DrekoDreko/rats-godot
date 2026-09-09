@@ -10,7 +10,14 @@ extends Node3D
 ## **Survey Phase (60s):**
 ## - Authoritative 60s timer running on the host and synced to all peers.
 ## - Zero rats spawned in the house.
-## - All rat holes and escape routes stand out with visual highlights.
+## - All rat holes and escape routes stand out with visual highlights, and each
+##   one is a mouth of a run that comes out somewhere else in the house
+##   (`scripts/house/rat_hole.gd`). Noticing which two are the same hole is what
+##   the minute is for.
+## - The clues are already on the floor: droppings along the routes the animals
+##   walk (`scripts/house/dropping_trail.gd`), streaks of piss down the same
+##   routes that cost flesh to stand on (`scripts/house/rat_streak.gd`), and heaps
+##   of rubbish the trails lead to (`scripts/house/garbage_pile.gd`).
 ## - Attack weapons barred; only traps, map, bait, patches, flashlight, hands allowed.
 ## - Ready station at the front door allows the crew to advance early if all ready.
 ##
@@ -18,7 +25,9 @@ extends Node3D
 ## - The transition plays the rat screech; nothing about how the house is drawn
 ##   changes, since the PS1 shader draws every surface unshaded.
 ## - Host spawns rats based on `SessionManager.random_seed` and the contract's
-##   infestation level in nests far from player front-door spawns.
+##   infestation level, out of the heaps the crew baited first and then out of the
+##   burrows farthest from the front-door spawns (`_nests`). A quarter of them are
+##   the marking breed, which wets the floor as it goes.
 ## - Visual highlights on rat holes are extinguished.
 ## - Attack weapons unlocked in the inventory belt.
 ## - Trap installation takes longer arming cooldown.
@@ -37,6 +46,29 @@ extends Node3D
 
 const DEFAULT_INFESTATION := 6
 const RAT_SCENE_PATH := "res://scenes/rat.tscn"
+
+## How much of the infestation is the spraying breed
+## (`resources/species/sprayer_rat.tres`), which turns on whoever corners it and
+## gets him in the face. It is worth more than a common rat and it is a quarter of
+## what is in the walls: enough that every shift has one, few enough that meeting
+## one is news.
+const SPRAYER_SHARE := 0.25
+
+## The two breeds the house puts out. They are the same resources `rat.gd` lists
+## in `SPECIES`, reached by the same paths so that `preload` hands back the same
+## instances — which is what lets the rat find its own breed's index in that list
+## and send it to the guests.
+const RAT_SPECIES_COMMON := preload("res://resources/species/common_rat.tres")
+const RAT_SPECIES_SPRAYER := preload("res://resources/species/sprayer_rat.tres")
+
+## Where the animals are put when there is no house around them at all — a bench,
+## or a world somebody trimmed the burrows out of.
+const FALLBACK_NESTS: Array[Vector3] = [
+	Vector3(-10.0, 0.1, -10.0),
+	Vector3(10.0, 0.1, -10.0),
+	Vector3(-10.0, 0.1, -5.0),
+	Vector3(10.0, 0.1, -5.0),
+]
 ## The peer that thinks for every rat on the map. It is the same 1 that
 ## `PhaseManager` uses, written out again rather than reached through the
 ## autoload: an autoload has no global *name* until it is in the tree, so a
@@ -66,6 +98,15 @@ func _ready() -> void:
 	_setup_audio()
 	_setup_contract_geometry()
 	_update_phase_state(false)
+
+	# The old piss the crew is about to walk over. Host only — the guests are
+	# handed the streaks through the spawner over `Clues/Streaks` — and awaited
+	# inside `ClueManager`, because the navigation mesh they are laid on was baked
+	# a frame ago and has not answered the server yet.
+	#
+	# No count is passed: how many there are is a property of how many runs this
+	# house has, not of what the contract said about the infestation.
+	ClueManager.scatter_streaks()
 
 	PhaseManager.phase_changed.connect(_on_phase_changed)
 
@@ -239,6 +280,50 @@ func _contract_infestation() -> int:
 	return infestation if infestation > 0 else DEFAULT_INFESTATION
 
 
+## Where the rats come out of when the hunt starts, farthest from the crew first.
+##
+## Two kinds of place, and one rule over both of them:
+##
+## - **The burrows**, taken at the pace of floor in front of the slit rather than
+##   at the slit itself (`RatHole.mouth`) — the slit is in the plaster, and an
+##   animal put down there is an animal inside a wall.
+## - **The heaps of rubbish** (`scripts/house/garbage_pile.gd`), which are nests
+##   because rats live where the food is and a bin bag was food long before
+##   anybody bought a tub of bait.
+##
+## They are sorted together and by the same measure: **distance from the crew,
+## farthest first.** A hunt that opened with six rats on the doorstep would be
+## over before anybody had walked anywhere, and sorting the two kinds separately
+## would be two rules where one does the work.
+##
+## The list is walked round and round (`i % size`), so every nest is used when
+## the infestation outnumbers them; the order only decides which ones get animals
+## when there are fewer rats than places to put them.
+func _nests() -> Array[Vector3]:
+	# Where the crew is standing, or the doorstep when nobody is up yet.
+	var front_door := Vector3(0.0, 0.0, 10.0)
+	var player := get_tree().get_first_node_in_group("player") as Node3D
+	var ref_point: Vector3 = player.global_position if player != null else front_door
+
+	var nests: Array[Vector3] = []
+	for node in get_tree().get_nodes_in_group("rat_holes"):
+		var hole := node as RatHole
+		if hole != null:
+			nests.append(hole.mouth())
+	for node in get_tree().get_nodes_in_group("garbage"):
+		var pile := node as Node3D
+		if pile != null:
+			nests.append(pile.global_position)
+
+	if nests.is_empty():
+		return FALLBACK_NESTS.duplicate()
+
+	nests.sort_custom(func(a: Vector3, b: Vector3) -> bool:
+		return a.distance_to(ref_point) > b.distance_to(ref_point)
+	)
+	return nests
+
+
 ## Spawns the rats authoritative on the host using SessionManager.random_seed and Contract.infestation.
 func _spawn_rats_if_needed() -> void:
 	if _rats_spawned:
@@ -263,30 +348,7 @@ func _spawn_rats_if_needed() -> void:
 		_rats_root.add_to_group("rats_root")
 		add_child(_rats_root)
 
-	# Find candidate nest / burrow spawn points
-	var holes := get_tree().get_nodes_in_group("rat_holes")
-	var spawn_positions: Array[Vector3] = []
-
-	if holes.is_empty():
-		spawn_positions = [
-			Vector3(-10.0, 0.1, -10.0),
-			Vector3(10.0, 0.1, -10.0),
-			Vector3(-10.0, 0.1, -5.0),
-			Vector3(10.0, 0.1, -5.0)
-		]
-	else:
-		# Determine player position / front door reference point
-		var front_door := Vector3(0.0, 0.0, 10.0)
-		var player := get_tree().get_first_node_in_group("player") as Node3D
-		var ref_point: Vector3 = player.global_position if player != null else front_door
-
-		# Sort burrows by distance from players descending (placing rats in distant nests)
-		var sorted_holes := holes.duplicate()
-		sorted_holes.sort_custom(func(a: Node3D, b: Node3D) -> bool:
-			return a.global_position.distance_to(ref_point) > b.global_position.distance_to(ref_point)
-		)
-		for hole in sorted_holes:
-			spawn_positions.append(hole.global_position)
+	var spawn_positions := _nests()
 
 	if ResourceLoader.exists(RAT_SCENE_PATH):
 		var rat_packed := ResourceLoader.load(RAT_SCENE_PATH) as PackedScene
@@ -311,6 +373,13 @@ func _spawn_rats_if_needed() -> void:
 				rat.name = "Rat_%d" % (i + 1)
 				rat.set_multiplayer_authority(HOST_PEER)
 				rat.position = base_pos + offset
+				# The breed, written before the animal is in the tree for the
+				# same reason as everything else on this list: the rat reads it
+				# in its own `_ready` to work out the index that crosses the wire
+				# (`rat.gd::sync_species`), and a breed written afterwards is a
+				# breed the guests were never told about.
+				var sprayer := rng.randf() < SPRAYER_SHARE
+				rat.species = RAT_SPECIES_SPRAYER if sprayer else RAT_SPECIES_COMMON
 				_rats_root.add_child(rat)
 				if rat.has_signal("died"):
 					rat.died.connect(_on_rat_died)

@@ -1,12 +1,12 @@
 class_name StoreScreen
 extends Control
-## The store the crew shops at on the road: the man himself on the left, his
-## name and his money over him, and the racks of weapons he can buy on the
-## right.
+## The shop page of the terminal: the man himself on the left, his name and his
+## money over him, and the racks of weapons he can buy on the right.
 ##
 ## **It is a `Control` and not a `CanvasLayer` any more.** A layer buys ordering
 ## against the rest of the HUD, and there is no rest of the HUD inside a monitor:
-## the viewport holds this and nothing else, at whatever size the glass is.
+## the viewport holds the terminal and nothing else, at whatever size the glass
+## is — this page is one of three sharing it (`scripts/ui/terminal_screen.gd`).
 ##
 ## **It is drawn on the monitor and not over it.** This layer lives inside the
 ## `SubViewport` painted onto the glass of the totem at the front of the van
@@ -16,14 +16,17 @@ extends Control
 ##
 ## **It does not open itself, and it does not read keys.** Nothing in the window
 ## reaches a layer inside a `SubViewport`: the terminal owns the camera, the man
-## and the keys while the store is up, and hands the mouse through onto the glass
-## itself. This screen is only shown, drawn and hidden.
+## and the keys while it is up, and hands the mouse through onto the glass
+## itself. This screen is only shown, drawn and hidden — by the terminal wrapper,
+## which is also the one that decides whether the rest of the HUD is showing.
 ##
-## **Only while the wheels are turning.** `ShopManager.is_open()` is the one
-## answer, and it is the phase and nothing else: the lobby has not left yet and
-## the house has no van in it. The key does nothing in either, the hint does not
-## show, and a screen that is up when the phase turns is shut by the phase rather
-## than left standing over a van that has parked.
+## **The shelf is only open on the road.** `ShopManager.is_open()` is the one
+## answer, and it is the phase and nothing else. The terminal itself opens on
+## the road and in the hunt alike — the map and the job sheet are wanted in
+## both — but pressing `BUY` off the road still buys nothing, so a shut shelf
+## shows its racks as read as ever with nothing on them pressable, and a notice
+## saying why (`CLOSED_NOTICE`) rather than a `BUY` that is quietly refused a
+## moment later.
 ##
 ## **The rack is drawn from the catalogue, not from the scene.** Everything in
 ## `resources/store/` is on sale, grouped into columns by its `kind`, and every
@@ -83,6 +86,12 @@ const EMPTY_COLOR := Color(0.5, 0.56, 0.62)
 
 ## What an empty frame reads.
 const EMPTY_TEXT := "—"
+
+## What the notice line reads while the shelf is shut — the terminal now opens
+## in the hunt as well as on the road, and buying is still a `TRAVEL` thing
+## (`ShopManager.OPEN_PHASE`). Told out loud rather than left to a silent
+## refusal, the same bargain the radio's dead line already strikes.
+const CLOSED_NOTICE := "THE SHELF IS SHUT — BUY ON THE ROAD"
 
 ## The racks, and which kinds of thing stand on each. The columns are fixed and
 ## the items find their way into them, rather than the other way round: a column
@@ -266,7 +275,6 @@ var _open := false
 
 
 func _ready() -> void:
-	add_to_group("store_screen")
 	_root.hide()
 
 	_build_racks()
@@ -276,6 +284,7 @@ func _ready() -> void:
 	ShopManager.item_bought.connect(_on_item_bought)
 	ShopManager.request_refused.connect(_on_refused)
 	SessionManager.player_changed.connect(_on_player_changed)
+	SessionManager.bank_changed.connect(_on_bank_changed)
 	ColorManager.color_changed.connect(_on_color_changed)
 	PhaseManager.phase_changed.connect(_on_phase_changed)
 	SettingsManager.streamer_mode_changed.connect(func(_enabled: bool) -> void: _refresh_player())
@@ -330,6 +339,12 @@ func _process(delta: float) -> void:
 ## The man himself is not touched here: the terminal took him over before the
 ## camera moved and hands him back after it has moved again, so that he is not
 ## walking around the van for the half second the screen is flying home.
+##
+## The rest of the HUD — the crosshair, the prompt, the phase clock — is no
+## longer this screen's to hide. Three pages share the glass now
+## (`scripts/ui/terminal_screen.gd`), and it is the terminal as a whole that
+## decides whether the man is "at the machine", not whichever page happens to
+## be showing.
 func open() -> void:
 	if _open:
 		return
@@ -337,7 +352,6 @@ func open() -> void:
 	_notice.text = ""
 	_refresh()
 	_root.show()
-	_show_rest_of_hud(false)
 
 
 func close() -> void:
@@ -352,37 +366,7 @@ func close() -> void:
 	_show_held_item(null)
 	_refresh()
 	_root.hide()
-	_show_rest_of_hud(true)
 	closed.emit()
-
-
-## The crosshair and the prompt have nothing to say while a man is shopping. The
-## prompt is the one that does not come back on its own account: he may still be
-## standing at a station, and the character announces it again on the next frame.
-##
-## The HUD is hunted for by name rather than pointed at. This layer is inside the
-## monitor's own viewport now, several nodes down a branch of the van, and a
-## relative path from in there is one rename away from silently pointing at
-## nothing — the map table pays the same toll to find the layer it draws on.
-func _show_rest_of_hud(on: bool) -> void:
-	# The clock over the road goes with them. It is drawn in the middle of the
-	# top of the window, which is exactly where the monitor is while a man is
-	# reading it — a phase counter across the racks is the one thing on screen
-	# that is neither the van nor the shop.
-	var clock := get_tree().get_first_node_in_group("hud_phase") as CanvasLayer
-	if clock != null:
-		clock.visible = on
-
-	var hud := get_tree().root.find_child("HUD", true, false)
-	if hud == null:
-		return
-	var crosshair := hud.get_node_or_null("Crosshair") as CanvasItem
-	if crosshair != null:
-		crosshair.visible = on
-	if not on:
-		var prompt := hud.get_node_or_null("Prompt") as CanvasItem
-		if prompt != null:
-			prompt.hide()
 
 
 # --- The racks --------------------------------------------------------------
@@ -938,10 +922,20 @@ func _refresh_player() -> void:
 
 ## The whole screen, from the purse and the catalogue and nothing kept here: the
 ## numbers on the store cannot drift from the ones that survive the van.
+##
+## The terminal now opens in the hunt as well as on the road, and the shelf is
+## still a `TRAVEL` thing (`ShopManager.OPEN_PHASE`) — a rule enforced at the
+## host regardless of what this screen draws. Off the road the racks are shown
+## as read as ever, priced the same, only nothing on them is pressable, and the
+## notice line says why rather than leaving a man to press `BUY` and be told no
+## by a packet a moment later.
 func _refresh() -> void:
 	var us := _our_steam_id()
 	_money.text = "$ %d" % ShopManager.money(us)
 	_refresh_player()
+	var open := ShopManager.is_open()
+	if not open:
+		_notice.text = CLOSED_NOTICE
 	for tile in _tiles:
 		var item: StoreItem = tile["item"]
 		var price: Label = tile["price"]
@@ -954,11 +948,10 @@ func _refresh() -> void:
 		var afford := ShopManager.can_afford(us, item)
 		price.add_theme_color_override("font_color",
 			AFFORDABLE_COLOR if afford else DEAR_COLOR)
-		# Every tile stays pressable, whatever it costs. Picking a thing up is
-		# not buying it any more, and a man ought to be able to turn the
-		# expensive one over in his hand and decide it is worth saving for —
-		# the red price already says he cannot have it yet, and the button in
-		# the footer is the one that goes dead.
+		# Every tile stays pressable, whatever it costs, and for the same reason
+		# a shut shelf takes that away entirely: there is nothing to turn over in
+		# his hand when there is nobody to sell it to him.
+		button.disabled = not open
 		_mark_selected(button, item == _selected)
 	_refresh_buy_button()
 
@@ -974,7 +967,8 @@ func _refresh_buy_button() -> void:
 		_buy_button.disabled = true
 		return
 	_buy_button.text = "%s $%d" % [BUY_TEXT, _selected.price]
-	_buy_button.disabled = not ShopManager.can_afford(_our_steam_id(), _selected)
+	_buy_button.disabled = not ShopManager.can_afford(_our_steam_id(), _selected) \
+		or not ShopManager.is_open()
 
 
 ## A refused tile, blinking red. It is the whole of the feedback for an empty
@@ -1062,6 +1056,10 @@ func _on_refused(reason: String) -> void:
 func _on_player_changed(steam_id: int) -> void:
 	if steam_id == _our_steam_id():
 		_refresh()
+
+
+func _on_bank_changed(_balance: int) -> void:
+	_refresh()
 
 
 func _on_color_changed(steam_id: int, _color: Color) -> void:

@@ -80,6 +80,7 @@ const ANIMATIONS := {
     PlayerAvatar.State.AIRBORNE: &"Jump",
     PlayerAvatar.State.CROUCHING: &"CrouchIdle",
     PlayerAvatar.State.CROUCH_WALKING: &"CrouchedWalking",
+    PlayerAvatar.State.SITTING: &"seating/SeatedIdle",
 }
 
 ## The state being shown, so that a state which has not changed is not played
@@ -105,6 +106,7 @@ var _arms: PlayerArms
 
 
 func _ready() -> void:
+    _animation.add_animation_library(&"seating", preload("res://resources/seated_animations.tres"))
     _build_arms()
     _play(_state)
     _started = true
