@@ -9,22 +9,22 @@ spacing_top = -3
 spacing_bottom = -1
 
 [sub_resource type="StyleBoxEmpty" id="Style_check_flat"]
-content_margin_left = 16.0
-content_margin_top = 2.0
+content_margin_left = 13.0
+content_margin_top = 1.0
 content_margin_right = 2.0
-content_margin_bottom = 2.0
+content_margin_bottom = 1.0
 
 [sub_resource type="StyleBoxEmpty" id="Style_check_focus"]
 
 [node name="CheckOption" type="Button"]
-custom_minimum_size = Vector2(0, 16)
+custom_minimum_size = Vector2(0, 14)
 theme_override_colors/font_color = Color(0.82, 0.82, 0.82, 1)
 theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
 theme_override_colors/font_pressed_color = Color(1, 1, 1, 1)
 theme_override_colors/font_focus_color = Color(0.82, 0.82, 0.82, 1)
 theme_override_colors/font_disabled_color = Color(1, 1, 1, 0.45)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 2
+theme_override_constants/outline_size = 4
 theme_override_fonts/font = SubResource("FontVariation_check")
 theme_override_font_sizes/font_size = 16
 theme_override_styles/normal = SubResource("Style_check_flat")
@@ -39,8 +39,8 @@ layout_mode = 1
 anchors_preset = 4
 anchor_top = 0.5
 anchor_bottom = 0.5
-offset_top = -5.0
-offset_right = 10.0
-offset_bottom = 5.0
+offset_top = -4.0
+offset_right = 8.0
+offset_bottom = 4.0
 grow_vertical = 2
 mouse_filter = 2

@@ -1,19 +1,29 @@
 class_name GamePostProcessWrapper
-extends SubViewportContainer
-## Persistent presentation shell for the game. It owns the post-process material
-## and its SubViewport while gameplay scenes are replaced inside that viewport.
+extends Control
+## Persistent presentation shell for the game. It owns the post-process layers
+## and their SubViewport while gameplay scenes are replaced inside that viewport.
 
 @export var initial_scene: PackedScene
 
 var _game_scene: Node
 var _game_scene_path := ""
 
-@onready var _viewport: SubViewport = $Viewport
+@onready var _viewport: SubViewport = $GameViewport/Viewport
+@onready var _ps1_effect: ColorRect = $GameViewport/Viewport/PostProcessLayer/Effects/PS1Effect
 
 
 func _ready() -> void:
+	# AudioManager finds the gameplay viewport through this group, so the lookup
+	# survives the wrapper being renamed or reparented.
+	add_to_group(AudioManager.WRAPPER_GROUP)
+	_apply_post_process_settings()
+	SettingsManager.ps1_post_process_changed.connect(_apply_post_process_settings)
 	if initial_scene != null:
 		change_scene_to_packed(initial_scene)
+
+
+func _apply_post_process_settings() -> void:
+	_ps1_effect.visible = SettingsManager.ps1_post_process_enabled
 
 
 ## Replaces the gameplay scene without replacing this wrapper or its viewport.

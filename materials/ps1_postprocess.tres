@@ -6,5 +6,5 @@
 shader = ExtResource("1_shader")
 shader_parameter/enabled = true
 shader_parameter/dithering = true
-shader_parameter/colors = 12
+shader_parameter/colors = 16
 shader_parameter/dither_size = 1

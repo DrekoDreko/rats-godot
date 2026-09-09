@@ -84,6 +84,3 @@ theme_override_constants/outline_size = 5
 text = "HUD_READY"
 label_settings = SubResource("Label_hud_phase")
 horizontal_alignment = 1
-
-[node name="Beep" type="AudioStreamPlayer" parent="."]
-volume_db = -14.0

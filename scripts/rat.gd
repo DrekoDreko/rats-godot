@@ -32,6 +32,8 @@ enum Capture { POUNCE, RISING, IN_HAND, GOING_LIMP, STOWING }
 @export var acceleration := 45.0
 @export var gravity := 22.0
 @export var turn_speed := 11.0
+## Ground distance between two rat footsteps.
+const STEP_DISTANCE := 0.8
 
 @export_group("Perception")
 ## Distance at which the rat flees if it can see the player.
@@ -408,6 +410,7 @@ var _dodge_direction := Vector3.ZERO
 var _idle_duration := 1.0
 var _desired_speed := 0.0
 var _previous_position := Vector3.ZERO
+var _step_distance := 0.0
 var _cover_query := PhysicsShapeQueryParameters3D.new()
 ## The hole this flight is running for, or null for a flight that is only looking
 ## for something to hide behind. Set by `_pick_bolt_hole` and spent by
@@ -682,6 +685,7 @@ func _physics_process(delta: float) -> void:
 
 	_apply_gravity(delta)
 	move_and_slide()
+	_update_steps()
 	_update_animation()
 	_check_stuck(delta)
 
@@ -1384,6 +1388,8 @@ func _follow_capture_point() -> void:
 		return
 	global_transform = _capture_point.global_transform \
 		* _held_transform.scaled_local(_held_scale(_holder_peer))
+	_previous_position = global_position
+	_step_distance = 0.0
 
 
 ## How big to draw the animal in the hand it is in: `FIRST_PERSON_SCALE` in our
@@ -2434,6 +2440,17 @@ func _move(direction: Vector3, speed: float, delta: float) -> void:
 	velocity.z = move_toward(velocity.z, target.z, acceleration * delta)
 	_turn_to(Vector3(velocity.x, 0.0, velocity.z), delta)
 	model.scale = model.scale.lerp(Vector3.ONE, minf(delta * 8.0, 1.0))
+
+
+func _update_steps() -> void:
+	var walked := _flat_distance(global_position, _previous_position)
+	if not is_on_floor() or _desired_speed <= IDLE_SPEED:
+		_step_distance = 0.0
+		return
+	_step_distance += walked
+	while _step_distance >= STEP_DISTANCE:
+		_step_distance -= STEP_DISTANCE
+		AudioManager.play_networked_3d("step_grass", global_position, -8.0, 1.0, self)
 
 func _turn_to(direction: Vector3, delta: float) -> void:
 	if direction.length() < 0.2:

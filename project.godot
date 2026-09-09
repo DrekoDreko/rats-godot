@@ -40,14 +40,15 @@ SteamAvatars="*res://scripts/steam/steam_avatars.gd"
 ShiftReport="*res://scripts/session/shift_report.gd"
 Bank="*res://scripts/economy/bank.gd"
 SettingsManager="*res://scripts/settings/settings_manager.gd"
+AudioManager="*res://scripts/audio/audio_manager.gd"
 
 [display]
 
-window/size/viewport_width=640
-window/size/viewport_height=360
-window/size/window_width_override=1920
-window/size/window_height_override=1080
-window/stretch/mode="viewport"
+window/size/viewport_width=480
+window/size/viewport_height=270
+window/size/window_width_override=960
+window/size/window_height_override=540
+window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 
 [editor_plugins]

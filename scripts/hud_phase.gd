@@ -57,20 +57,10 @@ const WAGER_COLOR := {
 	HuntTime.Type.SHORT: Color("ff4b3a"),
 }
 
-## The beep of the last ten seconds, built rather than loaded: there is no audio
-## in the project yet, and a square wave at a few hundred hertz is what a PSX
-## countdown sounded like anyway. Hertz, seconds, sample rate and how loud it
-## sits against the rest.
-const BEEP_HZ := 880.0
-const BEEP_TIME := 0.06
-const BEEP_RATE := 22050
-const BEEP_DB := -14.0
-
 @onready var _phase_label: Label = $Panel/Margin/Rows/Phase
 @onready var _clock_label: Label = $Panel/Margin/Rows/Clock
 @onready var _wager_label: Label = $Panel/Margin/Rows/Wager
 @onready var _ready_label: Label = $Panel/Margin/Rows/Ready
-@onready var _beep: AudioStreamPlayer = $Beep
 
 ## Which whole second the last beep went off on, or -1 for none. It is what keeps
 ## the beep to one a second rather than one a frame.
@@ -82,8 +72,6 @@ var _warning := false
 
 
 func _ready() -> void:
-	_beep.stream = _build_beep()
-	_beep.volume_db = BEEP_DB
 	set_process(false)
 
 	PhaseManager.phase_changed.connect(_on_phase_changed)
@@ -212,30 +200,7 @@ func _stop_warning() -> void:
 ## It became reachable the moment the hunt grew a clock: the warning of the last
 ## ten seconds is the one thing here that fires on a phase about to end.
 func _play_beep() -> void:
-	if _beep.stream != null and _beep.is_inside_tree():
-		_beep.play()
-
-
-## The beep itself: a square wave, eight-bit and mono, which is both what the era
-## sounded like and the cheapest thing to hand to the mixer. It is built here
-## rather than loaded because there is no audio in the project yet, and a HUD
-## that waits for a sound designer is a HUD nobody can test.
-func _build_beep() -> AudioStreamWAV:
-	var frames := int(BEEP_RATE * BEEP_TIME)
-	var data := PackedByteArray()
-	data.resize(frames)
-	for i in frames:
-		var cycle := fmod(float(i) * BEEP_HZ / float(BEEP_RATE), 1.0)
-		# Faded out over its own length, or the cut at the end of the wave is a
-		# click louder than the beep it ends.
-		var fade := 1.0 - float(i) / float(frames)
-		data[i] = int(roundf((80.0 if cycle < 0.5 else -80.0) * fade)) & 0xff
-	var wave := AudioStreamWAV.new()
-	wave.format = AudioStreamWAV.FORMAT_8_BITS
-	wave.mix_rate = BEEP_RATE
-	wave.stereo = false
-	wave.data = data
-	return wave
+	AudioManager.play_ui("countdown", 1.0, -14.0)
 
 # --- What wakes it up -------------------------------------------------------
 

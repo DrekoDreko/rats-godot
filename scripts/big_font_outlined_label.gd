@@ -15,6 +15,17 @@ extends MarginContainer
         _apply_text()
 
 
+## The colour of the text. It has to be a property of this scene rather than a
+## `theme_override_colors/font_color` written on the node, because the node is
+## the `MarginContainer` and the text belongs to the `Label` inside it — a
+## colour override on a container is local to the container and never reaches
+## its child, so a screen that set one that way got white text and no warning.
+@export var font_color: Color = Color.WHITE:
+    set(value):
+        font_color = value
+        _apply_font_color()
+
+
 @export_range(0, 3, 1) var autowrap_mode: int = TextServer.AUTOWRAP_OFF:
     set(value):
         autowrap_mode = value
@@ -43,6 +54,7 @@ extends MarginContainer
 func _ready() -> void:
     _apply_font_size()
     _apply_text()
+    _apply_font_color()
     _apply_autowrap_mode()
     _apply_alignment()
     _apply_text_overrun_behavior()
@@ -66,6 +78,12 @@ func _apply_text() -> void:
     var target := _get_label()
     if target != null:
         target.text = text
+
+
+func _apply_font_color() -> void:
+    var target := _get_label()
+    if target != null:
+        target.add_theme_color_override("font_color", font_color)
 
 
 func _apply_autowrap_mode() -> void:

@@ -1,4 +1,4 @@
-[gd_scene format=3 uid="uid://cb56lfm20553x"]
+[gd_scene format=3 uid="uid://psm7ay23fml5"]
 
 [ext_resource type="PackedScene" uid="uid://dlweiu424547o" path="res://models/rats_van.glb" id="1_van"]
 [ext_resource type="Script" uid="uid://c1brx5ynxvh6i" path="res://scripts/session/van_doors.gd" id="22_doors"]
@@ -21,23 +21,6 @@
 [ext_resource type="PackedScene" path="res://scenes/pause_menu.tscn" id="99_pause"]
 [ext_resource type="PackedScene" path="res://scenes/scoreboard.tscn" id="98_scoreboard"]
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_d5yb3"]
-render_priority = 0
-shader = ExtResource("4_8sque")
-shader_parameter/albedo_color = Color(1, 1, 1, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.0
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 0.5
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
 [sub_resource type="StandardMaterial3D" id="Mat_ground"]
 albedo_color = Color(0.11, 0.11, 0.12, 1)
 roughness = 0.95
@@ -47,34 +30,34 @@ uv1_scale = Vector3(6, 24, 1)
 material = SubResource("Mat_ground")
 size = Vector2(30, 96)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_27hl3"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_d5yb3"]
 render_priority = 0
 shader = ExtResource("4_8sque")
 shader_parameter/albedo_color = Color(0.11, 0.11, 0.12, 1)
 shader_parameter/uv_scale = Vector2(6, 24)
-shader_parameter/jitter = 0.0
+shader_parameter/jitter = 0.50000002375
 shader_parameter/jitter_grid = 0.0
 shader_parameter/jitter_z_coordinate = true
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 0.5
+shader_parameter/alpha_scissor = 1.0
 shader_parameter/recolor_target = Color(1, 1, 1, 1)
 shader_parameter/recolor_strength = 0.0
 shader_parameter/recolor_hue = 0.1406
 shader_parameter/recolor_hue_range = 0.09
 shader_parameter/recolor_min_saturation = 0.25
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_ylbqi"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_27hl3"]
 render_priority = 0
 shader = ExtResource("4_8sque")
 shader_parameter/albedo_color = Color(0.72, 0.68, 0.42, 1)
 shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.0
+shader_parameter/jitter = 0.50000002375
 shader_parameter/jitter_grid = 0.0
 shader_parameter/jitter_z_coordinate = true
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 0.5
+shader_parameter/alpha_scissor = 1.0
 shader_parameter/recolor_target = Color(1, 1, 1, 1)
 shader_parameter/recolor_strength = 0.0
 shader_parameter/recolor_hue = 0.1406
@@ -84,17 +67,17 @@ shader_parameter/recolor_min_saturation = 0.25
 [sub_resource type="BoxMesh" id="Mesh_pole"]
 size = Vector3(0.18, 5.5, 0.18)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_702em"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ylbqi"]
 render_priority = 0
 shader = ExtResource("4_8sque")
 shader_parameter/albedo_color = Color(0.24, 0.23, 0.21, 1)
 shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.0
+shader_parameter/jitter = 0.50000002375
 shader_parameter/jitter_grid = 0.0
 shader_parameter/jitter_z_coordinate = true
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 0.5
+shader_parameter/alpha_scissor = 1.0
 shader_parameter/recolor_target = Color(1, 1, 1, 1)
 shader_parameter/recolor_strength = 0.0
 shader_parameter/recolor_hue = 0.1406
@@ -104,17 +87,17 @@ shader_parameter/recolor_min_saturation = 0.25
 [sub_resource type="BoxMesh" id="Mesh_arm"]
 size = Vector3(1.1, 0.1, 0.1)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_72ap2"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_702em"]
 render_priority = 0
 shader = ExtResource("4_8sque")
 shader_parameter/albedo_color = Color(0.24, 0.23, 0.21, 1)
 shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.0
+shader_parameter/jitter = 0.50000002375
 shader_parameter/jitter_grid = 0.0
 shader_parameter/jitter_z_coordinate = true
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 0.5
+shader_parameter/alpha_scissor = 1.0
 shader_parameter/recolor_target = Color(1, 1, 1, 1)
 shader_parameter/recolor_strength = 0.0
 shader_parameter/recolor_hue = 0.1406
@@ -124,17 +107,34 @@ shader_parameter/recolor_min_saturation = 0.25
 [sub_resource type="BoxMesh" id="Mesh_bulb"]
 size = Vector3(0.4, 0.14, 0.3)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_he6y5"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_72ap2"]
 render_priority = 0
 shader = ExtResource("4_8sque")
 shader_parameter/albedo_color = Color(1, 0.85, 0.55, 1)
 shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.0
+shader_parameter/jitter = 0.50000002375
 shader_parameter/jitter_grid = 0.0
 shader_parameter/jitter_z_coordinate = true
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 0.5
+shader_parameter/alpha_scissor = 1.0
+shader_parameter/recolor_target = Color(1, 1, 1, 1)
+shader_parameter/recolor_strength = 0.0
+shader_parameter/recolor_hue = 0.1406
+shader_parameter/recolor_hue_range = 0.09
+shader_parameter/recolor_min_saturation = 0.25
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_he6y5"]
+render_priority = 0
+shader = ExtResource("4_8sque")
+shader_parameter/albedo_color = Color(0.24, 0.23, 0.21, 1)
+shader_parameter/uv_scale = Vector2(1, 1)
+shader_parameter/jitter = 0.50000002375
+shader_parameter/jitter_grid = 0.0
+shader_parameter/jitter_z_coordinate = true
+shader_parameter/jitter_depth_independent = true
+shader_parameter/affine_strength = 0.0
+shader_parameter/alpha_scissor = 1.0
 shader_parameter/recolor_target = Color(1, 1, 1, 1)
 shader_parameter/recolor_strength = 0.0
 shader_parameter/recolor_hue = 0.1406
@@ -146,12 +146,12 @@ render_priority = 0
 shader = ExtResource("4_8sque")
 shader_parameter/albedo_color = Color(0.24, 0.23, 0.21, 1)
 shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.0
+shader_parameter/jitter = 0.50000002375
 shader_parameter/jitter_grid = 0.0
 shader_parameter/jitter_z_coordinate = true
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 0.5
+shader_parameter/alpha_scissor = 1.0
 shader_parameter/recolor_target = Color(1, 1, 1, 1)
 shader_parameter/recolor_strength = 0.0
 shader_parameter/recolor_hue = 0.1406
@@ -161,14 +161,14 @@ shader_parameter/recolor_min_saturation = 0.25
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_oamsk"]
 render_priority = 0
 shader = ExtResource("4_8sque")
-shader_parameter/albedo_color = Color(0.24, 0.23, 0.21, 1)
+shader_parameter/albedo_color = Color(1, 0.85, 0.55, 1)
 shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.0
+shader_parameter/jitter = 0.50000002375
 shader_parameter/jitter_grid = 0.0
 shader_parameter/jitter_z_coordinate = true
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 0.5
+shader_parameter/alpha_scissor = 1.0
 shader_parameter/recolor_target = Color(1, 1, 1, 1)
 shader_parameter/recolor_strength = 0.0
 shader_parameter/recolor_hue = 0.1406
@@ -178,14 +178,14 @@ shader_parameter/recolor_min_saturation = 0.25
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_qsly2"]
 render_priority = 0
 shader = ExtResource("4_8sque")
-shader_parameter/albedo_color = Color(1, 0.85, 0.55, 1)
+shader_parameter/albedo_color = Color(0.24, 0.23, 0.21, 1)
 shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.0
+shader_parameter/jitter = 0.50000002375
 shader_parameter/jitter_grid = 0.0
 shader_parameter/jitter_z_coordinate = true
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 0.5
+shader_parameter/alpha_scissor = 1.0
 shader_parameter/recolor_target = Color(1, 1, 1, 1)
 shader_parameter/recolor_strength = 0.0
 shader_parameter/recolor_hue = 0.1406
@@ -197,12 +197,12 @@ render_priority = 0
 shader = ExtResource("4_8sque")
 shader_parameter/albedo_color = Color(0.24, 0.23, 0.21, 1)
 shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.0
+shader_parameter/jitter = 0.50000002375
 shader_parameter/jitter_grid = 0.0
 shader_parameter/jitter_z_coordinate = true
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 0.5
+shader_parameter/alpha_scissor = 1.0
 shader_parameter/recolor_target = Color(1, 1, 1, 1)
 shader_parameter/recolor_strength = 0.0
 shader_parameter/recolor_hue = 0.1406
@@ -212,31 +212,14 @@ shader_parameter/recolor_min_saturation = 0.25
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_cxu5t"]
 render_priority = 0
 shader = ExtResource("4_8sque")
-shader_parameter/albedo_color = Color(0.24, 0.23, 0.21, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.0
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 0.5
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_gjmg6"]
-render_priority = 0
-shader = ExtResource("4_8sque")
 shader_parameter/albedo_color = Color(1, 0.85, 0.55, 1)
 shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.0
+shader_parameter/jitter = 0.50000002375
 shader_parameter/jitter_grid = 0.0
 shader_parameter/jitter_z_coordinate = true
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 0.5
+shader_parameter/alpha_scissor = 1.0
 shader_parameter/recolor_target = Color(1, 1, 1, 1)
 shader_parameter/recolor_strength = 0.0
 shader_parameter/recolor_hue = 0.1406
@@ -246,17 +229,34 @@ shader_parameter/recolor_min_saturation = 0.25
 [sub_resource type="BoxMesh" id="Mesh_fence"]
 size = Vector3(0.1, 1.6, 8)
 
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_gjmg6"]
+render_priority = 0
+shader = ExtResource("4_8sque")
+shader_parameter/albedo_color = Color(0.2, 0.21, 0.2, 1)
+shader_parameter/uv_scale = Vector2(1, 1)
+shader_parameter/jitter = 0.50000002375
+shader_parameter/jitter_grid = 0.0
+shader_parameter/jitter_z_coordinate = true
+shader_parameter/jitter_depth_independent = true
+shader_parameter/affine_strength = 0.0
+shader_parameter/alpha_scissor = 1.0
+shader_parameter/recolor_target = Color(1, 1, 1, 1)
+shader_parameter/recolor_strength = 0.0
+shader_parameter/recolor_hue = 0.1406
+shader_parameter/recolor_hue_range = 0.09
+shader_parameter/recolor_min_saturation = 0.25
+
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_2dm0v"]
 render_priority = 0
 shader = ExtResource("4_8sque")
 shader_parameter/albedo_color = Color(0.2, 0.21, 0.2, 1)
 shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.0
+shader_parameter/jitter = 0.50000002375
 shader_parameter/jitter_grid = 0.0
 shader_parameter/jitter_z_coordinate = true
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 0.5
+shader_parameter/alpha_scissor = 1.0
 shader_parameter/recolor_target = Color(1, 1, 1, 1)
 shader_parameter/recolor_strength = 0.0
 shader_parameter/recolor_hue = 0.1406
@@ -268,29 +268,12 @@ render_priority = 0
 shader = ExtResource("4_8sque")
 shader_parameter/albedo_color = Color(0.2, 0.21, 0.2, 1)
 shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.0
+shader_parameter/jitter = 0.50000002375
 shader_parameter/jitter_grid = 0.0
 shader_parameter/jitter_z_coordinate = true
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 0.5
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_0talx"]
-render_priority = 0
-shader = ExtResource("4_8sque")
-shader_parameter/albedo_color = Color(0.2, 0.21, 0.2, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.0
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 0.5
+shader_parameter/alpha_scissor = 1.0
 shader_parameter/recolor_target = Color(1, 1, 1, 1)
 shader_parameter/recolor_strength = 0.0
 shader_parameter/recolor_hue = 0.1406
@@ -300,34 +283,34 @@ shader_parameter/recolor_min_saturation = 0.25
 [sub_resource type="BoxMesh" id="Mesh_house"]
 size = Vector3(6, 4.4, 7)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_mq2pp"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_0talx"]
 render_priority = 0
 shader = ExtResource("4_8sque")
 shader_parameter/albedo_color = Color(0.17, 0.16, 0.17, 1)
 shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.0
+shader_parameter/jitter = 0.50000002375
 shader_parameter/jitter_grid = 0.0
 shader_parameter/jitter_z_coordinate = true
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 0.5
+shader_parameter/alpha_scissor = 1.0
 shader_parameter/recolor_target = Color(1, 1, 1, 1)
 shader_parameter/recolor_strength = 0.0
 shader_parameter/recolor_hue = 0.1406
 shader_parameter/recolor_hue_range = 0.09
 shader_parameter/recolor_min_saturation = 0.25
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_0nhi2"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_mq2pp"]
 render_priority = 0
 shader = ExtResource("4_8sque")
 shader_parameter/albedo_color = Color(0.17, 0.16, 0.17, 1)
 shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.0
+shader_parameter/jitter = 0.50000002375
 shader_parameter/jitter_grid = 0.0
 shader_parameter/jitter_z_coordinate = true
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 0.5
+shader_parameter/alpha_scissor = 1.0
 shader_parameter/recolor_target = Color(1, 1, 1, 1)
 shader_parameter/recolor_strength = 0.0
 shader_parameter/recolor_hue = 0.1406
@@ -340,17 +323,17 @@ size = Vector3(0.7, 1.2, 0.9)
 [sub_resource type="QuadMesh" id="Mesh_totem_screen"]
 size = Vector2(0.4293, 0.3398)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_cw8ms"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_vvayw"]
 render_priority = 0
 shader = ExtResource("4_8sque")
 shader_parameter/albedo_color = Color(1, 1, 1, 1)
 shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.0
+shader_parameter/jitter = 0.50000002375
 shader_parameter/jitter_grid = 0.0
 shader_parameter/jitter_z_coordinate = true
 shader_parameter/jitter_depth_independent = true
 shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 0.5
+shader_parameter/alpha_scissor = 1.0
 shader_parameter/recolor_target = Color(1, 1, 1, 1)
 shader_parameter/recolor_strength = 0.0
 shader_parameter/recolor_hue = 0.1406
@@ -368,13 +351,13 @@ script = ExtResource("12_road")
 [node name="Ground" type="MeshInstance3D" parent="Road" unique_id=840795276]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.02, -20)
 mesh = SubResource("Mesh_ground")
-surface_material_override/0 = SubResource("ShaderMaterial_27hl3")
+surface_material_override/0 = SubResource("ShaderMaterial_d5yb3")
 
 [node name="Kerb" type="MeshInstance3D" parent="Road" unique_id=328693907]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -20)
 visible = false
 mesh = SubResource("Mesh_ground")
-surface_material_override/0 = SubResource("ShaderMaterial_ylbqi")
+surface_material_override/0 = SubResource("ShaderMaterial_27hl3")
 
 [node name="Props" type="Node3D" parent="Road" unique_id=1354704428]
 
@@ -383,76 +366,76 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.4, 2.75, 22)
 
 [node name="Post" type="MeshInstance3D" parent="Road/Props/PoleL1" unique_id=1451807250]
 mesh = SubResource("Mesh_pole")
-surface_material_override/0 = SubResource("ShaderMaterial_702em")
+surface_material_override/0 = SubResource("ShaderMaterial_ylbqi")
 
 [node name="Arm" type="MeshInstance3D" parent="Road/Props/PoleL1" unique_id=2131293757]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 2.6, 0)
 mesh = SubResource("Mesh_arm")
-surface_material_override/0 = SubResource("ShaderMaterial_72ap2")
+surface_material_override/0 = SubResource("ShaderMaterial_702em")
 
 [node name="Bulb" type="MeshInstance3D" parent="Road/Props/PoleL1" unique_id=1280562290]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1, 2.52, 0)
 mesh = SubResource("Mesh_bulb")
-surface_material_override/0 = SubResource("ShaderMaterial_he6y5")
+surface_material_override/0 = SubResource("ShaderMaterial_72ap2")
 
 [node name="PoleL2" type="Node3D" parent="Road/Props" unique_id=639358300]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -7.4, 2.75, -18)
 
 [node name="Post" type="MeshInstance3D" parent="Road/Props/PoleL2" unique_id=1663385796]
 mesh = SubResource("Mesh_pole")
-surface_material_override/0 = SubResource("ShaderMaterial_08j1w")
+surface_material_override/0 = SubResource("ShaderMaterial_he6y5")
 
 [node name="Arm" type="MeshInstance3D" parent="Road/Props/PoleL2" unique_id=1046114866]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 2.6, 0)
 mesh = SubResource("Mesh_arm")
-surface_material_override/0 = SubResource("ShaderMaterial_oamsk")
+surface_material_override/0 = SubResource("ShaderMaterial_08j1w")
 
 [node name="Bulb" type="MeshInstance3D" parent="Road/Props/PoleL2" unique_id=389118983]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1, 2.52, 0)
 mesh = SubResource("Mesh_bulb")
-surface_material_override/0 = SubResource("ShaderMaterial_qsly2")
+surface_material_override/0 = SubResource("ShaderMaterial_oamsk")
 
 [node name="PoleR1" type="Node3D" parent="Road/Props" unique_id=1982426277]
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 7.4, 2.75, 2)
 
 [node name="Post" type="MeshInstance3D" parent="Road/Props/PoleR1" unique_id=571533977]
 mesh = SubResource("Mesh_pole")
-surface_material_override/0 = SubResource("ShaderMaterial_vek2g")
+surface_material_override/0 = SubResource("ShaderMaterial_qsly2")
 
 [node name="Arm" type="MeshInstance3D" parent="Road/Props/PoleR1" unique_id=2052116537]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 2.6, 0)
 mesh = SubResource("Mesh_arm")
-surface_material_override/0 = SubResource("ShaderMaterial_cxu5t")
+surface_material_override/0 = SubResource("ShaderMaterial_vek2g")
 
 [node name="Bulb" type="MeshInstance3D" parent="Road/Props/PoleR1" unique_id=2060092022]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1, 2.52, 0)
 mesh = SubResource("Mesh_bulb")
-surface_material_override/0 = SubResource("ShaderMaterial_gjmg6")
+surface_material_override/0 = SubResource("ShaderMaterial_cxu5t")
 
 [node name="FenceL1" type="MeshInstance3D" parent="Road/Props" unique_id=349579806]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.2, 0.8, 12)
 mesh = SubResource("Mesh_fence")
-surface_material_override/0 = SubResource("ShaderMaterial_2dm0v")
+surface_material_override/0 = SubResource("ShaderMaterial_gjmg6")
 
 [node name="FenceL2" type="MeshInstance3D" parent="Road/Props" unique_id=961527864]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.2, 0.8, -28)
 mesh = SubResource("Mesh_fence")
-surface_material_override/0 = SubResource("ShaderMaterial_i31up")
+surface_material_override/0 = SubResource("ShaderMaterial_2dm0v")
 
 [node name="FenceR1" type="MeshInstance3D" parent="Road/Props" unique_id=828967908]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9.2, 0.8, -8)
 mesh = SubResource("Mesh_fence")
-surface_material_override/0 = SubResource("ShaderMaterial_0talx")
+surface_material_override/0 = SubResource("ShaderMaterial_i31up")
 
 [node name="HouseL1" type="MeshInstance3D" parent="Road/Props" unique_id=1696277070]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 2.2, -4)
 mesh = SubResource("Mesh_house")
-surface_material_override/0 = SubResource("ShaderMaterial_mq2pp")
+surface_material_override/0 = SubResource("ShaderMaterial_0talx")
 
 [node name="HouseR1" type="MeshInstance3D" parent="Road/Props" unique_id=1770418550]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 2.2, -34)
 mesh = SubResource("Mesh_house")
-surface_material_override/0 = SubResource("ShaderMaterial_0nhi2")
+surface_material_override/0 = SubResource("ShaderMaterial_mq2pp")
 
 [node name="Van" parent="." unique_id=1807624601 instance=ExtResource("1_van")]
 
@@ -471,14 +454,6 @@ script = ExtResource("22_doors")
 
 [node name="CabinShake" type="Node" parent="." unique_id=425989788]
 script = ExtResource("13_shake")
-
-[node name="Audio" type="Node" parent="." unique_id=1897576517]
-
-[node name="Engine" type="AudioStreamPlayer" parent="Audio" unique_id=1093490538]
-volume_db = -6.0
-
-[node name="Radio" type="AudioStreamPlayer" parent="Audio" unique_id=584438622]
-volume_db = -18.0
 
 [node name="Stations" type="Node3D" parent="." unique_id=973598005]
 
@@ -500,7 +475,7 @@ max_distance = 12.0
 [node name="Screen" type="MeshInstance3D" parent="Stations/StoreTerminal" unique_id=658090853]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00175, 0.7501, 0.15)
 mesh = SubResource("Mesh_totem_screen")
-surface_material_override/0 = SubResource("ShaderMaterial_cw8ms")
+surface_material_override/0 = SubResource("ShaderMaterial_vvayw")
 
 [node name="Viewport" type="SubViewport" parent="Stations/StoreTerminal/Screen" unique_id=1816679350]
 size = Vector2i(640, 507)
@@ -554,8 +529,7 @@ spawn_radius = 0.0
 [node name="PauseMenu" parent="." unique_id=388792559 instance=ExtResource("99_pause")]
 
 [node name="VoteUI" type="CanvasLayer" parent="."]
-layer = 1
+layer = 2
 
-[node name="ContractVoteScreen" parent="VoteUI" instance=ExtResource("20_vote")]
+[node name="ContractVoteScreen" parent="VoteUI" unique_id=500837635 instance=ExtResource("20_vote")]
 visible = false
-hud_path = NodePath("../../HUD")

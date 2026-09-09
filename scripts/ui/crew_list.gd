@@ -32,7 +32,7 @@ extends VBoxContainer
 const REFRESH := 0.5
 
 ## The dot in front of each name, drawn in that player's colour. A filled circle
-## is the one glyph that reads as a colour swatch at eight points.
+## is the one glyph that reads as a colour swatch at a row's size.
 const SWATCH := "●"
 
 ## What marks the host in the list, as a translation key. It goes after the
@@ -51,10 +51,16 @@ const CATCH_ICON_SIZE := Vector2(10, 10)
 ## would be a lie of exactly the kind a player would believe.
 const NO_PING := "—"
 
-## Font size for a crew row. The same eight points the rest of the small text in
-## the game is set in: this is a footnote, not a headline.
-const FONT_SIZE := 8
-const OUTLINE_SIZE := 4
+## The label a crew cell is built from, the same one the rest of the interface
+## is: the font, the outline and the spacing all come with it, so a row built
+## here can never quietly drift away from the ones a scene laid out around it.
+const ROW_LABEL := preload("res://scenes/big_font_outlined_label.tscn")
+
+## Font size for a crew row. Sixteen, because `matchup.ttf` is a pixel face
+## drawn on a sixteen-pixel grid and any size off that grid comes out with the
+## stems at uneven widths. The shared label rounds to the grid itself; the
+## constant is kept only so every cell in a row is set from one place.
+const FONT_SIZE := 16
 
 ## The two thresholds a player would draw himself, and the grey for a row with no
 ## number at all — so that "we do not know" never looks like "this is fine".
@@ -113,7 +119,7 @@ func refresh() -> void:
 ## One line: a dot in the player's colour, his name, the host mark if it is his,
 ## his tally and his ping.
 ##
-## The dot is a `Label` of its own so that only it carries the colour — a whole
+## The dot is a label of its own so that only it carries the colour — a whole
 ## row tinted red would be a row that reads as an error rather than as a man in
 ## a red suit.
 func _row(steam_id: int) -> HBoxContainer:
@@ -157,13 +163,11 @@ func _row(steam_id: int) -> HBoxContainer:
 ## A cell, dressed the way every other line of small text in the game is: flat
 ## colour with a hard black outline behind it, so it stays legible over whatever
 ## the house happens to be showing underneath.
-func _label(text: String, color: Color) -> Label:
-	var label := Label.new()
+func _label(text: String, color: Color) -> BigFontOutlinedLabel:
+	var label := ROW_LABEL.instantiate() as BigFontOutlinedLabel
+	label.font_size = FONT_SIZE
 	label.text = text
-	label.add_theme_font_size_override("font_size", FONT_SIZE)
-	label.add_theme_color_override("font_color", color)
-	label.add_theme_color_override("font_outline_color", Color.BLACK)
-	label.add_theme_constant_override("outline_size", OUTLINE_SIZE)
+	label.font_color = color
 	return label
 
 

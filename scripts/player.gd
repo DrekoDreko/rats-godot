@@ -138,6 +138,16 @@ const BOB_SETTLE := 8.0
 ## bends the visible legs; this moves the first-person view to the same height.
 const SEATED_HEAD_SCALE := 0.44
 
+## The footfall. `step_rock` is a bright 0.19s crack recorded near unity, so it
+## is pitched down a little to give the step some weight, then spread either
+## side of that so a run is not the same click repeated. The volume gets a
+## narrower spread of its own, which keeps the two from lining up into an
+## audible pattern.
+const STEP_PITCH := 0.92
+const STEP_PITCH_SPREAD := 0.12
+const STEP_VOLUME_DB := -6.0
+const STEP_VOLUME_SPREAD_DB := 2.0
+
 ## How much of the animal's own fighting the hands follow, and how far they are
 ## allowed to be carried by it, in metres.
 ##
@@ -158,6 +168,7 @@ const GRIP_DRIFT := 0.04
 
 @onready var head: Node3D = $Head
 @onready var camera: Camera3D = $Head/Camera
+@onready var audio_listener: AudioListener3D = $Head/Camera/AudioListener3D
 @onready var inventory: Inventory = $Head/Inventory
 ## Where a rat he has caught is held, in front of his own camera. It is the same
 ## node `Hands` hangs the animal off (`hands.gd: capture_point`), and it is read
@@ -188,10 +199,14 @@ var _air_time := 0.0
 ## he walks and is left where it stopped when he stands still — picked back up
 ## from there on the next step, so setting off again does not jerk the view.
 var _bob_phase := 0.0
+## Accumulated walking phase used to emit one footstep every half cycle.
+var _step_phase := 0.0
 ## How much of the sway is being applied, from 0 standing still to 1 at a full
 ## run. It travels rather than switching so that stopping eases the camera back
 ## to its resting height instead of dropping it there.
 var _bob_weight := 0.0
+## Initialized true so spawning on the floor is not mistaken for a landing.
+var _was_on_floor := true
 ## The camera's height in the head, read once off the scene: the sway is drawn
 ## around it, never away from it.
 var _camera_rest_y := 0.0
@@ -240,6 +255,10 @@ var _seated := false
 func _ready() -> void:
 	_start_position = global_position
 	_health = max_health
+	# The player scene is mounted in the gameplay SubViewport. Wait until that
+	# mount has completed before selecting its listener; otherwise the main
+	# viewport has no current 3D listener and positional sounds are inaudible.
+	call_deferred(&"_make_audio_listener_current")
 	# The shape is duplicated before a single frame is drawn: the one in the scene
 	# is shared with the ceiling cast — and with every other player in a lobby —
 	# and shrinking it in place would crouch all of them at once.
@@ -270,7 +289,17 @@ func _ready() -> void:
 		# they have no such gesture.
 		if weapon.has_signal(&"stowing"):
 			weapon.connect(&"stowing", _on_weapon_stowing)
-	inventory.equipped.connect(func(slot: int, weapon: Weapon) -> void: weapon_changed.emit(slot, weapon))
+	inventory.equipped.connect(_on_inventory_equipped)
+
+
+func _make_audio_listener_current() -> void:
+	if audio_listener != null and audio_listener.is_inside_tree():
+		audio_listener.make_current()
+
+
+func _on_inventory_equipped(slot: int, weapon: Weapon) -> void:
+	weapon_changed.emit(slot, weapon)
+	AudioManager.play_networked_3d("item_equip", global_position, -6.0, 1.0, self)
 
 
 ## A weapon has taken hold of a rat.
@@ -523,6 +552,11 @@ func _physics_process(delta: float) -> void:
 
 	if not _seated:
 		move_and_slide()
+		var landed := not _was_on_floor and is_on_floor()
+		_was_on_floor = is_on_floor()
+		if landed:
+			_step_phase = 0.0
+			AudioManager.play_networked_3d("landing_rock", global_position, -4.0, 1.0, self)
 
 	# The tail of a kill: his arms are still carrying the body down to his belt
 	# for a moment after the hands report themselves free (`arms_state`).
@@ -611,7 +645,13 @@ func _update_bob(delta: float) -> void:
 	var gait := clampf(speed / run_speed, 0.0, 1.0) if moving else 0.0
 	_bob_weight = move_toward(_bob_weight, gait, BOB_SETTLE * delta)
 	if moving:
-		_bob_phase = fposmod(_bob_phase + TAU * bob_frequency * gait * delta, TAU)
+		var phase_delta := TAU * bob_frequency * gait * delta
+		_bob_phase = fposmod(_bob_phase + phase_delta, TAU)
+		_step_phase += phase_delta
+		while _step_phase >= PI:
+			_step_phase -= PI
+			if not _ui_open:
+				_play_step()
 	# The arms ride the same step the view does, and they are handed the phase
 	# rather than left to find it: an arm counting its own steps off the velocity
 	# would drift a frame from the camera it is drawn in front of, and the two
@@ -622,6 +662,19 @@ func _update_bob(delta: float) -> void:
 		camera.position.y = _camera_rest_y
 		return
 	camera.position.y = _camera_rest_y + sin(_bob_phase) * bob_amount * _bob_weight
+
+
+## One footfall. The sample is a single short crack, so a fixed pitch turns a
+## walk into a machine gun of identical clicks — thin, and audibly looped. Two
+## things break that up: a pitch a little under unity, which gives the step some
+## body rather than the bright top-end of the raw sample, and a random spread
+## either side of it so no two footfalls are the same sound. The volume moves
+## with it, because a step that is pitched down reads as heavier and a step
+## pitched up reads as lighter.
+func _play_step() -> void:
+	var pitch := STEP_PITCH * randf_range(1.0 - STEP_PITCH_SPREAD, 1.0 + STEP_PITCH_SPREAD)
+	var volume := STEP_VOLUME_DB + randf_range(-STEP_VOLUME_SPREAD_DB, STEP_VOLUME_SPREAD_DB)
+	AudioManager.play_networked_3d("step_rock", global_position, volume, pitch, self)
 
 # --- Down on his knees ------------------------------------------------------
 

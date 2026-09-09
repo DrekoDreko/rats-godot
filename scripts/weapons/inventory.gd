@@ -110,7 +110,6 @@ var _barred: Array[int] = []
 
 var _index := HANDS_INDEX
 var _current: Weapon
-var _refusal_audio: AudioStreamPlayer
 
 func _ready() -> void:
 	# The loops come first: empty ones, as many as the belt was built with. What
@@ -130,11 +129,6 @@ func _ready() -> void:
 	if _current != null:
 		_current.equip()
 	Stock.changed.connect(_on_stock_changed)
-	_refusal_audio = AudioStreamPlayer.new()
-	_refusal_audio.name = "RefusalAudio"
-	_refusal_audio.stream = _build_refusal_beep()
-	_refusal_audio.volume_db = -12.0
-	add_child(_refusal_audio)
 	equipped.emit(_index, _current)
 
 ## Swaps to a slot. Returns false when it could not be done: there is no such
@@ -146,8 +140,7 @@ func equip(slot: int) -> bool:
 	if holds_belt():
 		return false
 	if is_barred(slot):
-		if _refusal_audio != null:
-			_refusal_audio.play()
+		AudioManager.play_ui("click", 0.75, -12.0)
 		refused.emit(slot)
 		return false
 	_swap_to(slot, _pick(slot))
@@ -380,23 +373,3 @@ func try_use() -> void:
 func press_secondary() -> void:
 	if _current != null:
 		_current.press_secondary()
-
-
-## Builds an 8-bit PSX denial buzzer for refused weapon equips.
-func _build_refusal_beep() -> AudioStreamWAV:
-	var sample_rate := 22050
-	var duration := 0.1
-	var hz := 220.0
-	var frames := int(sample_rate * duration)
-	var data := PackedByteArray()
-	data.resize(frames)
-	for i in frames:
-		var cycle := fmod(float(i) * hz / float(sample_rate), 1.0)
-		var fade := 1.0 - float(i) / float(frames)
-		data[i] = int(roundf((60.0 if cycle < 0.5 else -60.0) * fade)) & 0xff
-	var wave := AudioStreamWAV.new()
-	wave.format = AudioStreamWAV.FORMAT_8_BITS
-	wave.mix_rate = sample_rate
-	wave.stereo = false
-	wave.data = data
-	return wave

@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://3iy7wjg0y4ry" path="res://scripts/ui/menu_screen.gd" id="1_menu"]
 [ext_resource type="PackedScene" uid="uid://bgordf5uoxh7c" path="res://scenes/ps1.tscn" id="2_13sgg"]
 [ext_resource type="Script" uid="uid://3wh3h00cllfg" path="res://scripts/ui/menu_crew.gd" id="2_crew"]
-[ext_resource type="PackedScene" path="res://scenes/lobby.tscn" id="5_modal"]
+[ext_resource type="PackedScene" uid="uid://ii1wfwg7nxtc" path="res://scenes/lobby.tscn" id="5_modal"]
 [ext_resource type="PackedScene" uid="uid://k6hnry2avdc" path="res://scenes/settings_menu.tscn" id="6_settings"]
 [ext_resource type="PackedScene" uid="uid://r6380qbonva8" path="res://scenes/black_button.tscn" id="7_i6lef"]
 [ext_resource type="PackedScene" uid="uid://b4wetum1hnqtu" path="res://scenes/big_font_outlined_label.tscn" id="8_ufwb2"]
@@ -50,21 +50,21 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 16
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 16
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
 
 [node name="LocalPlayer" type="HBoxContainer" parent="UI/MarginContainer" unique_id=735532409]
 layout_mode = 2
 size_flags_horizontal = 0
 size_flags_vertical = 0
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 alignment = 1
 
 [node name="Photo" type="TextureRect" parent="UI/MarginContainer/LocalPlayer" unique_id=773197327]
 texture_filter = 1
-custom_minimum_size = Vector2(32, 32)
+custom_minimum_size = Vector2(20, 20)
 layout_mode = 2
 expand_mode = 1
 stretch_mode = 5
@@ -103,7 +103,7 @@ size_flags_horizontal = 1
 text = "MENU_QUIT"
 
 [node name="Empty" type="Control" parent="UI/MarginContainer/Center" unique_id=889182707]
-custom_minimum_size = Vector2(0, 12)
+custom_minimum_size = Vector2(0, 8)
 layout_mode = 2
 
 [node name="StatusLabel" parent="UI/MarginContainer/Center" unique_id=207522613 instance=ExtResource("8_ufwb2")]

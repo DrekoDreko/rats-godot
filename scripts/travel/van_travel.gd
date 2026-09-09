@@ -45,10 +45,16 @@ extends Node3D
 ## grey-boxed without one still drives.
 @export var lamp_path: NodePath = ^"Van/Lamps/Front"
 
-## The engine and the radio: two loops, both of them running only while the
-## wheels are.
-@export var engine_path: NodePath = ^"Audio/Engine"
-@export var radio_path: NodePath = ^"Audio/Radio"
+## The point from which the engine loop is spatialized.
+@export var engine_anchor_path: NodePath = ^"Van"
+
+## How loud the engine sits under everything else. The cabin is a small box and
+## the anchor is about three metres from where anybody is sitting, so the
+## distance takes barely a decibel off: this number is very nearly what the
+## player hears. It wants to be present without covering the crew talking over
+## it, which is a good deal louder than the -22 dB it was written at — that came
+## out at seven percent amplitude and vanished under everything.
+const ENGINE_VOLUME_DB := -10.0
 
 ## How much the ceiling lamp dips and how often, as a fraction of its own
 ## brightness and in cycles a second. A fluorescent tube in a truck does not
@@ -64,8 +70,7 @@ const LAMP_TRIP_DIP := 0.22
 @onready var _road: RoadScroll = get_node_or_null(road_path) as RoadScroll
 @onready var _shake: CabinShake = get_node_or_null(shake_path) as CabinShake
 @onready var _lamp: OmniLight3D = get_node_or_null(lamp_path) as OmniLight3D
-@onready var _engine: AudioStreamPlayer = get_node_or_null(engine_path) as AudioStreamPlayer
-@onready var _radio: AudioStreamPlayer = get_node_or_null(radio_path) as AudioStreamPlayer
+@onready var _engine_anchor: Node3D = get_node_or_null(engine_anchor_path) as Node3D
 
 ## What the ceiling lamp burns at when nothing is dipping it, read off the scene
 ## so that dimming the van in the editor dims it here too.
@@ -108,8 +113,10 @@ func _apply_state() -> void:
 	if _shake != null:
 		_shake.running = _moving
 
-	_play(_engine, _moving)
-	_play(_radio, _moving)
+	if _moving:
+		AudioManager.play_loop_3d("van_motor", _engine_anchor, ENGINE_VOLUME_DB)
+	else:
+		AudioManager.stop_loop_3d(_engine_anchor)
 
 	# The lamp only needs a frame of its own while it is tripping. A parked van
 	# gets its steady light back and this node stops costing anything.
@@ -131,20 +138,6 @@ func _flicker_lamp() -> void:
 	# way a lamp that is already browning out goes further down over a pothole.
 	var factor := (1.0 - LAMP_DIP * buzz) * (1.0 - LAMP_TRIP_DIP * trip * trip)
 	_lamp.light_energy = _lamp_energy * factor
-
-
-## A loop, started or stopped. Every player is optional and so is every stream:
-## the van has to drive in a project with no audio in it yet, which is the state
-## it is being built in.
-func _play(player: AudioStreamPlayer, should_play: bool) -> void:
-	if player == null or player.stream == null:
-		return
-	if should_play == player.playing:
-		return
-	if should_play:
-		player.play()
-	else:
-		player.stop()
 
 
 func _on_phase_changed(_previous: Phase.Type, _current: Phase.Type) -> void:
