@@ -2,8 +2,8 @@ extends CharacterBody3D
 ## Rat: a fearful mob. It wanders the map slowly, bolts when the player comes
 ## close and looks for a spot outside his line of sight to hide in. When the
 ## player grabs it, it is torn off the ground and ends up in his hand, where it
-## struggles until it is strangled — and then stowed at the waist — or until it
-## gets loose and goes back to fleeing.
+## struggles until it is strangled — and then comes apart in his fist — or until
+## it gets loose and goes back to fleeing.
 ##
 ## Both the wandering and the fleeing follow the navigation mesh baked in
 ## `world.tscn`: it only picks destinations it can actually reach, and the path
@@ -14,9 +14,15 @@ signal died(rat: Node3D, death_type: Death.Type)
 ## The order is the wire format (`sync_state`), so anything new goes on the end.
 enum State { WANDERING, IDLE, FLEEING, HIDING, CAPTURED, DEAD, SPRAYING }
 
-## The beats of the capture, from the grab until the dead body is stowed at the
-## waist.
-enum Capture { POUNCE, RISING, IN_HAND, GOING_LIMP, STOWING }
+## The beats of the capture, from the grab until the animal comes apart in the
+## fist.
+##
+## `BURSTING` is where a strangling now ends, and it replaced two phases that
+## used to follow it: the body going limp in the hand, and the arm carrying the
+## carcass down to the waist. It is a shorter beat than either of them on
+## purpose — what it draws is the half-second in which the rat is squeezed past
+## what it can take, and then there is no rat.
+enum Capture { POUNCE, RISING, IN_HAND, BURSTING }
 
 @export_group("Species")
 ## Which rat this is: where its fur and its price come from. See
@@ -244,12 +250,17 @@ const HELD_SCALE := Vector3(0.85, 0.85, 0.85)
 ## `Hands.hands_height` came in by the same fraction, and for the same reason:
 ## what has to hold still is the picture, not the metres.
 const FIRST_PERSON_SCALE := Vector3(0.54, 0.54, 0.54)
-## How it sits once dead, before being stowed: the body tips forward and slumps
-## sideways, with nothing at all holding the head up.
+## The line drawn round it while somebody has it in his sights (`highlight`).
+##
+## Shared by every rat rather than duplicated per animal: nothing about it is
+## per-rat — the pulse runs off `TIME` in the shader — so six rats lighting up
+## and going dark again cost one material between them.
+const OUTLINE_MATERIAL: ShaderMaterial = preload("res://materials/rat_outline.tres")
+## How it sits in the last moments, crushed rather than held: the body tips
+## forward and slumps sideways with nothing holding the head up. It is what a
+## watcher sees of a kill happening in somebody else's hands, where the crush
+## itself is drawn on the holder's machine alone (`_process_burst`).
 const LIMP_POSE := Vector3(16.0, 200.0, 28.0)
-## How it hangs on the way down as it is stowed: upside down, crooked, the way
-## someone already holding the animal by the tail would carry it.
-const STOWED_POSE := Vector3(-72.0, 200.0, 24.0)
 ## The middle of its body, in the rat's own coordinates. The rat's origin sits on
 ## the ground between its feet, and the trunk (snout to hip) sits ahead of and
 ## above it — this point, not the origin, is what the hand puts in the middle of
@@ -264,38 +275,50 @@ const STRETCHED_SCALE := Vector3(0.85, 1.3, 0.85)
 ## shrink is its *length*, not the height of something walking on all fours: the
 ## squashing happens along the body's axis (Z) and the rest bulges sideways.
 const SQUEEZED_SCALE := Vector3(1.2, 1.2, 0.78)
-## How long the body takes to go limp in the hand before being stowed.
-const LIMP_TIME := 0.5
-## How far the body settles as it dies, from where it was held.
+## How long the last squeeze lasts before the animal comes apart, in seconds.
 ##
-## It used to be twelve centimetres down, and that was right for as long as the
-## player's hand let go on the killing squeeze: with nothing holding the animal
-## any more, a body sagging out of shot was the only thing left to read. Now the
-## fist stays closed on it and carries it away
-## (`PlayerViewModel.stow_hand`), and at twelve centimetres the rat visibly
-## slipped through the glove and hung below it for the whole slump — a dead rat
-## falling out of a hand that was still gripping.
+## It is the anticipation, and it is the whole reason the burst reads as a burst
+## rather than as a rat blinking out. In it the body is crushed in the fist — it
+## squashes, it shakes, and it does not fight back — and the eye is given just
+## enough time to see that something has gone wrong before it goes wrong. Cut
+## this to nothing and the kill loses its punch entirely: a spray of red appears
+## with no cause on screen.
 ##
-## Small enough to read as a body going slack in a grip rather than out of one.
-## The forward part is untouched: the snout tipping towards the camera as the
-## neck gives is the slump, and it is not what came apart.
-const LIMP_SAG := Vector3(0.0, -0.04, 0.05)
-## How long the stowing lasts: from the hand to the waist. The rat leaves the
-## frame in the first half of the gesture; the rest is the arm finishing its
-## descent with it.
-const STOW_TIME := 0.55
-## Where the hand takes the dead rat, in capture-point coordinates: downwards, to
-## the hand's side and in close to the player's body, at waist height. It sits
-## outside the frame — anyone looking down sees the animal going down, anyone
-## looking ahead only sees it leave the scene from below.
-const WAIST := Vector3(0.22, -0.68, 0.42)
-## How far the path to the waist swings outward before dropping. It is what makes
-## the gesture read as a wrist turning to stow something, and not as a body
-## falling.
-const STOW_OFFSET := Vector3(0.15, 0.05, -0.08)
-## From here on, at the end of the stowing, the body has already vanished at the
-## waist.
-const STOW_VANISH := 0.62
+## Short, though. Anything much longer and the player is waiting on an animation
+## in the middle of what should be the fastest moment in the game.
+const BURST_WINDUP := 0.16
+## How far the body is crushed by the end of the windup, on top of whatever the
+## squeezes already did to it. Flattened along its own length, like every squeeze
+## (`SQUEEZED_SCALE`), and bulging further sideways than any single squeeze does:
+## this is the one it does not survive.
+const BURST_SCALE := Vector3(1.45, 1.45, 0.45)
+## How hard the crushed body shakes in the last moments, in metres and degrees.
+## Far more than the ordinary tremor: it is not struggling any more, it is being
+## crushed.
+const BURST_SHAKE := 0.02
+const BURST_SHAKE_ANGLE := 14.0
+## The cadence of that shake, in shakes per second.
+const BURST_SHAKE_SPEED := 46.0
+## How hard the burst throws the player's own view. It is the biggest shake in
+## the game and it is meant to be: it is the only one that happens a hand's
+## width from the lens.
+const BURST_SHAKE_STRENGTH := 0.85
+## How much of a burst a rat killed at a distance throws, against the one that
+## goes off in the fist.
+##
+## Small, and a long way short of it. What happens at arm's length is the animal
+## being crushed until it bursts, and what happens across the room is a trap
+## breaking its back or a bat catching it — the body stays a body, and a full
+## spray for one of those would read as every rat in the house being made of the
+## same thing. This is the splash of a blow landing, and it is drawn for the same
+## reason the burst is: a kill with nothing coming off it does not feel like a
+## kill.
+const HIT_SPRAY := 0.4
+## Where the spray comes from, relative to the point the animal hangs from, and
+## which way it is thrown: out of the fist and back towards the player, because
+## the fist is between him and the rest of the room. Forwards it would spray
+## away from the camera and the kill would happen off in the distance.
+const BURST_BACK := 0.35
 ## After escaping, it stays impossible to re-grab for a while.
 const IMMUNITY_TIME := 1.5
 ## How much of the usual work a rat already stuck on the glue is worth. Pinned,
@@ -439,7 +462,7 @@ var _capture_point: Node3D
 var _holder_peer := 0
 var _original_layer := 0
 ## Where the rat sits in the hand, in capture-point coordinates. The whole
-## gesture — trembling, going limp, being stowed — is written against this
+## gesture — trembling, being crushed — is written against this
 ## transform and only then carried to the world by `_follow_capture_point`.
 ##
 ## It is kept here rather than in the node's own `transform` because the rat
@@ -451,11 +474,6 @@ var _original_layer := 0
 var _held_transform := Transform3D.IDENTITY
 var _rise_origin := Vector3.ZERO
 var _origin_basis := Basis.IDENTITY
-## Where the stowing starts from, already in capture-point coordinates: the limp
-## body never stops in exactly the same pose, so the gesture starts from wherever
-## it ended up.
-var _stow_origin := Vector3.ZERO
-var _stow_basis := Basis.IDENTITY
 var _struggle := 1.0
 var _jolt := Vector3.ZERO
 var _jolt_spin := Vector3.ZERO
@@ -563,7 +581,7 @@ var _held_remotely := false
 
 ## A watched rat has died in the hand and should stop fighting. It is a latch and
 ## not a reading of `sync_state`, because the rat is freed on the host at the end
-## of the stowing and the last packets before that are the ones that matter: once
+## of the burst and the last packets before that are the ones that matter: once
 ## it has gone limp on this screen it does not start thrashing again.
 var _remote_limp := false
 
@@ -718,16 +736,14 @@ func _process(delta: float) -> void:
 			_process_rise(delta)
 		Capture.IN_HAND:
 			_process_in_hand(delta)
-		Capture.GOING_LIMP:
-			_process_limp(delta)
-		Capture.STOWING:
-			_process_stow(delta)
+		Capture.BURSTING:
+			_process_burst(delta)
 
 	# The capture is the one gesture physics never touches, so it is also the one
 	# frame `_physics_process` never reports (it returns early on `CAPTURED`).
 	# Publishing here is what puts the rat in the host's hands on everybody
 	# else's screen instead of leaving it standing on the floor where it was
-	# grabbed. `queue_free` at the end of the stowing can land inside the match
+	# grabbed. `queue_free` at the end of the burst can land inside the match
 	# above, hence the guard.
 	if is_inside_tree():
 		_publish()
@@ -794,7 +810,7 @@ func is_dead() -> bool:
 	if not _is_authority():
 		return sync_state == State.DEAD
 	if _state == State.CAPTURED:
-		return _capture_phase == Capture.GOING_LIMP or _capture_phase == Capture.STOWING
+		return _capture_phase == Capture.BURSTING
 	return _state == State.DEAD
 
 ## Whether this rat's account is closed: the money has been paid and the shift
@@ -847,6 +863,25 @@ func holder_peer() -> int:
 ## the one the capture carries to the middle of the screen.
 func body_center() -> Vector3:
 	return global_position + global_basis * BODY_CENTER
+
+## Draw the outline around it, or take it off again.
+##
+## It is the rat's own look and so it lives here, but *whether* it is lit is not
+## the rat's business at all: it is whether somebody has it in his sights, which
+## only the weapon holding the sights knows (`player.gd: _update_target`).
+##
+## It goes on the overlay slot rather than the override, and that is the whole
+## reason this works: the animal's surfaces already carry the PS1 material
+## (`scripts/ps1_material_applier.gd`), and an override here would take the
+## animal's own skin off to put a line round it.
+##
+## Purely local. Nothing about it crosses the wire and nothing should — it is one
+## player's aim, drawn on his own screen, and a rat lit up on everybody's would
+## be showing the whole crew where one man happens to be pointing.
+func highlight(on: bool) -> void:
+	if mesh == null or not is_instance_valid(mesh):
+		return
+	mesh.material_overlay = OUTLINE_MATERIAL if on else null
 
 # --- Stuck -----------------------------------------------------------------
 #
@@ -960,8 +995,9 @@ func release_carcass() -> void:
 # along.
 #
 # Strangled, it never goes back to the ground: it goes limp in the hand and drops
-# to the waist, stowed. A carcass on the ground belongs to a rat killed from a
-# distance — whatever dies in the player's hand vanishes with him.
+# to the fist, where it comes apart. A carcass on the ground belongs to a rat
+# killed from a distance — whatever dies in the player's hand leaves nothing but
+# the blood it was thrown as.
 
 ## The player grabbed this rat. Returns false when it cannot be done: dead,
 ## already in someone's hand or freshly escaped.
@@ -1176,9 +1212,9 @@ func _request_squeeze() -> void:
 		return
 	_flinch()
 
-## Died in the hand: it goes limp for a moment and is then stowed at the waist.
-## `type` comes from the weapon that killed it — today only the hands get here,
-## strangling.
+## Died in the hand: the fist closes past what the animal can take and it comes
+## apart. `type` comes from the weapon that killed it — today only the hands get
+## here, strangling.
 func die_in_hands(type := Death.Type.STRANGULATION) -> void:
 	# `is_captured` and not `_state`, and that is the whole of what a puppet
 	# needs: its own `_state` was frozen at whatever it held when its physics was
@@ -1188,9 +1224,8 @@ func die_in_hands(type := Death.Type.STRANGULATION) -> void:
 	if not is_captured() or is_dead():
 		return
 	# The killing blow is the host's to land, whoever threw it. A guest that
-	# strangled its rat says so and stops there: the body goes limp, is stowed
-	# and is paid for on the host, and comes back over the wire as a rat that is
-	# dead. Doing it here as well would kill the animal twice — once really, once
+	# strangled its rat says so and stops there: the body is crushed, burst and
+	# paid for on the host, and comes back over the wire as a rat that is dead. Doing it here as well would kill the animal twice — once really, once
 	# on a puppet — and pay for it twice with it.
 	if not _is_authority():
 		_request_kill.rpc_id(get_multiplayer_authority(), type)
@@ -1201,16 +1236,24 @@ func die_in_hands(type := Death.Type.STRANGULATION) -> void:
 	# world.
 	if _capture_phase != Capture.IN_HAND:
 		_snap_to_hand()
-	_capture_phase = Capture.GOING_LIMP
+	_capture_phase = Capture.BURSTING
 	_capture_time = 0.0
 	_struggle = 0.0
 	animator.speed_scale = 1.0
 	animator.play(ANIM_DEATH, BLEND)
-	# For the scoreboard it already died here, on the last squeeze. What comes
-	# after — going limp and being stowed — is only the gesture. The money, that
-	# one only lands at the end of it: whoever kills and loses the body gets
-	# nothing.
+	# The rattle of a thing being crushed, under the death sound. Networked
+	# rather than local: the burst is a loud, wet thing that happens in one
+	# man's hands, and everybody in the house should hear it happen.
+	AudioManager.play_networked_3d("rat_death", global_position, -2.0,
+		randf_range(0.94, 1.06), self)
 	_record_death(type)
+	# The money lands here rather than at the end of the gesture, and that is the
+	# burst's doing. It used to be paid at the player's waist, because the body
+	# had a journey to make and losing it on the way was possible — a man who
+	# killed a rat and then dropped off the wire had earned nothing. There is no
+	# journey any more: the animal comes apart in the fist and is gone, so the
+	# moment it dies and the moment its account closes are the same moment.
+	_pay_reward()
 
 ## Got loose from the player's hand and bolts.
 func escape() -> void:
@@ -1307,8 +1350,7 @@ func _follow_holder() -> void:
 	# Already in a hand: it moves across to the new one rather than starting the
 	# rise over, which from a watcher's side is the rat simply being where the
 	# man is.
-	if _capture_phase == Capture.IN_HAND or _capture_phase == Capture.GOING_LIMP \
-			or _capture_phase == Capture.STOWING:
+	if _capture_phase == Capture.IN_HAND or _capture_phase == Capture.BURSTING:
 		_snap_to_hand()
 
 ## The pounce: it hunches on the ground and the hand comes down on it.
@@ -1444,63 +1486,160 @@ func _process_in_hand(delta: float) -> void:
 	_follow_capture_point()
 	model.scale = model.scale.lerp(Vector3.ONE, minf(delta * 9.0, 1.0))
 
-## Died: the body goes limp in the hand before being stowed.
-func _process_limp(delta: float) -> void:
-	_damp_jolt(delta)
-	var t := minf(_capture_time / LIMP_TIME, 1.0)
-	var hanging := Basis.from_euler(_radians(LIMP_POSE))
-	var pose := Basis(_held_transform.basis.get_rotation_quaternion().slerp(
-		hanging.get_rotation_quaternion(), minf(delta * 9.0, 1.0)))
-	# It settles in the fist as the strength goes out of it — always around the
-	# middle of its body, otherwise the limp body would leave the frame
-	# mid-slump.
-	var origin := _held_transform.origin.lerp(
-		_anchor(pose) + LIMP_SAG, minf(delta * 6.0, 1.0))
-	_held_transform = Transform3D(pose, origin)
+## The last moments: the fist closes past what the animal can take, and then
+## there is no animal.
+##
+## It is one short beat with two halves. For the whole of `BURST_WINDUP` the
+## body is crushed — flattened along its length, shaking hard, going nowhere —
+## and at the end of it the rat is replaced by a spray of red thrown out of the
+## fist (`BloodBurst`) and freed.
+##
+## The spray is deliberately *not* the rat's own child. This node is freed on the
+## same frame it is spawned, and anything hanging off it would be freed with it:
+## it goes into the world the rat was standing in and outlives the animal by the
+## second or so it takes to fall.
+func _process_burst(_delta: float) -> void:
+	var t := clampf(_capture_time / BURST_WINDUP, 0.0, 1.0)
+
+	# It shakes on the spot rather than travelling: what is being drawn is
+	# something held still and squeezed, and a body that wandered the frame
+	# would read as one still fighting. It shakes harder the closer it gets to
+	# coming apart.
+	var rattle := Vector3(
+		sin(_capture_time * BURST_SHAKE_SPEED),
+		sin(_capture_time * BURST_SHAKE_SPEED * 1.31 + 1.7),
+		sin(_capture_time * BURST_SHAKE_SPEED * 0.83 + 0.4)
+	) * BURST_SHAKE * t
+	var spin := Vector3(
+		sin(_capture_time * BURST_SHAKE_SPEED * 1.13),
+		sin(_capture_time * BURST_SHAKE_SPEED * 0.91 + 2.2),
+		sin(_capture_time * BURST_SHAKE_SPEED * 1.47 + 0.9)
+	) * deg_to_rad(BURST_SHAKE_ANGLE) * t
+
+	var pose := Basis.from_euler(_radians(HELD_POSE) + spin)
+	_held_transform = Transform3D(pose, _anchor(pose) + rattle)
 	_follow_capture_point()
-	model.scale = model.scale.lerp(Vector3.ONE, minf(delta * 9.0, 1.0))
+
+	# Crushed, not shrinking: it gets *wider* as it gets shorter, which is what
+	# a body being squeezed does and what makes the burst that follows read as
+	# pressure having to go somewhere.
+	model.scale = model.scale.lerp(BURST_SCALE, minf(t * 0.5, 1.0))
+
 	if t < 1.0:
 		return
+	_burst()
 
-	# With no strength left in the animal at all, the arm goes down with it.
-	_capture_phase = Capture.STOWING
-	_capture_time = 0.0
-	_stow_origin = _held_transform.origin - _anchor(_held_transform.basis)
-	_stow_basis = _held_transform.basis
+## The animal comes apart. Everything about it that is louder than the rat —
+## the spray, the bang, the knock in the player's own neck — is thrown here, and
+## then the rat is gone.
+func _burst() -> void:
+	var point := global_position
+	var away := Vector3.UP
+	# Thrown out of the fist and back towards whoever is holding it, so the spray
+	# crosses his view instead of going off into the room. The capture point sits
+	# in front of his face and its -Z is where he is looking, so +Z is back at
+	# him.
+	if _capture_point != null and is_instance_valid(_capture_point):
+		var facing := _capture_point.global_basis
+		point = _capture_point.global_position + _anchor(Basis.from_euler(_radians(HELD_POSE)))
+		away = (Vector3.UP + facing.z * BURST_BACK).normalized()
 
-## The stowing: the player lowers the dead rat from the middle of the screen to
-## his waist, where it leaves the frame. This is where the hunt ends — the body
-## does not go back to the world, it vanishes along with whoever killed it.
-func _process_stow(_delta: float) -> void:
-	var t := clampf(_capture_time / STOW_TIME, 0.0, 1.0)
-	# It leaves the hand slowly and slows down at the waist: it is a gesture of
-	# stowing something, not a body dropping.
-	var progress := t * t * (3.0 - 2.0 * t)
+	# Everybody in the house sees the same rat come apart in the same place. The
+	# spray is thrown here and asked for on every other machine, because this
+	# body is freed on the last line of this function and the spawner takes the
+	# guests' copies down with it: a burst left to each machine's own reading of
+	# the wire would be a burst on none of them.
+	_spray(point, away, 1.0)
+	if _is_authority():
+		_burst_elsewhere.rpc(point, away, 1.0)
 
-	# The wrist turns before the arm goes down. Out of order, the still-lying
-	# body sweeps the whole path with its snout and grazes the camera, swelling
-	# on screen at exactly the frame it should be leaving it.
-	var stowed := Basis.from_euler(_radians(STOWED_POSE))
-	var pose := Basis(_stow_basis.get_rotation_quaternion().slerp(
-		stowed.get_rotation_quaternion(), smoothstep(0.0, 0.55, t)))
+	# And the knock in the neck of whoever was holding it. It is his camera
+	# alone, so it goes to his machine and no further: everybody else is looking
+	# at the spray from across the room, and a shake for something happening in
+	# another man's hands is a shake with no cause on screen.
+	_shake_holder()
 
-	# What travels the path is the middle of the body, as in the hand: that way
-	# it goes down whole instead of pivoting around its feet.
-	var middle := (_stow_origin + WAIST) * 0.5 + STOW_OFFSET
-	_held_transform = Transform3D(pose,
-		_bezier(_stow_origin, middle, WAIST, progress) + _anchor(pose))
-	_follow_capture_point()
+	queue_free()
 
-	# It vanishes by shrinking at the end of the path, the way the carcass
-	# vanishes on the ground: anyone looking down sees the rat being stowed
-	# rather than blinking out.
-	model.scale = Vector3.ONE.lerp(Vector3(0.02, 0.02, 0.02), smoothstep(STOW_VANISH, 1.0, t))
+## The spray itself, and the bang under it. It is the half of `_burst` that has
+## to happen on every machine, so it is the half that is its own function.
+func _spray(point: Vector3, away: Vector3, strength := 1.0) -> void:
+	# Into the world the rat was standing in rather than onto the rat: this body
+	# is freed the moment the burst is over, and a spray parented to it would go
+	# with it. The parent is the rat's own, which is the house's `Rats` container
+	# — a node that outlives every animal in it.
+	var world := get_parent()
+	if world != null:
+		BloodBurst.burst(world, point, away, strength)
 
-	if t >= 1.0:
-		# It reached the waist: this is where this rat's hunt ends and where it
-		# turns into money.
-		_pay_reward()
-		queue_free()
+	# The bang. Two sounds rather than one: `rat_death` went out with the last
+	# squeeze (`die_in_hands`) and is the animal, and this is the wet crack of
+	# it coming apart. They overlap on purpose — one sound for a kill this size
+	# is a thin sound.
+	#
+	# Played locally rather than networked, and that is the whole point of this
+	# function: the spray it belongs to is already being announced to every
+	# machine, and a networked sound on top of that is the same crack played
+	# twice on every screen but the one that sent it.
+	#
+	# Only a full burst bangs. A blow landing across the room has its own weapon
+	# sound and does not need a second one under it — and a splash of blood the
+	# size of `HIT_SPRAY` with a crack that size on top would be a mousetrap that
+	# sounds like an explosion.
+	if strength >= 1.0:
+		AudioManager.play_3d("explosion_small", point, -4.0, randf_range(0.9, 1.1))
+	else:
+		AudioManager.play_3d("blood_drop", point, -8.0, randf_range(0.9, 1.15))
+
+## A rat has come apart somewhere. Runs on every machine but the one that
+## decided it.
+##
+## The point and the direction cross rather than being worked out here, because
+## by the time this lands the animal may already have been taken down by the
+## spawner — and a spray thrown from wherever this copy last heard the rat was
+## is a spray in the wrong corner of the room.
+@rpc("authority", "call_remote", "reliable")
+func _burst_elsewhere(point: Vector3, away: Vector3, strength := 1.0) -> void:
+	_spray(point, away, strength)
+
+## Knocks the view of whoever was holding the rat, and only his.
+##
+## The holder can be sitting at another machine, so this fires on the one that
+## owns the camera: ours goes straight to the player in the tree, and anybody
+## else's crosses the wire to be played there.
+func _shake_holder() -> void:
+	if _holder_peer == 0:
+		return
+	if _holder_peer != _local_peer():
+		if _is_authority():
+			_shake_kill.rpc_id(_holder_peer)
+		return
+	_shake_local_player()
+
+## The rat somebody was holding has come apart. Runs on that man's machine, sent
+## by the one that thought for the animal.
+##
+## It carries nothing: the only thing the far machine needs to know is that it
+## happened, and how hard a burst knocks the view is this script's business at
+## both ends.
+@rpc("authority", "reliable")
+func _shake_kill() -> void:
+	_shake_local_player()
+
+## Knocks this machine's own view, if it has one.
+##
+## The body in the `player` group is the one man on this machine who is looking
+## out of his own eyes — everybody else in the house is an avatar in
+## `player_avatars`, and an avatar has no camera to shake. It is deliberately
+## not `_get_player`, which answers *the nearest hunter* and would happily hand
+## back somebody else's body standing closer.
+func _shake_local_player() -> void:
+	var tree := get_tree()
+	if tree == null:
+		return
+	var player := tree.get_first_node_in_group("player")
+	if player != null and player.has_method("shake"):
+		player.shake(BURST_SHAKE_STRENGTH)
 
 func _kick(strength: float) -> void:
 	_jolt = Vector3(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0), randf_range(-0.5, 0.5)) \
@@ -2651,9 +2790,10 @@ func _draw_remote_capture(delta: float) -> void:
 
 	_capture_time += delta
 	if sync_state == State.DEAD or _remote_limp:
-		# Dead in the hand: it stops fighting and hangs. The stowing itself is the
-		# holder's own gesture and is not drawn here — what a watcher sees is the
-		# animal go limp and then vanish with the man, which is what happens.
+		# Dead in the hand: it stops fighting and hangs. The crushing itself is
+		# the holder's own gesture and is not drawn here — what a watcher sees is
+		# the animal go limp in his fist and then burst, which is what happens
+		# and which arrives as its own message (`_burst_elsewhere`).
 		_remote_limp = true
 		_damp_jolt(delta)
 		var hanging := Basis.from_euler(_radians(LIMP_POSE))
@@ -2823,7 +2963,7 @@ func _record_death(type: Death.Type) -> void:
 	# A rat that dies in somebody's hand was killed by whoever is holding it, and
 	# there is no blow to carry a name. It is latched here rather than read at
 	# paying time because the two are a whole gesture apart — the body still has
-	# to go limp and be stowed — and by then the hand has let go of it.
+	# to be crushed and come apart — and by then there is no hand on it.
 	if _holder_peer != 0:
 		_killer_peer = _holder_peer
 	remove_from_group("rats")
@@ -2870,6 +3010,16 @@ func _die(origin: Vector3, leap := 3.0, type := Death.Type.UNKNOWN,
 	velocity = Vector3.UP * leap
 	if origin != INVALID_POINT:
 		velocity += _away_from(origin) * knockback_force
+
+	# The splash of the blow landing, thrown back the way the blow came from —
+	# which is what blood does when something is hit, and what puts the spray
+	# between the animal and whoever swung. A fraction of the burst that goes off
+	# in the fist (`HIT_SPRAY`): the body is still a body here.
+	var splash := Vector3.UP if origin == INVALID_POINT else _away_from(origin) * -1.0 + Vector3.UP
+	var at := global_position + Vector3.UP * BODY_CENTER.y
+	_spray(at, splash, HIT_SPRAY)
+	if _is_authority():
+		_burst_elsewhere.rpc(at, splash, HIT_SPRAY)
 
 	animator.speed_scale = 1.0
 	# The death animation does not repeat: it topples the rat and holds the last

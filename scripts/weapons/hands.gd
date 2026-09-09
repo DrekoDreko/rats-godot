@@ -129,18 +129,21 @@ extends Weapon
 ## value buys a rat off to one side of a grip that stayed where it was.
 @export var hands_side := -0.02
 
-## The rat died in the hand and the player is putting it away: the arm holds the
-## body for `wait` seconds, takes `fall` to carry it down out of the frame, and
-## `rise` to come back up empty.
+## The rat died in the fist and is coming apart: the hand stays closed on it for
+## `windup` seconds, and then there is nothing left in it.
 ##
-## It is separate from `finished` because the two say different things and used
-## to be conflated. `finished` is *the hands are free* — the bar comes off the
-## screen, the crosshair comes back, the click means grab again — and it is true
-## the instant the last squeeze lands. This one is *the arm is still busy with the
-## body*, which goes on for a second longer, and is the only thing that has any
-## business knowing it. Sent for a kill and not for an escape: a rat that got
-## loose left under its own power and there is nothing left in the hand to carry.
-signal stowing(wait: float, fall: float, rise: float)
+## It is separate from `finished` because the two say different things. `finished`
+## is *the hands are free* — the bar comes off the screen, the crosshair comes
+## back, the click means grab again — and it is true the instant the last squeeze
+## lands. This one is *the fist is still closed on a body*, which goes on for a
+## fraction of a second longer, and is the only thing that has any business
+## knowing it. Sent for a kill and not for an escape: a rat that got loose left
+## under its own power and opened the hand on the way out.
+##
+## It replaced a `stowing` that carried three counts — the wait, the fall to the
+## waist and the empty arm coming back up — because the gesture it described no
+## longer happens. There is no body to carry anywhere.
+signal bursting(windup: float)
 
 ## Strength of the shake from the grab, and from each squeeze.
 const GRAB_RECOIL := 1.0
@@ -163,33 +166,31 @@ const DEATH_TYPE := Death.Type.STRANGULATION
 ## moment longer than it should.
 const CLAIM_TIMEOUT := 0.6
 
-## How long the arm comes back up for after it has put the body away.
+## The cry of a rat being squeezed, and how it climbs.
 ##
-## Slower than the way down, and slower than `PlayerViewModel.grip_time` — which
-## is what the hand would otherwise use to return, and which is fast because it
-## is the answer to a grab. Coming back is the one part of the gesture with
-## nothing chasing it: the rat is gone, the hand is empty, and an arm that
-## snapped back to its corner would undo the weight the descent had just put into
-## it.
-const RISE_TIME := 0.42
+## Every squeeze plays the same sample a little higher than the last, from the
+## first go at `HURT_PITCH.x` up to `HURT_PITCH.y` on the one that kills it. That
+## climb is the whole of the feedback the strangling has: the bar on screen says
+## how far along it is, but the bar is a bar, and what the player actually reads
+## is an animal whose voice is going up as it runs out of room. Held at one pitch
+## it is the same click twelve times and the hammering feels like nothing.
+##
+## It is pitch and not volume because a rat does not get *louder* as it dies, it
+## gets higher — and because the last squeeze has to be audibly the last one
+## without the mix having to swell for it.
+const HURT_PITCH := Vector2(0.85, 1.75)
+## The spread rolled either side of that ladder, so two rats strangled at the
+## same cadence are not the same twelve sounds.
+const HURT_PITCH_SPREAD := 0.06
 
-## How much of the slump the arm cuts off the front of its own wait, in seconds:
-## the hand starts down slightly before the body does.
+## The beat the hands hold after the animal has come apart, on top of the burst
+## itself, before a click can grab again.
 ##
-## The body does not hang perfectly still while it goes limp. It slips a little
-## way out of the fist as the strength leaves it (`rat.gd: _process_limp` settles
-## it about twelve centimetres below where it was held), and then sets off for
-## the waist the instant the slump ends. An arm that waited out the whole of
-## `LIMP_TIME` and then eased into its descent was behind the animal at both
-## moments — the rat sagged out of a hand that stayed up, and then dropped away
-## while the arm was still getting going.
-##
-## Photographed rather than reasoned out: the arithmetic said the two arrived at
-## the belt together, which they did, and the pictures said the rat spent the
-## first third of the journey below the glove. Leading by this much puts the hand
-## on the body through the middle of the gesture, which is the part the player is
-## actually watching.
-const STOW_LEAD := 0.18
+## It is short — the burst is a fast, brutal thing and the player should be back
+## in the hunt right after it — but it is not nothing. Without it the frame the
+## spray appears on is a frame the player can already be grabbing the next rat
+## through, and the kill he just made lands somewhere behind him.
+const BURST_RECOVERY := 0.18
 
 var _rat: Node3D
 var _pressure := 0.0
@@ -271,8 +272,27 @@ func press_secondary() -> void:
 	squeezed.emit()
 	var goes := maxf(1.0, float(squeezes_to_kill) * _effort)
 	_set_pressure(_pressure + 1.0 / goes)
+	# The cry, on the pressure *after* this squeeze rather than before it: the
+	# click the player just made is the one he should hear, and pitching it off
+	# the pressure he had a moment ago is an animal always one squeeze behind
+	# its own throat.
+	_cry()
 	if _pressure >= 1.0:
 		_release(true)
+
+## The rat's own voice, climbing with the pressure on its neck. See `HURT_PITCH`
+## for why the climb is the point.
+##
+## It comes off the *rat* rather than these hands, because that is where the
+## sound is coming from and everybody in the house should hear it from there —
+## a strangling in the far corner of the map is a thing you can follow with your
+## ears.
+func _cry() -> void:
+	if _rat == null or not is_instance_valid(_rat):
+		return
+	var pitch := lerpf(HURT_PITCH.x, HURT_PITCH.y, _pressure) \
+		* randf_range(1.0 - HURT_PITCH_SPREAD, 1.0 + HURT_PITCH_SPREAD)
+	AudioManager.play_networked_3d("rat_hurt", _rat.global_position, -5.0, pitch, _rat)
 
 ## Whether the rat in these hands is really in them.
 ##
@@ -330,30 +350,23 @@ func _release(killed: bool) -> void:
 	_claim_time = 0.0
 	if killed:
 		rat.die_in_hands(DEATH_TYPE)
-		# The body is dead but it is not out of the hand yet: it slumps, and then
-		# the player carries it down to his belt. The arm is told to go with it —
-		# see `stowing` for why this is not simply the end of the grip.
+		# The rat is dead but it is not gone yet: the fist closes the rest of the
+		# way on it and it comes apart. The arm is told to hold the grip for
+		# exactly that long — see `bursting`.
 		#
-		# The two counts come off the rat, which is the one that knows how long
-		# its own body takes to do either (`rat.gd: LIMP_TIME`, `STOW_TIME`).
-		# Asked for rather than reached for: these hands do not know what a rat
-		# is beyond what it answers, and a weapon that read another script's
-		# constants would break the day something else could be strangled.
-		var wait: float = rat.LIMP_TIME if "LIMP_TIME" in rat else 0.0
-		var fall: float = rat.STOW_TIME if "STOW_TIME" in rat else 0.0
-		stowing.emit(maxf(wait - STOW_LEAD, 0.0), fall + STOW_LEAD, RISE_TIME)
+		# The count comes off the rat, which is the one that knows how long its
+		# own body takes to give. Asked for rather than reached for: these hands
+		# do not know what a rat is beyond what it answers, and a weapon that
+		# read another script's constants would break the day something else
+		# could be strangled.
+		var windup: float = rat.BURST_WINDUP if "BURST_WINDUP" in rat else 0.0
+		bursting.emit(windup)
 		# The rat died mid-hammering and more clicks are still coming in behind:
 		# without this pause they would grab the next rat without the player
-		# meaning to.
-		#
-		# It lasts the whole of the stowing rather than the usual cooldown, and
-		# that is the gesture's doing rather than the cadence's: a grab landing
-		# while the arm is still on its way down cancels the descent
-		# (`PlayerViewModel.set_gripping`), and what the player would see is the
-		# body he just killed dropping out of shot on its own while his hand
-		# leaves it to snatch the next one — which is the thing the whole stow
-		# was written to stop.
-		start_cooldown(wait + fall + RISE_TIME)
+		# meaning to. It lasts the whole of the burst rather than the usual
+		# cadence — a grab landing inside it would open the fist on an animal
+		# that is still in it.
+		start_cooldown(windup + BURST_RECOVERY)
 	else:
 		# It got away precisely because nobody was clicking; there is nothing to
 		# hold on to.

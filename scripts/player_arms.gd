@@ -93,7 +93,8 @@ const SIDES: Array[float] = [1.0, -1.0]
 ## within a fifth of a second (`rat.gd`), and arms that took longer than the rat
 ## did would be reaching for something already held. Letting go is the end of
 ## the business and has nothing chasing it, so it settles instead of snapping,
-## the same reasoning as `Hands.RISE_TIME`.
+## the same reasoning that used to keep the empty arm's return slower than its
+## descent, back when there was a body to carry down.
 const RAISE_TIME := 0.16
 const LOWER_TIME := 0.30
 

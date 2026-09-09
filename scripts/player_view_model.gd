@@ -510,50 +510,38 @@ const CROUCH_PULL := Vector3(0.0, 0.05, 0.09)
 @export_range(0.01, 1.0, 0.01) var swing_follow_time := 0.13
 ## How long the arm takes to settle back out of the follow-through. Longer than
 ## either half of the blow, because it is the only part of the gesture with
-## nothing chasing it — the same reason `Hands.RISE_TIME` is slower than the
+## nothing chasing it — the same reason an empty arm's return used to be slower than the
 ## descent it undoes.
 @export_range(0.01, 1.5, 0.01) var swing_recover_time := 0.26
 
-## Where the arm takes the dead rat, and how it is turned on the way — the third
-## and last of the named poses, read the same way as `rest_offset` and
-## `grip_offset`.
+## How much harder the fist closes as the animal comes apart, and how it turns
+## while it does — the third and last of the named poses, read the same way as
+## `rest_offset` and `grip_offset`.
 ##
-## It is where the gesture the player asked for lives: the animal does not stop
-## being held the moment it stops moving. It dies in the fist, the arm carries
-## it down past the bottom of the frame, and comes back up without it. What used
-## to happen is that the fist let go on the killing squeeze and travelled back to
-## its resting corner in `grip_time` while the body took a whole second longer to
-## drop to the waist under its own steam — so the last thing the player saw of a
-## rat he had just strangled was it falling out of shot on its own, with his hand
-## already back where it started, nowhere near it.
+## It is where the kill the player asked for lives. The rat does not leave the
+## hand any more: it is crushed in it, and for the fraction of a second that
+## takes, the arm has to be seen doing the crushing. So the fist comes *in* —
+## nearer the lens and a little further into the middle of the frame, following
+## the body it is closing on — and the wrist turns over with it.
 ##
-## Solved against the rat rather than picked, and that is why it is not simply
-## "down": the body travels to `Rat.WAIST`, which is off to the hand's own side
-## and in towards the belt, so this puts the fist where the fist was relative to
-## the animal — a little in front of and above the body's middle, as in
-## `grip_offset` — after the animal has arrived there. Getting it merely low
-## enough reads as the arm dropping and the rat sinking through it.
-##
-## Below the frame, which is the point of the whole gesture: at this the glove is
-## well past the bottom edge before the travel ends, so the hand that comes back
-## up is unmistakably a hand that put something away rather than one that opened.
-@export var stow_offset := Vector3(0.30, -0.72, -0.36):
+## It replaced a pose that took the dead rat down to the belt. There is no body
+## to take anywhere now, so the gesture went with it: what is left is the half
+## second of squeezing that ends the animal, and the hand opening on nothing.
+@export var burst_offset := Vector3(0.24, -0.02, 0.05):
 	set(value):
-		stow_offset = value
+		burst_offset = value
 		_apply()
 
-## How the arm is turned as it stows, in degrees, before `ARM_FACING` and the
+## How the arm is turned as it crushes, in degrees, before `ARM_FACING` and the
 ## mirror — the same reading as `grip_rotation`.
 ##
-## It is the grip's yaw with the pitch rolled over: the wrist turns down and in
-## as the arm goes, which is what a hand does putting something at its own belt,
-## and it keeps the sleeve reading as a forearm on the way out of shot the same
-## way the sixty-five degrees does on the way in. The yaw is left where the grip
-## had it on purpose — swinging it back towards the sights mid-descent would show
-## the cut end of the mesh at the exact moment the arm is nearest the lens.
-@export var stow_rotation := Vector3(26.0, 65.0, 0.0):
+## The wrist rolls in over the animal and the fist tips down onto it: the grip's
+## yaw is kept, because swinging it back towards the sights would show the cut
+## end of the mesh at the exact moment the arm is nearest the lens, and the
+## pitch and roll are what do the work.
+@export var burst_rotation := Vector3(38.0, 65.0, -14.0):
 	set(value):
-		stow_rotation = value
+		burst_rotation = value
 		_apply()
 
 ## How far the fist drives forward on a squeeze, in metres, and how long the
@@ -638,7 +626,7 @@ const HELD_TRAVEL := 0.35
 @onready var _right_upper: Node3D = $Right/Upper
 @onready var _left_upper: Node3D = $Left/Upper
 ## Where a carried weapon hangs: a child of the right forearm, so the thing in
-## the fist inherits the whole pose — the grip, the stow, the bob, the sway and
+## the fist inherits the whole pose — the grip, the crush, the bob, the sway and
 ## the swing alike — without any of them being solved a second time for it.
 ##
 ## Only the right arm has one. The left is the right one mirrored through a
@@ -671,29 +659,25 @@ var _punch := 0.0
 ## the camera's own coordinates. Handed over by `player.gd` rather than rolled
 ## here — see `set_grip_drift`.
 var _drift := Vector3.ZERO
-## How far the arm is into carrying a dead rat away, from 0 holding it in the
-## middle of the screen to 1 with the fist below the frame at the belt. It rides
-## on top of `_grip` rather than replacing it: the arm goes on being an arm that
-## holds something for the whole of the descent, and stowing is what it does
-## *with* the thing it holds.
-var _stow := 0.0
-## The stowing, in three counts: how long the body still hangs dead in the fist
-## before the arm starts down, how long the arm takes to go, and how long it
-## takes to come back up empty. All handed over by whoever killed the rat, so
-## that the arm follows the body's own timing without this file learning what a
-## body is (`hands.gd: stow_hand`).
-var _stow_wait := 0.0
-var _stow_fall := 0.0
-var _stow_rise := 0.0
-## Where the stowing is, in seconds from the kill. Negative when there is none.
-var _stow_time := -1.0
-## Whether the second hand is still on the animal.
+## How far the fist is into crushing what it holds, from 0 merely gripping to 1
+## closed as hard as it closes. It rides on top of `_grip` rather than replacing
+## it: the arm goes on being an arm that holds something for the whole of the
+## burst, and crushing is what it does *with* the thing it holds.
+var _burst := 0.0
+## How long the crushing lasts, handed over by whoever killed the rat so that the
+## arm follows the body's own timing without this file learning what a body is
+## (`hands.gd: bursting`, `rat.gd: BURST_WINDUP`).
+var _burst_windup := 0.0
+## Where the crushing is, in seconds from the killing squeeze. Negative when
+## there is none.
+var _burst_time := -1.0
+## Whether the second hand is on an animal.
 ##
-## It is not `_grip` because the two part company at the bottom of the stow: the
-## rat leaves the fist at the belt, and from there the arm is coming back up
-## empty while `_grip` is still winding down out of the holding pose. The left
-## hand goes with the body, so this is what says it does — without it the pair
-## rises together and the player is shown two empty gloves.
+## It is not `_grip` because the two part company at the end of a kill: the rat
+## bursts and is gone on the instant, and from there the arm is opening while
+## `_grip` is still winding down out of the holding pose. The left hand has
+## nothing left to hold, so this is what says so — without it the pair travel
+## back together and the player is shown two gloves holding nothing.
 var _left_carried := false
 ## Where the swing is, in seconds from the click: through the wind-up, then the
 ## follow-through, then the settle back. Negative when the arm is not swinging.
@@ -853,64 +837,62 @@ func set_gripping(gripping: bool) -> void:
 	var wanted := 1.0 if gripping else 0.0
 	if gripping:
 		# Set before the early return: a grab that arrives with the target
-		# already at one is a grab on top of a stow, and the second hand has to
+		# already at one is a grab on top of a kill, and the second hand has to
 		# come back with the new animal either way.
 		_left_carried = true
 	if is_equal_approx(_grip_target, wanted):
 		return
 	_grip_target = wanted
 	if gripping:
-		# A fresh grab cancels any stowing still running. It only happens when a
-		# rat is grabbed inside the second the last one takes to go down — the
-		# hands hold their own click off for exactly that reason
+		# A fresh grab cancels any crushing still running. It only happens when a
+		# rat is grabbed inside the fraction of a second the last one takes to
+		# come apart — the hands hold their own click off for exactly that reason
 		# (`hands.gd: _release`) — but the arm is not the place to assume it, and
-		# an arm left half-stowed under a new grip would hold the next rat at the
-		# belt.
-		_stow_time = -1.0
-		_stow = 0.0
+		# an arm left mid-crush under a new grip would hold the next rat in a
+		# fist already closed on nothing.
+		_burst_time = -1.0
+		_burst = 0.0
 		return
 	# Whatever was left of the last squeeze goes with the rat. Without this the
 	# hand would carry the thrust back to its resting place and twitch there,
 	# over nothing.
 	_punch = 0.0
+	# And there is nothing in the far hand either. A rat that got loose took
+	# itself out of both of them.
+	_left_carried = false
 
 
-## Carry the dead rat out of the frame: the fist waits `wait` seconds with the
-## limp body in it, takes `fall` to go down to the belt, and `rise` to come back
-## up empty.
+## Crush what is in the fist: the hand closes the rest of the way over `windup`
+## seconds, and there is nothing in it at the end.
 ##
 ## It is the one gesture the arm makes that outlives the thing it was made for.
 ## Everywhere else the hand opens the moment the rat is out of it — that is what
 ## `set_gripping(false)` is — and for a rat that got loose that is exactly right,
-## because it left under its own power and there is nothing to carry. A rat
-## strangled does not leave: it is dead in the fist, and the player is the one who
-## puts it away. So this keeps the arm in its holding pose past the kill and takes
-## it down along the same path the body travels, rather than opening the hand and
-## letting the corpse fall out of shot beside it.
+## because it left under its own power. A rat strangled does not leave: it is
+## killed *in* the fist, and the fist is what kills it. So this keeps the arm in
+## its holding pose past the kill, drives it deeper into the animal for as long
+## as the animal takes to give, and opens it on nothing.
 ##
-## The three counts are taken rather than written down here because they are the
-## body's, not the arm's — the rat is the one that knows how long it goes limp for
-## and how long it takes to reach the waist (`rat.gd: LIMP_TIME`, `STOW_TIME`) —
-## and a second copy of them in this file is two numbers that would drift apart
-## the first time either was tuned. This file still knows nothing about rats: it
-## is told how long to hold, how long to go down and how long to come back.
+## The count is taken rather than written down here because it is the body's,
+## not the arm's — the rat is the one that knows how long it takes to come apart
+## (`rat.gd: BURST_WINDUP`) — and a second copy of it in this file is two numbers
+## that would drift apart the first time either was tuned. This file still knows
+## nothing about rats: it is told how long to close for.
 ##
 ## Calling it with the hand empty does nothing. The kill is announced by the
 ## weapon and the weapon is the only thing that can be holding a rat, but the arm
 ## is asked either way rather than made to trust it.
-func stow_hand(wait: float, fall: float, rise: float) -> void:
+func hold_burst(windup: float) -> void:
 	if is_zero_approx(_grip_target) and is_zero_approx(_grip):
 		return
-	_stow_wait = maxf(wait, 0.0)
-	_stow_fall = maxf(fall, 0.0)
-	_stow_rise = maxf(rise, 0.0)
-	_stow_time = 0.0
-	# The fist keeps the rat for the whole descent, so the holding pose stays on
-	# until the arm is on its way back up. `_stow` is what carries it down.
+	_burst_windup = maxf(windup, 0.0)
+	_burst_time = 0.0
+	# The fist keeps the rat for the whole of it, so the holding pose stays on
+	# until the animal is gone. `_burst` is what closes it the rest of the way.
 	_grip_target = 1.0
 	_grip = 1.0
-	# The thrust of the killing squeeze does not ride down with the body: the arm
-	# is carrying now, not squeezing.
+	# The thrust of the killing squeeze is folded into the crush rather than
+	# decaying beside it: the arm is closing now, not hammering.
 	_punch = 0.0
 
 
@@ -1019,20 +1001,18 @@ func set_grip_drift(drift: Vector3) -> void:
 func advance(delta: float) -> void:
 	var moved := false
 
-	if _stow_time >= 0.0:
-		_stow_time += delta
-		_stow = _stow_fraction()
+	if _burst_time >= 0.0:
+		_burst_time += delta
+		_burst = _burst_fraction()
 		moved = true
-		if _stow_time >= _stow_wait + _stow_fall:
-			# Bottom of the fall: the body is at the belt and out of the hands.
-			# Only the right one comes back up.
+		if _burst_time >= _burst_windup:
+			# The animal has come apart. Both hands are empty from here, and the
+			# arm opens: it only lets go at the end of the crush and not at the
+			# killing squeeze, because everything between the two was a fist
+			# still closed on something.
+			_burst_time = -1.0
+			_burst = 0.0
 			_left_carried = false
-		if _stow_time >= _stow_wait + _stow_fall + _stow_rise:
-			# Back up and empty. The hand only lets go here, at the top of the
-			# rise, and not at the kill: everything between the two was the arm
-			# still carrying something.
-			_stow_time = -1.0
-			_stow = 0.0
 			_grip_target = 0.0
 
 	if not is_equal_approx(_grip, _grip_target):
@@ -1064,15 +1044,15 @@ func grip() -> float:
 	return _grip
 
 
-## How far the arm is into carrying a dead rat away, from 0 in the middle of the
-## screen to 1 below the frame. Read by the bench for the same reason `grip` is:
-## the descent is a fraction it can watch rather than a tween it cannot.
-func stow() -> float:
-	return _stow
+## How far the fist is into crushing what it holds, from 0 merely gripping to 1
+## closed all the way. Read by the bench for the same reason `grip` is: the
+## gesture is a fraction it can watch rather than a tween it cannot.
+func burst() -> float:
+	return _burst
 
 
 ## How far the arm is through a blow, from 0 not swinging to 1 at the far end of
-## the follow-through. Like `grip` and `stow`, it is a fraction the bench can
+## the follow-through. Like `grip` and `burst`, it is a fraction the bench can
 ## watch rather than a tween it cannot — and it is the only way to ask whether
 ## the arm swung on a click that hit nothing.
 func swing_progress() -> float:
@@ -1147,29 +1127,17 @@ func _place_held() -> void:
 	_hold.scale = Vector3.ONE * hold_scale
 
 
-## Where the stowing is right now, from its clock: still holding through the
-## wait, going down through the fall, coming back up through the rise.
+## How far the fist is into its crush right now, from its own clock.
 ##
-## The two halves are eased separately and not as one curve over the whole
-## gesture, because they are not one movement. Going down is a hand putting
-## something away and it settles at the bottom; coming back up is a hand
-## returning to where it lives, and it is the arm that leads rather than the
-## weight it no longer carries.
-func _stow_fraction() -> float:
-	if _stow_time < _stow_wait:
-		# Dead in the fist and not going anywhere yet. The rat is going limp for
-		# exactly this long, and an arm that started down while the body was still
-		# slumping would pull it out of the frame before the player saw it die.
-		return 0.0
-	var falling := _stow_time - _stow_wait
-	if falling < _stow_fall:
-		if is_zero_approx(_stow_fall):
-			return 1.0
-		return smoothstep(0.0, 1.0, falling / _stow_fall)
-	var rising := falling - _stow_fall
-	if is_zero_approx(_stow_rise):
-		return 0.0
-	return 1.0 - smoothstep(0.0, 1.0, clampf(rising / _stow_rise, 0.0, 1.0))
+## Eased *in* rather than smoothed at both ends, and that is the whole shape of
+## the gesture: the hand tightens slowly at first and then closes hard, so the
+## animal comes apart at the fastest moment of the squeeze rather than at the
+## end of a movement that was already settling.
+func _burst_fraction() -> float:
+	if is_zero_approx(_burst_windup):
+		return 1.0
+	var t := clampf(_burst_time / _burst_windup, 0.0, 1.0)
+	return t * t
 
 
 ## Puts both arms where everything above says they are. One place does it so
@@ -1204,13 +1172,13 @@ func _apply() -> void:
 	# and the rest of the file goes on saying how it moves from there.
 	var offset := rest_offset.lerp(grip_offset, _grip)
 	var pose := rest_rotation.lerp(grip_rotation, _grip)
-	# And the third pose on top of the second, not beside it: stowing is
+	# And the third pose on top of the second, not beside it: crushing is
 	# something the arm does while it holds, so it starts from wherever the grip
-	# has the fist rather than from the resting corner. At `_stow` of zero this
+	# has the fist rather than from the resting corner. At `_burst` of zero this
 	# is a lerp to itself and the holding pose is left exactly as solved.
-	if not is_zero_approx(_stow):
-		offset = offset.lerp(stow_offset, _stow)
-		pose = pose.lerp(stow_rotation, _stow)
+	if not is_zero_approx(_burst):
+		offset = offset.lerp(burst_offset, _burst)
+		pose = pose.lerp(burst_rotation, _burst)
 
 	# The squeeze drives the fist up its own length, which with the arm turned
 	# to `pose` is not any one axis of the camera's. Taking it through the
@@ -1298,9 +1266,9 @@ func _apply() -> void:
 	# the grip and leaves with the animal, so a man walking about is drawn with
 	# the one hand the game is built around and a man strangling something is
 	# drawn with both. `_left_carried` is what says the animal is still there: a
-	# rat stowed leaves the fist at the belt, and the hand that came with it does
-	# not ride back up empty — see `show_left` for the knob that keeps the second
-	# hand out at rest as well.
+	# rat that has burst is gone on the instant, and the hand that came with it
+	# does not travel back holding nothing — see `show_left` for the knob that
+	# keeps the second hand out at rest as well.
 	_left.visible = show_left or (_left_carried and not is_zero_approx(_grip))
 
 

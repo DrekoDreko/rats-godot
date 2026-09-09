@@ -110,6 +110,21 @@ signal seated_changed(seated: bool)
 ## so the sway keeps time with the legs instead of running away from them.
 @export var bob_frequency := 1.9
 
+## How far the view is thrown by a shake of strength 1, in metres to the side
+## and up. It is small because it is multiplied by a trauma that starts at one
+## and falls away in a fraction of a second: what the eye reads is the *speed*
+## of the throw, not how far it went, and a camera that travels far enough to
+## see it travel reads as a camera coming loose rather than as a jolt.
+@export var shake_amount := 0.055
+## How far the view rolls with the same shake, in degrees. The roll is what
+## makes a shake read as the whole head being knocked rather than as the picture
+## sliding, and it is the part a player notices without being able to name.
+@export var shake_roll := 2.4
+## How fast the shake rattles, in shakes per second. Fast enough not to read as
+## a sway, slow enough that a 30 fps frame still catches the wave rather than
+## sampling noise out of it.
+@export var shake_frequency := 26.0
+
 @export_group("Health")
 ## How much flesh the player has. It is read once, when the shift starts, and
 ## again at every respawn.
@@ -137,6 +152,42 @@ const BOB_SETTLE := 8.0
 ## Eye height while riding, relative to the standing head. The body animation
 ## bends the visible legs; this moves the first-person view to the same height.
 const SEATED_HEAD_SCALE := 0.44
+
+## How much of a shake is left after one second. A shake is a thing that happened
+## and is over: at this rate a full one is imperceptible inside a third of a
+## second, which is about as long as a jolt survives in the neck.
+const SHAKE_DAMPING := 0.0006
+## Below this much trauma there is nothing left to draw, and the camera is put
+## back exactly where it belongs rather than left a thousandth off it forever.
+const SHAKE_EPSILON := 0.002
+## The length of the whole rattle, in radians of its base wave.
+##
+## The shake is several sines of different rates read off one phase, and the
+## phase has to be folded somewhere or it grows all session. Folding it at `TAU`
+## would be right for the base wave and wrong for every other one — they would
+## jump mid-stride on each fold — so it is folded where all of them come round
+## together instead: ten turns covers the 1.3, 1.7 and 2.1 multiples below at
+## whole numbers of their own turns (13, 17 and 21).
+const SHAKE_PERIOD := TAU * 10.0
+## The knock of landing, per metre per second of the fall that was stopped.
+## Stepping off a kerb is nothing; coming off the top of a crate is felt.
+const LAND_SHAKE_PER_SPEED := 0.055
+## Below this landing speed nothing is felt at all: walking down a slope stops
+## and starts a fall many times a second, and a camera that jolted on each one
+## would rattle for the whole walk.
+const LAND_MIN_SPEED := 3.5
+## The most a landing can shake, however far the fall was.
+const LAND_MAX_SHAKE := 1.0
+## How much the view dips into the knees on landing, in metres per unit of the
+## landing's own strength, and how fast it comes back up. It is the half of a
+## landing the shake cannot draw: a shake is symmetrical and a landing is not —
+## the body goes *down* and comes back.
+const LAND_DIP := 0.085
+const LAND_DIP_RECOVERY := 7.0
+## The lift the view gets as he leaves the ground, in metres, and how fast it
+## settles. It is the same dip run the other way: the head lags behind the feet
+## on the way up, so the camera is left low for an instant and rises into place.
+const JUMP_DIP := -0.06
 
 ## The footfall. `step_rock` is a bright 0.19s crack recorded near unity, so it
 ## is pitched down a little to give the step some weight, then spread either
@@ -210,6 +261,19 @@ var _was_on_floor := true
 ## The camera's height in the head, read once off the scene: the sway is drawn
 ## around it, never away from it.
 var _camera_rest_y := 0.0
+## How badly the view is shaking, from 0 at rest to 1 on the hardest jolt the
+## game asks for. Everything that wants to shake the camera adds to this and
+## nothing reads it back: the drawing (`_update_shake`) is the only thing that
+## cares how much there is, and it spends it.
+var _shake := 0.0
+## Where the shake is in its own rattle, in radians. It is kept rather than read
+## off the clock so that two shakes running into each other carry on the same
+## wave instead of jumping to wherever the global time happens to be.
+var _shake_phase := 0.0
+## How far the view is dipped into the knees, in metres, from a landing (down)
+## or a jump (up). It is the one part of both gestures that is not a shake, and
+## it eases back to nothing on its own.
+var _dip := 0.0
 ## How far down he is, from 0 standing to 1 fully crouched. It is a fraction and
 ## not a flag because the body moves through it: everything that depends on his
 ## height is read off this and follows it down.
@@ -245,8 +309,8 @@ var _look := Vector2.ZERO
 ## the body instead of putting it away.
 var _held_rat: Node3D
 ## How much longer his arms are still busy with a rat he has already killed, in
-## seconds. It is what keeps the body holding the carcass for the length of the
-## stowing — see `_on_weapon_stowing` and `arms_state`.
+## seconds. It is what keeps the body holding the animal for as long as it takes
+## to come apart — see `_on_weapon_bursting` and `arms_state`.
 var _arms_busy := 0.0
 ## Fixed to a van bench. Looking remains available, but movement, weapons and
 ## world interaction wait until the player presses Interact to stand.
@@ -283,12 +347,12 @@ func _ready() -> void:
 		weapon.pressure_changed.connect(func(fraction: float) -> void: capture_progress.emit(fraction))
 		weapon.finished.connect(_on_weapon_finished)
 		weapon.squeezed.connect(_on_weapon_squeezed)
-		# Only the hands carry a body away after the kill, and the day another
+		# Only the hands hold a body while it comes apart, and the day another
 		# weapon does it will say so with the same signal. Asked for rather than
 		# assumed: the belt holds weapons that settle everything in one blow, and
-		# they have no such gesture.
-		if weapon.has_signal(&"stowing"):
-			weapon.connect(&"stowing", _on_weapon_stowing)
+		# they have no such moment.
+		if weapon.has_signal(&"bursting"):
+			weapon.connect(&"bursting", _on_weapon_bursting)
 	inventory.equipped.connect(_on_inventory_equipped)
 
 
@@ -322,9 +386,9 @@ func _on_weapon_caught(rat: Node3D) -> void:
 ## The arm is a separate question, and the two used to be the same one. It opens
 ## on a rat that got loose, because the animal took itself out of the fist and
 ## there is nothing left in it. On a rat that was strangled it does not: the body
-## is dead *in the hand*, and what happens next is the player putting it away —
-## which `_on_weapon_stowing` has already started by the time this runs, and which
-## leaves the hand closed for as long as it takes.
+## is dead *in the hand*, and what happens next is the fist closing the rest of
+## the way on it — which `_on_weapon_bursting` has already started by the time
+## this runs, and which leaves the hand closed for as long as it takes.
 func _on_weapon_finished(killed: bool) -> void:
 	if not killed:
 		view_model.set_gripping(false)
@@ -332,23 +396,20 @@ func _on_weapon_finished(killed: bool) -> void:
 	capture_finished.emit(killed)
 
 
-## The rat died in the fist: the arm carries it down out of the frame and comes
-## back up empty.
+## The rat is dying in the fist and about to come apart. The hand stays closed on
+## it for the length of it and opens on nothing.
 ##
 ## It is his alone, like the grip and for the same reason — nobody else's screen
 ## has his arms on it — so it goes no further than the view model. What the rest
-## of the world sees of the same moment is the body itself travelling to his
-## waist, which the rat draws on every machine off its own capture point
-## (`rat.gd: _process_stow`).
-func _on_weapon_stowing(wait: float, fall: float, rise: float) -> void:
-	view_model.stow_hand(wait, fall, rise)
-	# His body keeps hold of the carcass for as long as his arm does. The two
-	# used to part company here: `is_busy()` goes false on the killing squeeze,
-	# so to everybody watching him his arms dropped on the instant while the dead
-	# rat sailed down to his belt on its own (`rat.gd: _process_stow`). The
-	# `rise` is deliberately not counted — that is the empty arm coming back, and
-	# there is nothing in it to carry.
-	_arms_busy = wait + fall
+## of the world sees of the same moment is the spray, which the rat throws into
+## the world on every machine (`rat.gd: _burst`).
+func _on_weapon_bursting(windup: float) -> void:
+	view_model.hold_burst(windup)
+	# His body keeps hold of the animal for as long as his arm does. The two
+	# would otherwise part company here: `is_busy()` goes false on the killing
+	# squeeze, so to everybody watching him his arms would drop on the instant
+	# while the rat was still being crushed in them.
+	_arms_busy = windup
 
 
 ## One squeeze of the neck of a rat he is holding.
@@ -543,6 +604,11 @@ func _physics_process(delta: float) -> void:
 			and Input.is_action_just_pressed("jump") and _air_time <= COYOTE_TIME:
 		velocity.y = sqrt(2.0 * gravity * jump_height)
 		_air_time = COYOTE_TIME + 1.0
+		# The head lags behind the feet on the way up: the camera is left low for
+		# an instant and rises into place. Assigned rather than added, because a
+		# jump is a fresh gesture and whatever the last one left is not part of
+		# it.
+		_dip = JUMP_DIP
 
 	var direction := _desired_direction()
 	var target := direction * _target_speed(busy)
@@ -551,12 +617,16 @@ func _physics_process(delta: float) -> void:
 	velocity.z = move_toward(velocity.z, target.z, rate * delta)
 
 	if not _seated:
+		# Read before the move, because the move is what stops the fall:
+		# afterwards the body is already resting on the floor and the speed that
+		# hit it is gone.
+		var fall_speed := maxf(-velocity.y, 0.0)
 		move_and_slide()
 		var landed := not _was_on_floor and is_on_floor()
 		_was_on_floor = is_on_floor()
 		if landed:
 			_step_phase = 0.0
-			AudioManager.play_networked_3d("landing_rock", global_position, -4.0, 1.0, self)
+			_land(fall_speed)
 
 	# The tail of a kill: his arms are still carrying the body down to his belt
 	# for a moment after the hands report themselves free (`arms_state`).
@@ -596,6 +666,9 @@ func _physics_process(delta: float) -> void:
 	# After the move as well, and for the same reason: the sway is drawn from the
 	# ground he actually covered this frame, not from the keys he was holding.
 	_update_bob(delta)
+	# And after the sway, because the two are drawn on the same camera and this
+	# one is written on top of the height that one just set.
+	_update_shake(delta)
 
 	if global_position.y < MIN_HEIGHT:
 		respawn()
@@ -663,6 +736,83 @@ func _update_bob(delta: float) -> void:
 		return
 	camera.position.y = _camera_rest_y + sin(_bob_phase) * bob_amount * _bob_weight
 
+
+# --- The shake --------------------------------------------------------------
+
+## Knocks the view about. `strength` is 1 for the hardest jolt in the game and
+## fractions of it for everything smaller; anything above 1 is clamped, so no
+## caller can throw the camera off the man's shoulders however much it asks for.
+##
+## It *adds*, and that is what makes two shakes landing in the same breath read
+## as one bigger knock instead of the second one cancelling the first. The
+## trauma it adds is spent by `_update_shake` and by nothing else.
+##
+## It is his own camera and nobody else's, so it is not sent anywhere: what the
+## other players see of the same moment is whatever the thing that shook him is
+## drawing on every machine — the blood, the body, the trap going off.
+func shake(strength: float) -> void:
+	_shake = clampf(_shake + strength, 0.0, 1.0)
+
+## He hit the floor. How hard it is felt comes off the fall that was stopped:
+## stepping off a kerb is nothing, coming off the top of a crate is felt in the
+## knees, and the sound is pitched and mixed to match rather than being the same
+## thud for both.
+func _land(fall_speed: float) -> void:
+	if fall_speed < LAND_MIN_SPEED:
+		# A step down, not a landing. The sound still plays — his boots did touch
+		# the floor — but nothing is felt.
+		AudioManager.play_networked_3d("landing_rock", global_position, -8.0, 1.1, self)
+		return
+	# From nothing at the threshold up to the cap: a fall twice as long lands
+	# twice as hard, and past a point it lands as hard as it ever will.
+	var force := minf((fall_speed - LAND_MIN_SPEED) * LAND_SHAKE_PER_SPEED, LAND_MAX_SHAKE)
+	shake(force)
+	# And the knees go with it. Down, where the shake is symmetrical: this is the
+	# half of a landing that has a direction.
+	_dip = LAND_DIP * force
+	# A heavier landing is a louder and deeper thud, for the same reason a
+	# footstep pitched down reads as a heavier boot (`_play_step`).
+	AudioManager.play_networked_3d("landing_rock", global_position,
+		-6.0 + force * 4.0, 1.05 - force * 0.2, self)
+
+## Draws the shake and the dip on the camera, and spends both.
+##
+## It writes the camera's sideways offset and its roll, and neither of those is
+## anybody else's: the height is the sway's (`_update_bob`), the pitch is the
+## mouse's and lives on the head, and the screen-space offsets belong to the
+## weapon's own recoil (`weapon.gd`). So the four can all be on at once — a rat
+## exploding in the fist while he lands from a jump, mid-swing — and none of
+## them overwrite each other.
+##
+## The rattle is two sines whose periods do not divide each other, the same
+## trick the rat's tremor uses: added together they do not repeat closely enough
+## for the eye to find the pattern, which is what keeps a shake from reading as
+## a vibration.
+func _update_shake(delta: float) -> void:
+	_dip = move_toward(_dip, 0.0, absf(_dip) * LAND_DIP_RECOVERY * delta + 0.001)
+	camera.position.y += _dip
+
+	if _shake <= SHAKE_EPSILON:
+		if _shake != 0.0:
+			_shake = 0.0
+			camera.position.x = 0.0
+			camera.position.z = 0.0
+			camera.rotation.z = 0.0
+		return
+	# Wrapped on the whole rattle rather than on a single turn. The waves below
+	# run at 1.7 and 2.1 times this phase, so folding it at `TAU` would land them
+	# mid-stride and put a visible step in the shake every fortieth of a second;
+	# `SHAKE_PERIOD` is a turn for every one of them at once. It is wrapped at all
+	# only so the number cannot grow without bound through a long session.
+	_shake_phase = fposmod(_shake_phase + TAU * shake_frequency * delta, SHAKE_PERIOD)
+	var t := _shake_phase
+	# Squared, so that the tail of a shake dies away faster than its middle: a
+	# jolt that faded linearly reads as a rattle that will not stop.
+	var force := _shake * _shake
+	camera.position.x = (sin(t) * 0.7 + sin(t * 1.7 + 1.1) * 0.3) * shake_amount * force
+	camera.position.z = (sin(t * 1.3 + 2.4) * 0.6 + sin(t * 2.1) * 0.4) * shake_amount * force
+	camera.rotation.z = sin(t * 0.9 + 0.5) * deg_to_rad(shake_roll) * force
+	_shake *= pow(SHAKE_DAMPING, delta)
 
 ## One footfall. The sample is a single short crack, so a fixed pitch turns a
 ## walk into a machine gun of identical clicks — thin, and audibly looped. Two
@@ -805,6 +955,14 @@ func respawn() -> void:
 	_bob_phase = 0.0
 	_bob_weight = 0.0
 	camera.position.y = _camera_rest_y
+	# And with nothing left of whatever knocked him down still knocking the view
+	# about. He fell a long way to get here, and the landing that killed him is
+	# the last thing that should be shaking the camera he wakes up behind.
+	_shake = 0.0
+	_dip = 0.0
+	camera.position.x = 0.0
+	camera.position.z = 0.0
+	camera.rotation.z = 0.0
 	# And on his feet in the drawing too, not only in the collision. A man who
 	# died falling would otherwise stand at the van still folded into the pose of
 	# the jump, until the next physics frame thought better of it.

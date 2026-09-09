@@ -11,6 +11,12 @@ const NETWORKED_SOUNDS := {
 	"landing_rock": true,
 	"item_equip": true,
 	"step_grass": true,
+	# A rat being strangled and the moment it gives. Both belong on the wire for
+	# the same reason the footsteps do: they say where somebody is and what he is
+	# doing, and a hunt in which you cannot hear a colleague working in the next
+	# room is a hunt happening on four separate screens.
+	"rat_hurt": true,
+	"rat_death": true,
 }
 
 var _streams: Dictionary[String, AudioStream] = {}
