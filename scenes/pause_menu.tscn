@@ -79,31 +79,31 @@ theme_override_constants/separation = 1
 layout_mode = 2
 
 [node name="Resume" parent="Center/Panel/Margin/Rows" instance=ExtResource("4_button")]
-custom_minimum_size = Vector2(110, 0)
+custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "PAUSE_RESUME"
 
 [node name="HowTo" parent="Center/Panel/Margin/Rows" instance=ExtResource("4_button")]
-custom_minimum_size = Vector2(110, 0)
+custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "PAUSE_HOWTO"
 
 [node name="Settings" parent="Center/Panel/Margin/Rows" instance=ExtResource("4_button")]
-custom_minimum_size = Vector2(110, 0)
+custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "PAUSE_SETTINGS"
 
 [node name="Leave" parent="Center/Panel/Margin/Rows" instance=ExtResource("4_button")]
-custom_minimum_size = Vector2(110, 0)
+custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "PAUSE_LEAVE"
 
 [node name="Quit" parent="Center/Panel/Margin/Rows" instance=ExtResource("4_button")]
-custom_minimum_size = Vector2(110, 0)
+custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "PAUSE_QUIT"
@@ -132,7 +132,7 @@ autowrap_mode = 2
 layout_mode = 2
 
 [node name="Back" parent="Center/Panel/Margin/Help" instance=ExtResource("4_button")]
-custom_minimum_size = Vector2(110, 0)
+custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "HELP_BACK"
