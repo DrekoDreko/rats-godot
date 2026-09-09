@@ -5,7 +5,6 @@
 [ext_resource type="PackedScene" uid="uid://bgordf5uoxh7c" path="res://scenes/ps1.tscn" id="2_ps1"]
 [ext_resource type="PackedScene" uid="uid://bvvcrva6c1ve" path="res://scenes/player.tscn" id="3_player"]
 [ext_resource type="Shader" uid="uid://bwmdy542q66bt" path="res://scripts/ps1.gdshader" id="4_8sque"]
-[ext_resource type="PackedScene" path="res://scenes/ready_station.tscn" id="4_ready"]
 [ext_resource type="PackedScene" path="res://scenes/hud_phase.tscn" id="5_hud_phase"]
 [ext_resource type="Script" uid="uid://b5fi6sleuhdk1" path="res://scripts/session/van_spawns.gd" id="6_spawns"]
 [ext_resource type="PackedScene" path="res://scenes/van_seat.tscn" id="23_seat"]
@@ -483,9 +482,6 @@ render_target_update_mode = 4
 
 [node name="TerminalScreen" parent="Stations/StoreTerminal/Screen/Viewport" unique_id=2043639294 instance=ExtResource("17_store")]
 layout_mode = 3
-
-[node name="ReadyStation" parent="Stations" unique_id=1052331126 instance=ExtResource("4_ready")]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -1.48, 1.62, 2.2)
 
 [node name="Spawns" type="Node3D" parent="." unique_id=229546046]
 script = ExtResource("6_spawns")

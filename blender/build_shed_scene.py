@@ -260,7 +260,18 @@ def uv_cylinder_project(obj):
 
 def build_scene():
     print("Building PS1 Shed Yard scene...")
-    
+
+    # 0. This builder owns its own file. Never build inside whatever
+    # unrelated .blend the interactive session happens to have open
+    # (that's how the shed yard once got merged into rats_van.blend).
+    current_path = os.path.normcase(os.path.normpath(bpy.data.filepath)) if bpy.data.filepath else ""
+    target_path = os.path.normcase(os.path.normpath(BLEND_SAVE_PATH))
+    if current_path != target_path:
+        if os.path.exists(BLEND_SAVE_PATH):
+            bpy.ops.wm.open_mainfile(filepath=BLEND_SAVE_PATH)
+        else:
+            bpy.ops.wm.read_homefile(use_empty=True)
+
     # 1. Prepare collection in active scene
     scene = bpy.context.scene
     coll_name = "SHED_YARD"
@@ -410,44 +421,52 @@ def build_scene():
 
     # 5. Build Leaning Ladder & Blue Tarp (on the right side, visible from front)
     print("Building ladder and blue tarp...")
-    # Ladder: leans against shed eave at X = 2.5, Y = 3.2
+    # Ladder: leans cleanly against shed eave at X = 2.65, Y = 3.2, Z = 2.70 (under the 2.75m eave)
     lad_obj, lad_mesh = new_mesh_obj("Ladder", coll)
     bm_lad = bmesh.new()
-    rail_len = math.sqrt((3.3 - 2.5)**2 + 2.8**2)  # ~2.91m
-    angle = math.atan2(2.8, 3.3 - 2.5)  # ~74 deg
+    base_x, top_x = 3.30, 2.65
+    top_z = 2.70
+    dx_lad = base_x - top_x
+    rail_len = math.sqrt(dx_lad**2 + top_z**2)
+    angle = math.atan2(top_z, dx_lad)
     rot = Matrix.Rotation(math.pi/2 - angle, 4, 'Y')
     
     # 2 rails
     for offset_y in (-0.20, 0.20):
-        mat_rail = Matrix.Translation((2.9, 3.2 + offset_y, 1.4)) @ rot @ Matrix.Diagonal((0.06, 0.05, rail_len, 1.0))
+        mid_x = (base_x + top_x) * 0.5
+        mat_rail = Matrix.Translation((mid_x, 3.2 + offset_y, top_z * 0.5)) @ rot @ Matrix.Diagonal((0.06, 0.05, rail_len, 1.0))
         bmesh.ops.create_cube(bm_lad, size=1.0, matrix=mat_rail)
     # 8 rungs
     for i in range(1, 9):
         frac = i / 9.0
-        rz = 2.8 * frac
-        rx = 2.5 + (3.3 - 2.5) * (1.0 - frac)
+        rz = top_z * frac
+        rx = top_x + dx_lad * (1.0 - frac)
         mat_rung = Matrix.Translation((rx, 3.2, rz)) @ Matrix.Diagonal((0.04, 0.40, 0.04, 1.0))
         bmesh.ops.create_cube(bm_lad, size=1.0, matrix=mat_rung)
     bm_lad.to_mesh(lad_mesh)
     bm_lad.free()
     lad_obj.data.materials.append(mat_wood)
 
-    # Blue Tarp draped over roof and ladder
+    # Blue Tarp draped over roof and ladder with explicit clearances to prevent clipping
     tarp_obj, tarp_mesh = new_mesh_obj("Blue_Tarp", coll)
     bm_tarp = bmesh.new()
-    cols_x = [0.0, 1.0, 2.0, 2.7, 3.3, 3.8]
+    cols_x = [0.0, 1.0, 2.0, 2.65, 3.30, 3.80]
     rows_y = [1.8, 2.4, 3.0, 3.6, 4.2]
     grid_verts = []
     for r, y in enumerate(rows_y):
         row_v = []
         for c, x in enumerate(cols_x):
-            if x <= 2.6:
-                z = 3.8 - (x / 2.8) * 1.0 + 0.06
-            elif x <= 3.3:
-                z = 2.8 - ((x - 2.6) / 0.7) * 1.25
+            if x <= 2.65:
+                # 8 cm above corrugated roof
+                z = 3.8 - (x / 2.8) * 1.0 + 0.08
+            elif x <= 3.30:
+                # 10 cm above ladder slope
+                lad_slope_z = top_z - ((x - top_x) / dx_lad) * top_z
+                z = lad_slope_z + 0.10
             else:
-                z = max(0.02, 1.55 - ((x - 3.3) / 0.5) * 1.55)
-            z += math.sin(x * 4.0 + y * 3.5) * 0.08
+                # Dropping smoothly to ground
+                z = max(0.04, 1.40 - ((x - 3.30) / 0.50) * 1.36)
+            z += math.sin(x * 4.0 + y * 3.5) * 0.06
             v = bm_tarp.verts.new((x, y, z))
             row_v.append(v)
         grid_verts.append(row_v)
@@ -467,7 +486,7 @@ def build_scene():
 
     # 6. Build Utility Pole ("Pole") with Street Lamp & Cables
     print("Building utility pole with lamp and wires...")
-    pole_x, pole_y = -3.2, -1.0
+    pole_x, pole_y = -3.4, -1.2
     pole_obj, pole_mesh = new_mesh_obj("Utility_Pole", coll)
     bm_pole = bmesh.new()
     
@@ -558,12 +577,12 @@ def build_scene():
     wire_obj, wire_mesh = new_mesh_obj("Power_Wires", coll)
     bm_wire = bmesh.new()
     wire_ends = [
-        (Vector((pole_x - 0.9, pole_y, 6.3)), Vector((10.0, -1.0, 6.0))),
-        (Vector((pole_x - 0.3, pole_y, 6.3)), Vector((10.0, 2.0, 6.1))),
-        (Vector((pole_x + 0.3, pole_y, 6.3)), Vector((10.0, 5.0, 6.2))),
-        (Vector((pole_x + 0.9, pole_y, 6.3)), Vector((10.0, 8.0, 6.3))),
-        (Vector((pole_x - 0.9, pole_y, 6.3)), Vector((-12.0, -5.0, 5.9))),
-        (Vector((pole_x + 0.9, pole_y, 6.3)), Vector((-12.0, 2.0, 6.0))),
+        (Vector((pole_x - 0.9, pole_y, 6.32)), Vector((10.0, -1.0, 6.0))),
+        (Vector((pole_x - 0.3, pole_y, 6.32)), Vector((10.0, 2.0, 6.1))),
+        (Vector((pole_x + 0.3, pole_y, 6.32)), Vector((10.0, 5.0, 6.2))),
+        (Vector((pole_x + 0.9, pole_y, 6.32)), Vector((10.0, 8.0, 6.3))),
+        (Vector((pole_x - 0.9, pole_y, 6.32)), Vector((-12.0, -5.0, 5.9))),
+        (Vector((pole_x + 0.9, pole_y, 6.32)), Vector((-12.0, 2.0, 6.0))),
     ]
     for start_pt, end_pt in wire_ends:
         segments = 10
@@ -590,7 +609,7 @@ def build_scene():
     bm_wire.free()
     wire_obj.data.materials.append(mat_metal_dark)
 
-    # 7. Build Barrels (55-gallon oil drums)
+    # 7. Build Barrels (55-gallon oil drums) - Positioned with clean clearance
     print("Building oil barrels...")
     def add_barrel(name, pos, rot_z, mat):
         b_obj, b_mesh = new_mesh_obj(name, coll)
@@ -622,11 +641,14 @@ def build_scene():
         uv_cylinder_project(b_obj)
         return b_obj
 
-    add_barrel("Barrel_Red_Garage", Vector((-1.6, -0.3, 0.0)), 0.4, mat_b_red)
-    add_barrel("Barrel_Red_Ladder", Vector((3.1, 2.5, 0.0)), 1.2, mat_b_red)
-    add_barrel("Barrel_Red_Ladder_2", Vector((3.5, 3.0, 0.0)), -0.6, mat_b_red)
-    add_barrel("Barrel_Blue_Fence", Vector((2.8, -3.1, 0.0)), 0.2, mat_b_blue)
-    add_barrel("Barrel_Green_Fence", Vector((3.4, -2.8, 0.0)), -0.8, mat_b_green)
+    # Barrel 1: In front of garage door left column, 0.6m clear of wall
+    add_barrel("Barrel_Red_Garage", Vector((-1.9, -0.6, 0.0)), 0.4, mat_b_red)
+    # Barrel 2 & 3: Near ladder and tarp with clean separation
+    add_barrel("Barrel_Red_Ladder", Vector((3.6, 2.5, 0.0)), 1.2, mat_b_red)
+    add_barrel("Barrel_Red_Ladder_2", Vector((4.2, 3.0, 0.0)), -0.6, mat_b_red)
+    # Barrel 4 & 5: In right foreground, 0.9m inside fence, non-intersecting
+    add_barrel("Barrel_Blue_Fence", Vector((3.2, -2.6, 0.0)), 0.2, mat_b_blue)
+    add_barrel("Barrel_Green_Fence", Vector((3.9, -2.2, 0.0)), -0.8, mat_b_green)
 
     # 8. Build Wooden Work Table
     print("Building wooden work bench...")
@@ -635,14 +657,14 @@ def build_scene():
     bmesh.ops.create_cube(
         bm_t, 
         size=1.0, 
-        matrix=Matrix.Translation((3.6, 1.4, 0.72)) @ Matrix.Diagonal((0.8, 1.4, 0.06, 1.0))
+        matrix=Matrix.Translation((3.6, 1.3, 0.72)) @ Matrix.Diagonal((0.75, 1.3, 0.06, 1.0))
     )
-    for lx in (3.3, 3.9):
-        for ly in (0.85, 1.95):
+    for lx in (3.35, 3.85):
+        for ly in (0.80, 1.80):
             bmesh.ops.create_cube(
                 bm_t, 
                 size=1.0, 
-                matrix=Matrix.Translation((lx, ly, 0.35)) @ Matrix.Diagonal((0.08, 0.08, 0.70, 1.0))
+                matrix=Matrix.Translation((lx, ly, 0.35)) @ Matrix.Diagonal((0.08, 0.08, 0.72, 1.0))
             )
     bm_t.to_mesh(t_mesh)
     bm_t.free()
@@ -655,8 +677,8 @@ def build_scene():
         (Vector((-5.8, -3.5, 0)), Vector((-5.8, 9.0, 0)), False),
         (Vector((-5.8, 9.0, 0)), Vector((5.5, 9.0, 0)), False),
         (Vector((5.5, 9.0, 0)), Vector((5.5, -3.5, 0)), False),
-        # Front right section (starts at X = 2.4, framing the right side with barrels)
-        (Vector((5.5, -3.5, 0)), Vector((2.4, -3.5, 0)), False),
+        # Front right section (starts at X = 2.5, framing right side past barrels)
+        (Vector((5.5, -3.5, 0)), Vector((2.5, -3.5, 0)), False),
         # Front left section (leaning/broken)
         (Vector((-2.0, -3.5, 0)), Vector((-5.8, -3.5, 0)), True),
     ]
@@ -736,13 +758,19 @@ def build_scene():
         cam_obj = bpy.data.objects.new("ShedCam", cam_data)
         coll.objects.link(cam_obj)
     
-    cam_obj.location = Vector((3.6, -6.6, 1.35))
-    cam_obj.rotation_euler = (math.radians(88.0), math.radians(0.0), math.radians(28.0))
+    cam_obj.location = Vector((4.4, -8.4, 1.55))
+    cam_obj.rotation_euler = (math.radians(89.5), math.radians(0.0), math.radians(28.5))
     scene.camera = cam_obj
 
-    # 11. Preview Lights
+    # 11. Preview Lights & World Fog
+    if scene.world and scene.world.node_tree:
+        bg_node = scene.world.node_tree.nodes.get("Background")
+        if bg_node:
+            bg_node.inputs["Color"].default_value = (0.68, 0.65, 0.60, 1.0)
+            bg_node.inputs["Strength"].default_value = 0.85
+
     sun_data = bpy.data.lights.get("ShedSun") or bpy.data.lights.new("ShedSun", "SUN")
-    sun_data.energy = 2.5
+    sun_data.energy = 2.2
     sun_data.color = (1.0, 0.94, 0.86)
     sun_obj = bpy.data.objects.get("ShedSun")
     if not sun_obj:
@@ -751,7 +779,7 @@ def build_scene():
     sun_obj.rotation_euler = (math.radians(35.0), math.radians(-25.0), math.radians(45.0))
     
     lamp_light_data = bpy.data.lights.get("StreetLampLight") or bpy.data.lights.new("StreetLampLight", "SPOT")
-    lamp_light_data.energy = 150.0
+    lamp_light_data.energy = 180.0
     lamp_light_data.color = (1.0, 0.92, 0.75)
     lamp_light_data.spot_size = math.radians(75.0)
     lamp_light_data.spot_blend = 0.3
@@ -782,10 +810,15 @@ def build_scene():
         export_materials="EXPORT"
     )
     print("GLB export complete!")
-    
+
+    print(f"Saving blend to {BLEND_SAVE_PATH}...")
+    bpy.ops.wm.save_as_mainfile(filepath=BLEND_SAVE_PATH)
+    print("Blend save complete!")
+
     return {
         "status": "success",
         "export_path": EXPORT_PATH,
+        "blend_path": BLEND_SAVE_PATH,
         "object_count": len(coll.objects),
         "camera_location": list(cam_obj.location),
         "camera_rotation": list(cam_obj.rotation_euler)

@@ -146,6 +146,18 @@ text = "PLAYER"
 horizontal_alignment = 1
 text_overrun_behavior = 3
 
+[node name="CrewTitle" type="Label" parent="Root/Margin/Rows/Body/Left"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.45, 0.72, 0.9, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 16
+text = "CREW"
+
+[node name="Crew" type="VBoxContainer" parent="Root/Margin/Rows/Body/Left"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
 [node name="Columns" type="HBoxContainer" parent="Root/Margin/Rows/Body"]
 layout_mode = 2
 size_flags_horizontal = 3
@@ -158,6 +170,8 @@ theme_override_constants/separation = 10
 [node name="Notice" type="Label" parent="Root/Margin/Rows/Footer"]
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 4
+autowrap_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.32, 0.28, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 2

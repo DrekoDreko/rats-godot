@@ -203,6 +203,34 @@ const BUY_WIDTH := 76
 ## drawn off the same answer at the same moment.
 const BOUGHT_FLASH_TIME := 0.35
 
+## What the ready button reads in each of its two states, and how wide it is
+## kept so that the footer does not shuffle sideways as the word on it changes.
+##
+## The board that used to be bolted to the wall of the van is gone: the show of
+## hands is asked here, on the machine the crew is already stood at, because a
+## man buying a trap and a man saying he is done buying traps are the same man
+## a second apart.
+const READY_TEXT := "READY"
+const STAND_DOWN_TEXT := "STAND DOWN"
+const READY_WIDTH := 152
+
+## The two colours the ready button reads in — white while the crew is still
+## waiting on us, green once we have said it — and a third for the one state
+## that is neither: everybody has said it and the shift is still standing,
+## because nothing is signed yet (`ReadyManager.blocked`). It is the same amber
+## the wall board used, and the same the sheet prints an unsigned job in.
+const READY_COLOR := Color(0.55, 0.85, 0.45)
+const WAITING_COLOR := Color(1, 1, 1)
+const HELD_COLOR := Color(1, 0.7, 0.16)
+
+## The crew list down the left: the dot in front of each name, and what a name
+## and its dot are drawn in while that player has not said it yet. Dim rather
+## than hidden, so the list keeps the shape of the van and a man can see how
+## many he is waiting on without counting the ones that are missing.
+const CREW_SWATCH := "●"
+const CREW_DARK := Color(0.42, 0.45, 0.5)
+const CREW_SIZE := 16
+
 ## The body on the left, and the PS1 dressing that makes it match the one in the
 ## van. The preview renders in a world of its own, where the van's own applier
 ## cannot reach it.
@@ -229,6 +257,7 @@ const PREVIEW_JITTER_GRID := 156.0
 @onready var _money: Label = $Root/Margin/Rows/Header/Money
 @onready var _player_name: Label = $Root/Margin/Rows/Body/Left/PlayerName
 @onready var _columns: HBoxContainer = $Root/Margin/Rows/Body/Columns
+@onready var _crew: VBoxContainer = $Root/Margin/Rows/Body/Left/Crew
 @onready var _notice: Label = $Root/Margin/Rows/Footer/Notice
 @onready var _footer: HBoxContainer = $Root/Margin/Rows/Footer
 @onready var _close: Label = $Root/Margin/Rows/Footer/Close
@@ -266,6 +295,11 @@ var _selected: StoreItem
 ## The button that spends the money, built in code so that it wears the same
 ## frame as the rack it sits under.
 var _buy_button: Button
+## The button that says we are done, built in code for the same reason and put
+## in the same footer. What it draws is never this machine's opinion, only the
+## host's: pressing it asks `ReadyManager`, and the word on it only changes when
+## the answer lands.
+var _ready_button: Button
 ## What we last asked the host for, so that a refusal flashes the tile the man
 ## actually pressed. The refusal comes back off the wire without the item on it.
 var _pending_id := ""
@@ -279,6 +313,7 @@ func _ready() -> void:
 
 	_build_racks()
 	_build_preview()
+	_build_ready_button()
 	_build_buy_button()
 
 	ShopManager.item_bought.connect(_on_item_bought)
@@ -288,6 +323,15 @@ func _ready() -> void:
 	ColorManager.color_changed.connect(_on_color_changed)
 	PhaseManager.phase_changed.connect(_on_phase_changed)
 	SettingsManager.streamer_mode_changed.connect(func(_enabled: bool) -> void: _refresh_player())
+
+	# The show of hands. Every one of these can change what the button reads or
+	# which lamps are lit, and nothing else can: there is no `_process` on the
+	# crew list for the same reason the wall board never had one.
+	ReadyManager.ready_changed.connect(_on_ready_changed)
+	ReadyManager.hold_changed.connect(_on_hold_changed)
+	ReadyManager.request_refused.connect(_on_ready_refused)
+	SessionManager.player_joined.connect(_on_crew_changed)
+	SessionManager.player_left.connect(_on_crew_changed)
 
 	# Wait one frame so the character is already in the tree. Held onto before
 	# the wait rather than fetched again after it: a phase can end on the frame
@@ -350,8 +394,8 @@ func open() -> void:
 		return
 	_open = true
 	_notice.text = ""
-	_refresh()
 	_root.show()
+	_refresh()
 
 
 func close() -> void:
@@ -769,6 +813,119 @@ func _build_buy_button() -> void:
 	if _close != null:
 		_footer.move_child(_close, _footer.get_child_count() - 1)
 
+# --- The show of hands ------------------------------------------------------
+# The board that used to hang on the wall of the van (`ready_station.gd`, gone
+# with it) said two things: whether *we* have said we are ready, and who else
+# has. Both are said here now, in the two places on the glass where a man is
+# already looking — the button next to `BUY`, and the crew down the left under
+# his own name.
+#
+# **It decides nothing.** Pressing asks `ReadyManager`, the host answers, and
+# what comes back is what turns the button. The round trip is visible on
+# purpose: a button that goes green on our own say-so and back a moment later
+# when the host disagrees is worse than one that takes a beat to be right.
+
+## The button that says we are done, put in the footer to the left of `BUY` —
+## the last thing on the page, where a man's eye lands once he has stopped
+## shopping. Built in code so that it wears the same frame as the rack.
+func _build_ready_button() -> void:
+	if _footer == null:
+		return
+	_ready_button = _frame()
+	_ready_button.custom_minimum_size.x = READY_WIDTH
+	_ready_button.text = READY_TEXT
+	_ready_button.add_theme_font_size_override("font_size", FONT_SIZE)
+	_ready_button.add_theme_color_override("font_pressed_color", Color(1, 1, 1, 1))
+	_ready_button.add_theme_color_override("font_disabled_color", EMPTY_COLOR)
+	_ready_button.pressed.connect(_press_ready)
+	_footer.add_child(_ready_button)
+
+
+## Asks the host to flip our own flag. Nothing is written here and nothing is
+## drawn ahead of the answer.
+func _press_ready() -> void:
+	if not ReadyManager.is_active():
+		return
+	ReadyManager.request_toggle(_our_steam_id())
+
+
+## The button and the crew, from the flags as the host last stated them.
+func _refresh_ready() -> void:
+	_refresh_ready_button()
+	_refresh_crew()
+
+
+## What the button reads and what colour it reads in. Three states and not two:
+## green once we have said it, amber when everybody has said it and the van is
+## still standing because no job is signed (`ReadyManager.blocked`), and white
+## while the crew is still waiting on us.
+##
+## Dead where ready means nothing. Out in the hunt there is no show of hands to
+## take, so the button goes grey and unpressable rather than standing there
+## taking presses the host will refuse.
+func _refresh_ready_button() -> void:
+	if _ready_button == null:
+		return
+	var active := ReadyManager.is_active()
+	var said := active and ReadyManager.is_ready(_our_steam_id())
+	_ready_button.text = STAND_DOWN_TEXT if said else READY_TEXT
+	_ready_button.disabled = not active
+	var color := WAITING_COLOR
+	if said:
+		color = HELD_COLOR if ReadyManager.blocked else READY_COLOR
+	for state in ["font_color", "font_hover_color"]:
+		_ready_button.add_theme_color_override(state, color)
+
+
+## The crew down the left: a dot and a name each, in the order they walked in,
+## lit in that player's own colour when he has said it and left dim when he has
+## not — so a man at the machine can see who he is waiting on without opening
+## anything.
+##
+## Rebuilt whole rather than kept in step row by row: four rows is nothing to
+## build, and a list rebuilt whole can never be a list that quietly disagrees
+## with the crew.
+func _refresh_crew() -> void:
+	if _crew == null:
+		return
+	for row in _crew.get_children():
+		row.queue_free()
+	var active := ReadyManager.is_active()
+	# Sorted by Steam ID and not by arrival: a dictionary's order is whatever
+	# order people happened to reach *this* machine in, which is not the order
+	# they reached the next one in — the same rule `crew_list.gd` follows, so a
+	# man is in the same place in both lists.
+	var ids := SessionManager.players.keys()
+	ids.sort()
+	for steam_id in ids:
+		# Added below the freed ones rather than after them: `queue_free` only
+		# lands at the end of the frame.
+		_crew.add_child(_crew_row(steam_id))
+
+
+## One line of it. The dot carries the colour and the name does not: a whole row
+## in a player's colour reads as a warning rather than as a man in a red suit.
+func _crew_row(steam_id: int) -> HBoxContainer:
+	var lit := ReadyManager.is_active() and SessionManager.is_ready(steam_id)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 4)
+
+	var swatch := _label(CREW_SWATCH, CREW_SIZE)
+	swatch.add_theme_color_override("font_color",
+		SessionManager.color(steam_id) if lit else CREW_DARK)
+	row.add_child(swatch)
+
+	var shown := ColorManager.display_name_for(steam_id) if SettingsManager.streamer_mode 		else String(SessionManager.player(steam_id).get("name", "...")).to_upper()
+	var name_label := _label(shown, CREW_SIZE)
+	name_label.add_theme_color_override("font_color", Color.WHITE if lit else CREW_DARK)
+	# The column is 118 px wide and a Steam name is as long as its owner likes:
+	# trimmed with an ellipsis rather than allowed to push the preview sideways.
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_label.clip_text = true
+	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	row.add_child(name_label)
+	return row
+
 # --- The man on the left ----------------------------------------------------
 
 ## The body in the preview. It renders in a world of its own inside the
@@ -954,6 +1111,7 @@ func _refresh() -> void:
 		button.disabled = not open
 		_mark_selected(button, item == _selected)
 	_refresh_buy_button()
+	_refresh_ready()
 
 
 ## The button that spends: what it costs to buy the thing in his hand, and
@@ -1057,6 +1215,10 @@ func _on_refused(reason: String) -> void:
 func _on_player_changed(steam_id: int) -> void:
 	if steam_id == _our_steam_id():
 		_refresh()
+		return
+	# Somebody else's name, colour or flag. Nothing on the rack moves with it,
+	# and the crew list down the left moves with all three.
+	_refresh_ready()
 
 
 func _on_bank_changed(_balance: int) -> void:
@@ -1068,12 +1230,44 @@ func _on_color_changed(steam_id: int, _color: Color) -> void:
 		_refresh_player()
 
 
-## The van left the road with the store still up. It is shut here rather than
-## left standing, for the same reason the shelf went dark: a screen offering
-## goods the host will refuse is a screen that lies.
+## Somebody's flag moved — ours or anybody's. Both halves are redrawn either
+## way: the button is only ours, and the list is everybody's, and working out
+## which of the two changed would cost more than drawing both.
+func _on_ready_changed(_steam_id: int, _value: bool) -> void:
+	_refresh_ready()
+
+
+## The van was held, or let go. Only the button moves with it — the crew lamps
+## are flags, not permission.
+func _on_hold_changed(_held: bool) -> void:
+	_refresh_ready_button()
+
+
+## The host turned our press down — the wrong phase, or a van with no job signed
+## to it. Only heard on the machine that asked, and put in the same line a
+## refused purchase goes in.
+func _on_ready_refused(reason: String) -> void:
+	_notice.text = reason
+
+
+## Somebody arrived or walked out. A man who left is a man nobody is waiting on,
+## so the row goes with him.
+func _on_crew_changed(_steam_id: int) -> void:
+	_refresh_ready()
+
+
+## The van left the road with the store still up. The page is redrawn rather
+## than shut: the racks are worth reading off the road — the prices and what is
+## already in the belt are the same question in the house as in the van — and
+## the show of hands in the footer is worth pressing in the survey, which is a
+## phase this page is now open in. What changes is that nothing on the rack is
+## pressable and the notice says why.
+##
+## Shutting it here would also leave the terminal up on a page that had put
+## itself away, which is a blank monitor a man has to press an arrow to get out
+## of (`scripts/ui/terminal_screen.gd` owns what is showing, not this).
 func _on_phase_changed(_previous: Phase.Type, _current: Phase.Type) -> void:
-	if not ShopManager.is_open():
-		close()
+	_refresh()
 
 # --- Odds and ends ----------------------------------------------------------
 

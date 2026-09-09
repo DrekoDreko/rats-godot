@@ -3,15 +3,19 @@ extends Node
 ##
 ## The same question is asked three times in a shift — ready to leave the van,
 ## ready to get off the road, ready to let the rats out — and it is the same
-## question every time, so it is answered in one place rather than three. The
-## board in the van, the board on the road and the button in the hall are all
-## the same node (`scripts/session/ready_station.gd`) talking to this.
+## question every time, so it is answered in one place rather than three.
 ##
-## **The host holds the flags.** A player who slaps the board does not go ready;
+## It is asked on the terminal in the front of the van, in the footer of the
+## store page (`scripts/ui/store_screen.gd`), next to the button that spends the
+## money — one screen for all three, because it is one question. The board that
+## used to be bolted to the wall beside it is gone: two things asking the same
+## question is two places for the answer to be drawn differently.
+##
+## **The host holds the flags.** A player who presses it does not go ready;
 ## he *asks* to (`request_toggle`), the host decides, and the host tells
 ## everybody the answer at once (`_apply`). Nothing is written locally first and
 ## corrected later. That costs the man who pressed it a round trip before his
-## own light turns green, which is the honest price of every board in the game
+## own light turns green, which is the honest price of every screen in the game
 ## reading the same thing — and it means a client that has been tampered with
 ## can lie about nothing, because it was never the one holding the flag.
 ##
@@ -37,15 +41,15 @@ extends Node
 
 ## Somebody's ready flag moved. `SessionManager.player_changed` says the same
 ## thing among everything else that can change about a player; this one carries
-## the ready and nothing but, and is what the boards light off.
+## the ready and nothing but, and is what the terminal draws off.
 signal ready_changed(steam_id: int, value: bool)
 
 ## We asked and were refused. Emitted only on the machine that asked, which is
-## what a station plays its buzzer off. `reason` is a sentence.
+## what the store page's notice line is written from. `reason` is a sentence.
 signal request_refused(reason: String)
 
 ## The shift stopped being allowed to walk on, or started being allowed again.
-## The boards listen: a plate that is green while the van is held is a plate
+## The terminal listens: a button that is green while the van is held is a button
 ## telling the man he has done everything he can, which is a lie he can only find
 ## out about by standing there watching nothing happen.
 signal hold_changed(held: bool)
@@ -62,8 +66,8 @@ const REASON_HELD := "No job is signed — the van has nowhere to go."
 
 ## The phases in which saying ready means anything. The hunt ends when the house
 ## is clear and the pay slip ends when it is read; neither is waiting on a show
-## of hands, and a board left standing in one of them should refuse out loud
-## rather than quietly do nothing.
+## of hands, and a button left standing in one of them goes dead rather than
+## quietly taking presses the host will refuse.
 const PHASES: Array[Phase.Type] = [
 	Phase.Type.LOBBY,
 	Phase.Type.TRAVEL,
@@ -71,8 +75,8 @@ const PHASES: Array[Phase.Type] = [
 ]
 
 ## Whether the shift is allowed to walk on when everybody says so. Raised while
-## the crew is voting on the road (`ContractManager`): with it set, the boards
-## still light and the crew still goes green, while the last man ready does not
+## the crew is voting on the road (`ContractManager`): with it set, the button
+## still lights and the crew still goes green, while the last man ready does not
 ## take the van away — nor does the host's clock running out
 ## (`PhaseManager._on_timeout`).
 var blocked := false:
@@ -82,7 +86,7 @@ var blocked := false:
 		blocked = value
 		hold_changed.emit(blocked)
 		# Unblocking with the crew already all green has to move the shift, or
-		# it sits in a lobby everybody has finished with, waiting on a board
+		# it sits in a lobby everybody has finished with, waiting on a button
 		# that has already been pressed.
 		if not blocked:
 			_check_everybody()
@@ -98,15 +102,15 @@ func _ready() -> void:
 	SessionManager.player_left.connect(_on_player_left)
 
 
-## Whether ready means anything where the shift is standing. The stations ask
-## before they draw themselves, so that a board in the wrong phase is dark
-## rather than a board that lies.
+## Whether ready means anything where the shift is standing. The store page asks
+## before it draws itself, so that a button in the wrong phase is dead rather
+## than a button that lies.
 func is_active() -> bool:
 	return PHASES.has(PhaseManager.current())
 
 
 ## Whether a player has said it. A thin way through to `SessionManager`, so a
-## station has one autoload to talk to rather than two.
+## screen has one autoload to talk to rather than two.
 func is_ready(steam_id: int) -> bool:
 	return SessionManager.is_ready(steam_id)
 
@@ -120,11 +124,11 @@ func counts() -> Array[int]:
 ## Whether everybody the host is waiting on has said it. `steam_id` is the man
 ## doing the waiting — the host — and he is left out of the count for the reason
 ## `SessionManager.all_ready_except` gives: in the menu he holds the button
-## instead of a board, so his own flag never moves.
+## instead of a terminal, so his own flag never moves.
 ##
-## It is what the menu's PLAY asks before it starts a shift. The stations in the
-## van keep asking `SessionManager.all_ready()`, because out there the host slaps
-## a board like everybody else.
+## It is what the menu's PLAY asks before it starts a shift. The terminal in the
+## van keeps asking `SessionManager.all_ready()`, because out there the host
+## presses the same button as everybody else.
 func others_ready(steam_id: int) -> bool:
 	return SessionManager.all_ready_except(steam_id)
 
@@ -136,7 +140,7 @@ func others_counts(steam_id: int) -> Array[int]:
 
 
 ## Asks the host to flip our own flag. **This is the only way in from a
-## station** — it never writes anything itself, and what comes back is `_apply`
+## screen** — it never writes anything itself, and what comes back is `_apply`
 ## on every machine at once, our own included.
 func request_toggle(steam_id: int) -> void:
 	request_set(steam_id, not SessionManager.is_ready(steam_id))
@@ -171,10 +175,10 @@ func _request(steam_id: int, value: bool) -> void:
 ## The host's decision, in one place so that it is the same whether the request
 ## came off the wire or out of a solo game.
 ##
-## Three things are checked, and each of them is a way a board could otherwise be
-## made to lie:
+## Three things are checked, and each of them is a way the button could otherwise
+## be made to lie:
 ##
-## - **The phase.** A board that survived into the hunt is not a vote.
+## - **The phase.** A press that reached the hunt is not a vote.
 ## - **The crew.** A Steam ID nobody has been introduced to is not a player, and
 ##   filing a flag against one would leave `all_ready` waiting on a ghost.
 ## - **Whose flag it is.** A peer may only move his own. Without this, any client
@@ -191,7 +195,7 @@ func _handle_request(steam_id: int, value: bool, from_peer: int) -> void:
 		return
 	# Asking for the value it already holds. Nothing to write — but the only way
 	# a client gets here is that its copy of the flag disagreed with this one, so
-	# it is drawing a board the host would not recognise. Putting the answer back
+	# it is drawing a button the host would not recognise. Putting the answer back
 	# to that peer alone costs one packet and is what stops him pressing twice.
 	if SessionManager.is_ready(steam_id) == value:
 		_answer_to(from_peer, steam_id, value)
@@ -203,7 +207,7 @@ func _handle_request(steam_id: int, value: bool, from_peer: int) -> void:
 		_apply(steam_id, value)
 	_check_everybody()
 	# Everybody has said it and the shift is still standing. The only way that
-	# happens is `blocked`, and the man who just pressed the last board has to be
+	# happens is `blocked`, and the man who pressed the last one has to be
 	# told: without this he is looking at a row of green lights and a van that
 	# will not arrive, with nothing on screen to say why.
 	if blocked and is_active() and SessionManager.all_ready():
@@ -218,14 +222,14 @@ func _may_speak_for(from_peer: int, steam_id: int) -> bool:
 		return true
 	var owner_id := LobbyManager.steam_id_of_peer(from_peer)
 	# A peer whose introduction has not landed yet has no Steam ID to check
-	# against. Refusing him would mean a board that does nothing for the first
+	# against. Refusing him would mean a button that does nothing for the first
 	# second of a lobby, which is a worse bug than the one being guarded
 	# against — and the introduction is already on its way.
 	return owner_id == 0 or owner_id == steam_id
 
 
 ## The answer, run on every machine at once, the host included (`call_local`).
-## The flag is written here and nowhere else — a station reacts to this, it does
+## The flag is written here and nowhere else — a screen reacts to this, it does
 ## not write ahead of it.
 @rpc("authority", "call_local", "reliable")
 func _apply(steam_id: int, value: bool) -> void:
@@ -261,7 +265,7 @@ func _refuse_to(peer_id: int, reason: String) -> void:
 
 ## The host repeating a flag to one peer whose copy had drifted. The same shape
 ## as `_refuse_to`: nothing goes on the wire for the host's own machine, which
-## already holds the answer it just read. `_apply` is what lands, so the board
+## already holds the answer it just read. `_apply` is what lands, so the button
 ## is put right by the same road every other change takes.
 func _answer_to(peer_id: int, steam_id: int, value: bool) -> void:
 	if peer_id == 0 or peer_id == _our_peer_id():

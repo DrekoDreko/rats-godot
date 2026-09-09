@@ -723,9 +723,9 @@ The acceptance test needs two Steam accounts and is done by hand:
 4. Before they have taken a step, the crew list on the HUD already shows both
    names in their own colours, and the contract on the wall is the one the host
    signed. Nothing flickers into place afterwards.
-5. The host slaps the ready board; the newcomer's board shows one of two ready.
-   Close the second game and the host's board drops back to one of one rather
-   than waiting forever on a name that is gone.
+5. The host presses READY on the terminal; the newcomer's terminal shows one of
+   two lit in the crew list. Close the second game and the host's list drops back
+   to one of one rather than waiting forever on a name that is gone.
 
 ## Structure
 
@@ -734,8 +734,7 @@ The acceptance test needs two Steam accounts and is done by hand:
   opens over it, `van_travel.tscn` is the van on the road,
   `world.tscn` is the map, `player.tscn` is the character,
   `player_avatar.tscn` is the capsule a player stands as on the other players'
-  screens, `ready_station.tscn` is the board the crew slaps to say it is ready,
-  `hud_phase.tscn` is the strip showing the phase, the clock and who is ready,
+  screens, `hud_phase.tscn` is the strip showing the phase, the clock and who is ready,
   `rat.tscn` is the mob and `traps/` holds the two things the player leaves on
   the floor)
 - `scripts/session/` — the shift: `phase.gd` is the table of phases and how long
@@ -746,7 +745,7 @@ The acceptance test needs two Steam accounts and is done by hand:
   button on the menu, `phase_manager.gd` the one that
   drives the clock
   and the scene, `ready_manager.gd` the show of hands that ends a phase,
-  `ready_station.gd` the board a player slaps, `van_spawns.gd` the node that
+  `van_spawns.gd` the node that
   seats the crew in the van and bars the belt while it is parked, and
   `pending_station.gd` the stand-in for a station whose card is not written yet;
   `shop_manager.gd` is the till on the road, the autoload that reads the store's
@@ -784,7 +783,9 @@ The acceptance test needs two Steam accounts and is done by hand:
   `menu_player_card.gd` is the picture and name floating over one of them,
   `color_popup.gd` is the palette a man picks his colour from, `contract_panel.gd`
   the board of jobs the leader signs one off, `store_screen.gd` the store the
-  crew shops at on the road, and `pause_menu.gd` the menu the Esc key opens in a
+  crew shops at on the road — which is also where the show of hands is now, the
+  READY button in its footer and the crew list down its left saying who is still
+  being waited on — and `pause_menu.gd` the menu the Esc key opens in a
   shift
 - `scripts/economy/` — the money from the hunt: `death.gd` is the table of death
   types, `rat_species.gd` is the mould of a breed of rat, `store_item.gd` is a

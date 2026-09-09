@@ -18,8 +18,8 @@ extends CharacterBody3D
 ##
 ## The player also has flesh to lose (`take_damage`), and it is the only door
 ## into it: whatever comes to bite him knocks here, and the health bar over the
-## belt (`scripts/hud_health.gd`) hears about it by signal. Nothing in the map
-## hurts him yet — the rats only run.
+## belt (`scripts/hud_health.gd`) hears about it by signal. When it runs out,
+## the player stays down until a later revive mechanic brings him back.
 ##
 ## And he has hands for things that are not rats: a short ray out of the camera
 ## (`Head/Camera/Interact`) looks for whatever he could put them on, and `E` uses
@@ -160,6 +160,12 @@ const BOB_SETTLE := 8.0
 ## Eye height while riding, relative to the standing head. The body animation
 ## bends the visible legs; this moves the first-person view to the same height.
 const SEATED_HEAD_SCALE := 0.44
+## Third-person death camera orbit.
+const DEATH_CAMERA_DISTANCE := 5.5
+const DEATH_CAMERA_HEIGHT := 2.6
+const DEATH_CAMERA_MIN_PITCH := deg_to_rad(-8.0)
+const DEATH_CAMERA_MAX_PITCH := deg_to_rad(42.0)
+const DEATH_FALL_TIME := 0.45
 
 ## How much of a shake is left after one second. A shake is a thing that happened
 ## and is over: at this rate a full one is imperceptible inside a third of a
@@ -326,6 +332,11 @@ var _arms_busy := 0.0
 ## Fixed to a van bench. Looking remains available, but movement, weapons and
 ## world interaction wait until the player presses Interact to stand.
 var _seated := false
+var _dead_camera_center := Vector3.ZERO
+var _dead_camera_yaw := 0.0
+var _dead_camera_pitch := deg_to_rad(14.0)
+var _death_started := false
+var _model_rest_transform := Transform3D.IDENTITY
 
 func _ready() -> void:
 	_start_position = global_position
@@ -343,6 +354,7 @@ func _ready() -> void:
 	_stand_collision_y = collision.position.y
 	_stand_head = head.position.y
 	_camera_rest_y = camera.position.y
+	_model_rest_transform = model.transform
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	# He is inside his own body, so the mesh would be the inside of his own head.
 	# The shadow it throws is still his and still worth having, and his arms come
@@ -491,6 +503,15 @@ func _repaint_view_model() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if is_dead():
+		if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+			var motion := (event as InputEventMouseMotion).relative
+			_dead_camera_yaw -= motion.x * mouse_sensitivity
+			_dead_camera_pitch = clampf(
+				_dead_camera_pitch - motion.y * mouse_sensitivity,
+				DEATH_CAMERA_MIN_PITCH, DEATH_CAMERA_MAX_PITCH)
+			get_viewport().set_input_as_handled()
+		return
 	# With a screen open the player is not in the map: the mouse belongs to the
 	# buttons, and neither the camera nor the belt hears anything. The key that
 	# closes it is the screen's own business, and it never reaches this far.
@@ -594,6 +615,9 @@ func _handle_slot_keys(event: InputEvent) -> void:
 			return
 
 func _physics_process(delta: float) -> void:
+	if is_dead():
+		_update_dead_camera()
+		return
 	_update_focus()
 	_update_target()
 	_update_hold(delta)
@@ -683,7 +707,17 @@ func _physics_process(delta: float) -> void:
 	_update_shake(delta)
 
 	if global_position.y < MIN_HEIGHT:
-		respawn()
+		take_damage(max_health)
+
+
+func _update_dead_camera() -> void:
+	var horizontal := cos(_dead_camera_pitch) * DEATH_CAMERA_DISTANCE
+	var offset := Vector3(
+		-sin(_dead_camera_yaw) * horizontal,
+		sin(_dead_camera_pitch) * DEATH_CAMERA_DISTANCE + DEATH_CAMERA_HEIGHT,
+		cos(_dead_camera_yaw) * horizontal)
+	camera.global_position = _dead_camera_center + offset
+	camera.look_at(_dead_camera_center + Vector3.UP * 0.75, Vector3.UP)
 
 ## How fast he is trying to go. The order is the order of what wins: a rat in the
 ## hands is the slowest thing there is, and being down beats wanting to run —
@@ -950,6 +984,12 @@ func spawn_point() -> Vector3:
 	return _start_position
 
 func respawn() -> void:
+	_death_started = false
+	_dead_camera_center = Vector3.ZERO
+	camera.top_level = false
+	view_model.visible = true
+	model.set_shadows_only(true)
+	model.transform = _model_rest_transform
 	velocity = Vector3.ZERO
 	rotation.y = 0.0
 	head.rotation.x = 0.0
@@ -1240,12 +1280,24 @@ func health_fraction() -> float:
 func is_dead() -> bool:
 	return _health <= 0
 
-## Dying, for now, is what falling off the map already was: the player wakes up
-## back where the shift started, whole again, and what he earned stays in the
-## wallet. A rat still kicking in his hands comes back with him — nothing kills
-## the player yet, so there is no losing a capture to it either.
+## Dying leaves the player in the world. The body falls, the first-person view is
+## replaced by a controllable third-person death camera, and a later revive
+## mechanic will decide when `respawn()` is called.
 func _die() -> void:
+	if _death_started:
+		return
+	_death_started = true
 	died.emit()
-	respawn()
-	_health = max_health
-	health_changed.emit(_health, max_health)
+	velocity = Vector3.ZERO
+	collision.set_deferred("disabled", true)
+	_focused = null
+	_cancel_hold()
+	model.set_shadows_only(false)
+	model.set_arms(PlayerAvatar.Arms.FREE)
+	view_model.visible = false
+	_dead_camera_center = global_position
+	_dead_camera_yaw = rotation.y
+	camera.top_level = true
+	_update_dead_camera()
+	var fall := create_tween()
+	fall.tween_property(model, "rotation:x", deg_to_rad(82.0), DEATH_FALL_TIME)

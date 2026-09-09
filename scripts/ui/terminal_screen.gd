@@ -36,6 +36,12 @@ var _open := false
 
 
 func _ready() -> void:
+	# A SubViewport is not a Control parent, so anchor-only sizing can resolve
+	# to zero for this root. Match the terminal UI to the viewport explicitly so
+	# the pages have a canvas to draw into before its texture reaches the CRT.
+	var viewport := get_parent() as SubViewport
+	if viewport != null:
+		size = Vector2(viewport.size)
 	add_to_group("terminal_screen")
 	# Every page shut before the glass is ever lit. Three of the four put
 	# themselves away in their own `_ready()`, but `MapViewer` is saved visible

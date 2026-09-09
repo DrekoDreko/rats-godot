@@ -52,13 +52,14 @@ extends Node3D
 ## How far the smell reaches, in metres across the floor, and how far the lines
 ## are scaled from what they were modelled at.
 @export var radius := 0.35
-## What one lungful costs. Heavier than the old puddle's, because the old puddle
-## was nearly two metres wide and this is something a man can walk round.
-@export var damage := 8
 ## How long between one and the next, in seconds. Standing in it is meant to be
 ## survivable and stupid, not instantly fatal: it is what makes a man back out of
 ## a room rather than what ends his shift.
-@export var tick := 0.7
+@export var tick := 1.0
+## How long the poison remains after contact, including after the player leaves.
+@export var poison_duration := 3.0
+## Percentage of the player's maximum health removed by each application.
+@export_range(1.0, 2.0, 1.0) var damage_percent := 2.0
 
 ## The lines, and the sound they make when they take a bite out of somebody.
 @export var stain_path: NodePath = ^"Stain"
@@ -80,7 +81,7 @@ const MAX_RISE := 1.6
 ## What is left of the wait before the next lungful, and whether a foot was on it
 ## last frame. See `_physics_process` for why the second one has to exist.
 var _wait := 0.0
-var _stood_on := false
+var _poison_time := 0.0
 
 
 func _ready() -> void:
@@ -92,8 +93,7 @@ func _ready() -> void:
 	_setup_audio()
 
 
-## **It bites the moment a foot lands on it, and then on its own clock while the
-## foot stays.**
+## **Contact starts a short poison effect, and the effect ticks while it remains.**
 ##
 ## The order of those two matters and the old puddle had it backwards. It ran one
 ## clock and checked where the player was whenever the clock came up — which was
@@ -104,21 +104,20 @@ func _ready() -> void:
 ## hurts you one time in six is not a hazard the player can learn; it is a hazard
 ## he thinks is broken.
 ##
-## So the entry is what fires, and the clock only decides how fast it keeps
-## firing afterwards. Step on it, take a bite. Stand on it, keep taking them.
-## Step off, and the next step back on starts again.
+## A quick crossing still applies the poison for a few seconds. Standing on it
+## refreshes that duration, while leaving it lets the effect expire naturally.
 func _physics_process(delta: float) -> void:
 	var player := get_tree().get_first_node_in_group("player") as Node3D
-	if not _underfoot(player):
-		_stood_on = false
+	if player == null or (player.has_method("is_dead") and player.is_dead()):
+		_poison_time = 0.0
+		return
+	if _underfoot(player):
+		_poison_time = poison_duration
+
+	if _poison_time <= 0.0:
 		return
 
-	if not _stood_on:
-		_stood_on = true
-		_wait = tick
-		_bite(player)
-		return
-
+	_poison_time = maxf(0.0, _poison_time - delta)
 	_wait -= delta
 	if _wait > 0.0:
 		return
@@ -141,7 +140,9 @@ func _underfoot(player: Node3D) -> bool:
 
 
 func _bite(player: Node3D) -> void:
-	player.take_damage(damage)
+	var maximum := int(player.get("max_health"))
+	var poison_damage := maxi(1, roundi(maximum * damage_percent / 100.0))
+	player.take_damage(poison_damage)
 	# Something has to say *why* the bar is draining. The health bar whitens on
 	# every wound alike (`scripts/hud_health.gd`), so on its own a man walking
 	# backwards out of a dark room learns only that he is being hurt. The hiss

@@ -29,11 +29,17 @@ extends Interactable
 ## viewport's own pixels — and pushed in. The same goes for the keys: `E` and
 ## Esc are read here, because there is nobody inside the monitor to read them.
 ##
-## **Open on the road and in the hunt.** The map and the job sheet are wanted
-## in both — the corner dial that used to show the house during the hunt is
+## **Open from the road to the last rat.** The map and the job sheet are wanted
+## in all three — the corner dial that used to show the house during the hunt is
 ## gone (`scripts/minimap.gd`), and this is what it was replaced with. The shop
 ## page still sells nothing off the road; it says so on its own glass rather
 ## than this station turning a man away for a page he did not ask for.
+##
+## The survey is on that list because the show of hands moved onto the glass:
+## the board that used to hang on the wall of the van is gone, and pressing
+## `READY` in the store page's footer is now the only way to tell the host the
+## crew is done setting up. A terminal that stayed dark for that minute would be
+## a minute nobody could end early.
 ##
 ## **The screen decides nothing about money.** This is furniture: it lights a
 ## monitor and puts a screen on it, and the shop page asks `ShopManager` like
@@ -43,10 +49,12 @@ extends Interactable
 const PROMPT_USE := "PROMPT_USE_TERMINAL"
 const PROMPT_LEAVE := "PROMPT_STEP_BACK_TERMINAL"
 
-## The phases the terminal answers the key in. The lobby has not left yet and
-## the result screen has already paid out — a totem in either would have
-## nothing current to show.
-const OPEN_PHASES: Array[Phase.Type] = [Phase.Type.TRAVEL, Phase.Type.HUNT]
+## The phases the terminal answers the key in. The lobby is the menu and not the
+## van at all (`PhaseManager.scenes`), and the result screen has already paid
+## out — a totem in either would have nothing current to show.
+const OPEN_PHASES: Array[Phase.Type] = [
+	Phase.Type.TRAVEL, Phase.Type.SURVEY, Phase.Type.HUNT,
+]
 
 ## How long the camera takes to cross the van, each way. Long enough to read as
 ## walking up to the thing, short enough that a man buying three traps is not
@@ -166,10 +174,13 @@ func _open(by: Node3D) -> void:
 	if not screen.closed.is_connected(_on_screen_closed):
 		screen.closed.connect(_on_screen_closed)
 
+	# Open the page before the camera trip. The UI must not depend on the tween's
+	# completion callback: if a transition is interrupted, the monitor should
+	# still already contain the page when the camera reaches it.
+	screen.open()
+	_light_screen(true)
 	_travel(_eyes_of(by), _reading_seat(), READING_FOV,
-		func() -> void:
-			_light_screen(true)
-			screen.open())
+		func() -> void: pass)
 
 
 ## The way out: the monitor goes dark first, and the camera walks home with the
@@ -273,6 +284,15 @@ func _paint_glass() -> void:
 	# a van built to look like 1998 that would read as modern.
 	_glass.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_glass.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+	# The monitor is viewed from inside the van, so its quad's front face points
+	# away from the player. Preserve the original shader's double-sided behavior
+	# when replacing it with this runtime material.
+	_glass.cull_mode = BaseMaterial3D.CULL_DISABLED
+	# The totem has an opaque CRT face behind this runtime quad. Render the UI
+	# above that face so the model's black mask cannot cover the terminal when
+	# the reading camera becomes straight-on.
+	_glass.no_depth_test = false
+	_glass.render_priority = 0
 	_screen.set_surface_override_material(0, _glass)
 
 
@@ -281,10 +301,14 @@ func _paint_glass() -> void:
 ## man, and none of that is worth a frame while nobody is looking at it.
 func _light_screen(on: bool) -> void:
 	if _viewport != null:
-		_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if on \
-			else SubViewport.UPDATE_DISABLED
+		# Keep the framebuffer warm while the glass is dark. A disabled viewport
+		# can leave its first texture sample black when the camera arrives at the
+		# terminal in the same frame that the page becomes visible.
+		_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	if _glass == null:
 		return
+	_glass.no_depth_test = on
+	_glass.render_priority = 10 if on else 0
 	if on:
 		_glass.albedo_texture = _viewport.get_texture()
 		_glass.albedo_color = Color.WHITE
@@ -330,6 +354,13 @@ func _screen_size() -> Vector2:
 func _terminal() -> TerminalScreen:
 	if _terminal_screen != null and is_instance_valid(_terminal_screen):
 		return _terminal_screen
+	# Resolve the screen owned by this terminal first. During a phase transition
+	# the outgoing van and the incoming van can briefly coexist, so a global
+	# group lookup may open the other viewport and leave this monitor unchanged.
+	if _viewport != null:
+		_terminal_screen = _viewport.get_node_or_null("TerminalScreen") as TerminalScreen
+		if _terminal_screen != null:
+			return _terminal_screen
 	_terminal_screen = get_tree().get_first_node_in_group("terminal_screen") as TerminalScreen
 	return _terminal_screen
 

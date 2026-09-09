@@ -20,10 +20,10 @@ ambient_light_energy = 0.9
 tonemap_mode = 0
 fog_enabled = true
 fog_light_color = Color(0.70, 0.66, 0.60, 1)
-fog_density = 0.02
-fog_sky_affect = 0.6
-fog_depth_begin = 8.0
-fog_depth_end = 40.0
+fog_density = 0.07
+fog_sky_affect = 0.85
+fog_depth_begin = 3.5
+fog_depth_end = 20.0
 
 [node name="ShedYard" type="Node3D"]
 
