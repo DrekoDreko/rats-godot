@@ -1,7 +1,8 @@
 [gd_scene format=3 uid="uid://bchgd2vjllflu"]
 
 [ext_resource type="Script" uid="uid://c1d0bg6cxlt35" path="res://scripts/game_post_process_wrapper.gd" id="1_script"]
-[ext_resource type="Material" uid="uid://cq8yv3n5xrlp2" path="res://materials/ps1_postprocess.tres" id="2_ps1_material"]
+[ext_resource type="Material" path="res://materials/saturn_dither.tres" id="2_dither_material"]
+[ext_resource type="Material" path="res://materials/saturn_crt.tres" id="4_crt_material"]
 [ext_resource type="PackedScene" uid="uid://bslld2ban48a7" path="res://scenes/menu.tscn" id="3_initial_scene"]
 
 [node name="GamePostProcessWrapper" type="Control" unique_id=415531518]
@@ -30,6 +31,13 @@ own_world_3d = true
 handle_input_locally = false
 audio_listener_enable_2d = true
 audio_listener_enable_3d = true
+msaa_2d = 0
+msaa_3d = 0
+screen_space_aa = 0
+use_taa = false
+use_debanding = false
+scaling_3d_mode = 0
+scaling_3d_scale = 1.0
 size = Vector2i(480, 270)
 render_target_update_mode = 4
 
@@ -38,14 +46,28 @@ layer = 100
 
 [node name="Effects" type="Control" parent="GameViewport/Viewport/PostProcessLayer" unique_id=198843378]
 layout_mode = 3
-anchors_preset = 0
-offset_right = 640.0
-offset_bottom = 360.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
 
-[node name="PS1Effect" type="ColorRect" parent="GameViewport/Viewport/PostProcessLayer/Effects" unique_id=198843375]
-material = ExtResource("2_ps1_material")
+[node name="Dither" type="ColorRect" parent="GameViewport/Viewport/PostProcessLayer/Effects" unique_id=198843375]
+material = ExtResource("2_dither_material")
 layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="CRTLayer" type="CanvasLayer" parent="." unique_id=198843390]
+layer = 110
+
+[node name="CRT" type="ColorRect" parent="CRTLayer" unique_id=198843391]
+material = ExtResource("4_crt_material")
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0

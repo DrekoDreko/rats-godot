@@ -1,0 +1,9 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://scripts/retrofx/saturn_dither.gdshader" id="1_shader"]
+
+[resource]
+shader = ExtResource("1_shader")
+shader_parameter/levels = 32.0
+shader_parameter/dither_strength = 1.0
+shader_parameter/enabled = true

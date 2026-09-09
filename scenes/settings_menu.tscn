@@ -85,7 +85,7 @@ theme_override_constants/margin_bottom = 12
 
 [node name="Rows" type="VBoxContainer" parent="Center/Panel/Margin" unique_id=1076204877]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 4
 
 [node name="TitleRow" type="HBoxContainer" parent="Center/Panel/Margin/Rows" unique_id=1370584833]
 layout_mode = 2
@@ -94,7 +94,6 @@ theme_override_constants/separation = 6
 [node name="Title" parent="Center/Panel/Margin/Rows/TitleRow" unique_id=1677755568 instance=ExtResource("3_big_font")]
 layout_mode = 2
 size_flags_horizontal = 3
-font_size = 32
 text = "MENU_SETTINGS"
 
 [node name="Close" type="Button" parent="Center/Panel/Margin/Rows/TitleRow" unique_id=463589953]

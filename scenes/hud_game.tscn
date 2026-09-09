@@ -14,7 +14,7 @@
 [ext_resource type="Texture2D" path="res://assets/textures/hud/icon_rat.svg" id="11_icon_rat"]
 [ext_resource type="Texture2D" path="res://assets/textures/hud/icon_hands.svg" id="12_icon_hands"]
 
-[node name="HUD" type="CanvasLayer"]
+[node name="HUD" type="CanvasLayer" groups=["retrofx_hud"]]
 
 [node name="Splatter" type="Control" parent="."]
 anchors_preset = 15
