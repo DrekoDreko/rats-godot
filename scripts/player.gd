@@ -77,6 +77,14 @@ signal died()
 ## What the player could put his hands on right now, or null with nothing in
 ## front of him. It is what the on-screen prompt listens to.
 signal interactable_changed(interactable: Interactable)
+## The rat the weapon in hand would act on if he clicked now, or null with
+## nothing in his sights. It is what tells the player he may grab — the line
+## round the animal is drawn off it, and so is the prompt that says so.
+##
+## It carries the animal and not merely a yes or no, because the two listeners
+## want different halves of it: the outline has to know *which* rat to light up,
+## and the prompt only that there is one.
+signal target_changed(rat: Node3D)
 ## Hands on something slow. Not everything answers to a tap: a fouled trap has to
 ## be stood over and cleaned out, and while that is going on there is a bar on
 ## screen instead of a prompt (`scripts/hud_hold.gd`).
@@ -288,6 +296,9 @@ var _stand_collision_y := 0.0
 var _health := 0
 ## What is in front of him, or null. Only what changes is announced.
 var _focused: Interactable
+## The rat in his sights, or null. Held so the outline can be taken off the one
+## he stops pointing at — the animal has no way of knowing it was dropped.
+var _target_rat: Node3D
 ## The slow thing he is working on, and how long he has been at it. Null with his
 ## finger off the key, and null the instant he looks away — there is no such thing
 ## as half a cleaned trap waiting for him to come back to it.
@@ -584,6 +595,7 @@ func _handle_slot_keys(event: InputEvent) -> void:
 
 func _physics_process(delta: float) -> void:
 	_update_focus()
+	_update_target()
 	_update_hold(delta)
 	_update_crouch(delta)
 	var busy := inventory.is_busy()
@@ -1069,6 +1081,42 @@ func _update_focus() -> void:
 		return
 	_focused = found
 	interactable_changed.emit(_focused)
+
+## The rat the click would land on, tracked frame by frame so the animal can be
+## lit up before the player commits to anything.
+##
+## It asks the weapon rather than working it out here, and that is the point:
+## reach and cone belong to whatever is in his hands (`weapon.gd:
+## target_in_sights`), so the bat lights up rats at its own longer reach and a
+## box of traps lights up none at all — without this file knowing that either
+## kind of weapon exists.
+##
+## Nothing is in the sights while a screen is open or a rat is already in the
+## hand, for the same reason the prompt and the crosshair go: with your hands
+## full there is nothing to aim at, and the animal you are strangling should not
+## be wearing the line that means *you may grab this*.
+func _update_target() -> void:
+	var found: Node3D = null
+	if not _ui_open and not inventory.is_busy():
+		var weapon := inventory.current()
+		# A weapon on cooldown is one the click cannot reach either — the hands
+		# hold the belt for the whole of the gesture that ends a rat
+		# (`hands.gd: _release`), and a rat lit up through it would be inviting a
+		# grab that gets swallowed.
+		if weapon != null and weapon.is_ready():
+			found = weapon.target_in_sights()
+	if found == _target_rat:
+		return
+	# The old one goes dark first, and it is checked for validity because a rat
+	# can be freed between two frames — killed and cleared out — while still
+	# being the one we were pointing at.
+	if _target_rat != null and is_instance_valid(_target_rat) \
+			and _target_rat.has_method("highlight"):
+		_target_rat.highlight(false)
+	_target_rat = found
+	if _target_rat != null and _target_rat.has_method("highlight"):
+		_target_rat.highlight(true)
+	target_changed.emit(_target_rat)
 
 ## The slow jobs: the ones he has to stand there and do. He keeps the key down
 ## and the work goes up; he lets go, looks away, opens a screen or gets a rat in

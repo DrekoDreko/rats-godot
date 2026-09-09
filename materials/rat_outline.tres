@@ -1,0 +1,11 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://scripts/rat_outline.gdshader" id="1_shader"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_shader")
+shader_parameter/thickness = 0.004
+shader_parameter/outline_color = Color(1, 1, 1, 1)
+shader_parameter/pulse_min = 0.65
+shader_parameter/pulse_speed = 4.0

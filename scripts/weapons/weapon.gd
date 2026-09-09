@@ -183,6 +183,20 @@ func _use() -> void:
 
 # --- Sights ----------------------------------------------------------------
 
+## The rat this weapon would act on if the player clicked right now, or null.
+##
+## It is `_rat_in_sights` asked from outside, and it exists so that whatever
+## shows the player his target — the prompt, the outline on the animal — reads
+## the *same* rule the click does instead of keeping a second copy of it. A
+## highlight worked out from its own cone is a highlight that lights up rats the
+## click cannot reach, which is worse than no highlight at all.
+##
+## A weapon that does nothing to a rat in particular says so by overriding this
+## and answering null: the glue is laid on the floor and the trap is set down,
+## and neither one has a rat in its sights to point at.
+func target_in_sights() -> Node3D:
+	return _rat_in_sights()
+
 ## Closest rat within reach, inside the cone and with no wall in the way.
 func _rat_in_sights() -> Node3D:
 	var origin := camera.global_position

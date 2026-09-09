@@ -142,6 +142,13 @@ func _process(delta: float) -> void:
 
 # --- Aiming at the floor ----------------------------------------------------
 
+## No rat is ever in a trap's sights. What this weapon aims at is the floor, and
+## the ghost is already the whole of what it shows the player about where its
+## click would land — a rat lit up under a trap that is going down beside it
+## would be pointing at something the click is not going to touch.
+func target_in_sights() -> Node3D:
+	return null
+
 ## Where the player is pointing on the floor, or `INVALID_POINT` with nothing
 ## flat enough in range. It is the whole of a trap's aiming: the cone the other
 ## weapons use is looking for animals, and this is looking for ground.
