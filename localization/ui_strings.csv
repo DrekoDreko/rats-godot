@@ -96,6 +96,8 @@ HUD_STRANGLE_BUTTON,CLICK,CLIQUE
 HUD_STRANGLE_INSTRUCTION,hammer to strangle,martele para estrangular
 HUD_GRAB_PROMPT,CLICK TO STRANGLE,CLIQUE PARA ESGANAR
 PROMPT_USE_TERMINAL,use the terminal,use o terminal
+PROMPT_OPEN_DOOR,open the door,abra a porta
+PROMPT_CLOSE_DOOR,close the door,feche a porta
 PROMPT_CLEAN_TRAP,clean the trap,limpe a armadilha
 PROMPT_STEP_AWAY_TABLE,step away from the table,afaste-se da mesa
 PROMPT_STEP_BACK_TERMINAL,step back from the terminal,afaste-se do terminal

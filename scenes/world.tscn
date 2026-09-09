@@ -1,9 +1,9 @@
 [gd_scene format=3 uid="uid://3o1jdkd6gviy"]
 
 [ext_resource type="PackedScene" uid="uid://dlweiu424547o" path="res://models/rats_van.glb" id="1_van"]
-[ext_resource type="Shader" uid="uid://bwmdy542q66bt" path="res://scripts/ps1.gdshader" id="2_kxyy5"]
 [ext_resource type="PackedScene" uid="uid://bvvcrva6c1ve" path="res://scenes/player.tscn" id="2_player"]
 [ext_resource type="PackedScene" uid="uid://bgordf5uoxh7c" path="res://scenes/ps1.tscn" id="3_75jji"]
+[ext_resource type="PackedScene" uid="uid://cyleuoiobnkpg" path="res://models/house.glb" id="4_house"]
 [ext_resource type="Script" uid="uid://x5twjg1fjgnu" path="res://scripts/navigation.gd" id="6_navigation"]
 [ext_resource type="Script" uid="uid://bv088710brpjr" path="res://scripts/steam/player_avatars.gd" id="14_players"]
 [ext_resource type="Script" uid="uid://p2qmhsntuqfu" path="res://scripts/house/house.gd" id="16_house"]
@@ -11,630 +11,37 @@
 [ext_resource type="Script" uid="uid://cgmykbygxdhqj" path="res://scripts/session/house_spawns.gd" id="18_spawns"]
 [ext_resource type="PackedScene" path="res://scenes/hud_phase.tscn" id="20_hud_phase"]
 [ext_resource type="PackedScene" path="res://scenes/result_screen.tscn" id="22_result"]
-[ext_resource type="Texture2D" uid="uid://d4n0gjqdch0t2" path="res://assets/textures/floor/concrete_floor_atlas.png" id="23_floor_tex"]
 [ext_resource type="Script" uid="uid://bcvx5d4kfjqk1" path="res://scripts/session/store_terminal.gd" id="25_terminal"]
 [ext_resource type="PackedScene" path="res://scenes/terminal_screen.tscn" id="26_store"]
 [ext_resource type="PackedScene" path="res://scenes/hud_game.tscn" id="29_hud_game"]
 [ext_resource type="Script" uid="uid://c1brx5ynxvh6i" path="res://scripts/session/van_doors.gd" id="30_doors"]
 [ext_resource type="PackedScene" path="res://scenes/clues/garbage_pile.tscn" id="31_garbage"]
 [ext_resource type="Script" uid="uid://bwwpqtsfjhflr" path="res://scripts/house/dropping_trail.gd" id="32_droppings"]
+[ext_resource type="Shader" uid="uid://bwmdy542q66bt" path="res://scripts/ps1.gdshader" id="33_ps1_shader"]
+[ext_resource type="Script" path="res://scripts/house/house_doors.gd" id="34_house_doors"]
 [ext_resource type="PackedScene" path="res://scenes/scoreboard.tscn" id="98_scoreboard"]
 [ext_resource type="PackedScene" path="res://scenes/pause_menu.tscn" id="99_pause"]
 
-[sub_resource type="StandardMaterial3D" id="Mat_floor"]
-albedo_color = Color(0.68, 0.68, 0.7, 1)
-albedo_texture = ExtResource("23_floor_tex")
-metallic_specular = 0.1
-roughness = 0.95
-uv1_scale = Vector3(3, 6, 1)
+[sub_resource type="StandardMaterial3D" id="Mat_ground"]
+albedo_color = Color(0.19, 0.2, 0.18, 1)
+roughness = 1.0
 
-[sub_resource type="PlaneMesh" id="Mesh_floor"]
-material = SubResource("Mat_floor")
-size = Vector2(60, 60)
-subdivide_width = 59
-subdivide_depth = 59
+[sub_resource type="PlaneMesh" id="Mesh_ground"]
+material = SubResource("Mat_ground")
+size = Vector2(46, 46)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_2lf6f"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo = ExtResource("23_floor_tex")
-shader_parameter/albedo_color = Color(0.68, 0.68, 0.7, 1)
-shader_parameter/uv_scale = Vector2(3, 6)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="BoxShape3D" id="Shape_floor"]
-size = Vector3(60, 2, 60)
-
-[sub_resource type="StandardMaterial3D" id="Mat_wall"]
-albedo_color = Color(0.36, 0.36, 0.38, 1)
-roughness = 0.95
-
-[sub_resource type="BoxMesh" id="Mesh_wall_ns"]
-material = SubResource("Mat_wall")
-size = Vector3(68, 10, 4)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_7iits"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.36, 0.36, 0.38, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="BoxShape3D" id="Shape_wall_ns"]
-size = Vector3(68, 10, 4)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_oo54l"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.36, 0.36, 0.38, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="BoxMesh" id="Mesh_wall_ew"]
-material = SubResource("Mat_wall")
-size = Vector3(4, 10, 68)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_kpybi"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.36, 0.36, 0.38, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="BoxShape3D" id="Shape_wall_ew"]
-size = Vector3(4, 10, 68)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_ctatt"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.36, 0.36, 0.38, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="StandardMaterial3D" id="Mat_block"]
-albedo_color = Color(0.5, 0.5, 0.53, 1)
-roughness = 0.9
-
-[sub_resource type="BoxMesh" id="Mesh_block"]
-material = SubResource("Mat_block")
-size = Vector3(8, 14, 8)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_xgqkh"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.5, 0.5, 0.53, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="BoxShape3D" id="Shape_block"]
-size = Vector3(8, 14, 8)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_munwf"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.5, 0.5, 0.53, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_ts3gi"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.5, 0.5, 0.53, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_0nbtd"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.5, 0.5, 0.53, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_37qwj"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.5, 0.5, 0.53, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_navra"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.5, 0.5, 0.53, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="StandardMaterial3D" id="Mat_crate"]
-albedo_color = Color(0.66, 0.66, 0.68, 1)
-roughness = 0.85
-
-[sub_resource type="BoxMesh" id="Mesh_crate_medium"]
-material = SubResource("Mat_crate")
-size = Vector3(6, 6, 6)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_luhhm"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="BoxShape3D" id="Shape_crate_medium"]
-size = Vector3(6, 6, 6)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_fh13f"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_rup4s"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_4kbfs"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_f17e3"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="BoxMesh" id="Mesh_crate_small"]
-material = SubResource("Mat_crate")
-size = Vector3(3, 3, 3)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_x2olw"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="BoxShape3D" id="Shape_crate_small"]
-size = Vector3(3, 3, 3)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_817gm"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_ggc52"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_l8ah6"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_e75v4"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_8u370"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.66, 0.66, 0.68, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="StandardMaterial3D" id="Mat_column"]
-albedo_color = Color(0.74, 0.74, 0.76, 1)
-roughness = 0.8
-
-[sub_resource type="CylinderMesh" id="Mesh_column"]
-material = SubResource("Mat_column")
-top_radius = 1.5
-bottom_radius = 1.5
-height = 8.0
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_rga7q"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.74, 0.74, 0.76, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="CylinderShape3D" id="Shape_column"]
-height = 8.0
-radius = 1.5
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_6oujy"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.74, 0.74, 0.76, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_hi6a0"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.74, 0.74, 0.76, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_eo1xk"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.74, 0.74, 0.76, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="StandardMaterial3D" id="Mat_ramp"]
-albedo_color = Color(0.58, 0.56, 0.52, 1)
-roughness = 0.9
-
-[sub_resource type="BoxMesh" id="Mesh_platform"]
-material = SubResource("Mat_ramp")
-size = Vector3(10, 1, 10)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_18clu"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.58, 0.56, 0.52, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="BoxShape3D" id="Shape_platform"]
-size = Vector3(10, 1, 10)
-
-[sub_resource type="BoxMesh" id="Mesh_ramp"]
-material = SubResource("Mat_ramp")
-size = Vector3(6, 1, 14)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_4wdv8"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.58, 0.56, 0.52, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="BoxShape3D" id="Shape_ramp"]
-size = Vector3(6, 1, 14)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_d46x8"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.58, 0.56, 0.52, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_3l05q"]
-render_priority = 0
-shader = ExtResource("2_kxyy5")
-shader_parameter/albedo_color = Color(0.58, 0.56, 0.52, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
+[sub_resource type="BoxShape3D" id="Shape_ground"]
+size = Vector3(46, 1, 46)
 
 [sub_resource type="NavigationMesh" id="Nav_mesh"]
 geometry_parsed_geometry_type = 1
 geometry_collision_mask = 1
 geometry_source_geometry_mode = 1
 geometry_source_group_name = &"scenery"
+cell_size = 0.12
 cell_height = 0.1
-agent_height = 0.8
-agent_radius = 0.25
+agent_height = 0.6
+agent_radius = 0.16
 agent_max_climb = 0.2
 
 [sub_resource type="BoxShape3D" id="Shape_box_van_ramp"]
@@ -648,7 +55,7 @@ size = Vector2(0.4293, 0.3398)
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_x28ej"]
 render_priority = 0
-shader = ExtResource("2_kxyy5")
+shader = ExtResource("33_ps1_shader")
 shader_parameter/albedo_color = Color(1, 1, 1, 1)
 shader_parameter/uv_scale = Vector2(1, 1)
 shader_parameter/jitter = 0.50000002375
@@ -663,351 +70,58 @@ shader_parameter/recolor_hue = 0.1406
 shader_parameter/recolor_hue_range = 0.09
 shader_parameter/recolor_min_saturation = 0.25
 
-[node name="World" type="Node3D" unique_id=896002135]
+[node name="World" type="Node3D"]
 script = ExtResource("16_house")
 
-[node name="PS1" parent="." unique_id=1777166208 instance=ExtResource("3_75jji")]
+[node name="PS1" parent="." instance=ExtResource("3_75jji")]
 
-[node name="Floor" type="StaticBody3D" parent="." unique_id=1458331643 groups=["minimap_floor", "scenery"]]
+[node name="Ground" type="StaticBody3D" parent="." groups=["scenery"]]
 
-[node name="Mesh" type="MeshInstance3D" parent="Floor" unique_id=804065504]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.005826831, -0.02224803, 0.010666132)
-mesh = SubResource("Mesh_floor")
-surface_material_override/0 = SubResource("ShaderMaterial_2lf6f")
+[node name="Mesh" type="MeshInstance3D" parent="Ground"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.02, 0)
+mesh = SubResource("Mesh_ground")
 
-[node name="Collision" type="CollisionShape3D" parent="Floor" unique_id=491786415]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, 0)
-shape = SubResource("Shape_floor")
+[node name="Collision" type="CollisionShape3D" parent="Ground"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.52, 0)
+shape = SubResource("Shape_ground")
 
-[node name="Walls" type="Node3D" parent="." unique_id=382611527 groups=["scenery"]]
+[node name="House" parent="." groups=["minimap_floor", "scenery"] instance=ExtResource("4_house")]
 
-[node name="North" type="StaticBody3D" parent="Walls" unique_id=1068365500]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, -32)
+[node name="PS1" parent="House" instance=ExtResource("3_75jji")]
 
-[node name="Mesh" type="MeshInstance3D" parent="Walls/North" unique_id=121092836]
-mesh = SubResource("Mesh_wall_ns")
-surface_material_override/0 = SubResource("ShaderMaterial_7iits")
+[node name="Doors" type="Node3D" parent="House"]
+script = ExtResource("34_house_doors")
 
-[node name="Collision" type="CollisionShape3D" parent="Walls/North" unique_id=598293181]
-shape = SubResource("Shape_wall_ns")
-
-[node name="South" type="StaticBody3D" parent="Walls" unique_id=284329528]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5, 32)
-
-[node name="Mesh" type="MeshInstance3D" parent="Walls/South" unique_id=527741498]
-mesh = SubResource("Mesh_wall_ns")
-surface_material_override/0 = SubResource("ShaderMaterial_oo54l")
-
-[node name="Collision" type="CollisionShape3D" parent="Walls/South" unique_id=1546030304]
-shape = SubResource("Shape_wall_ns")
-
-[node name="East" type="StaticBody3D" parent="Walls" unique_id=1814802015]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 32, 5, 0)
-
-[node name="Mesh" type="MeshInstance3D" parent="Walls/East" unique_id=1833253467]
-mesh = SubResource("Mesh_wall_ew")
-surface_material_override/0 = SubResource("ShaderMaterial_kpybi")
-
-[node name="Collision" type="CollisionShape3D" parent="Walls/East" unique_id=10548637]
-shape = SubResource("Shape_wall_ew")
-
-[node name="West" type="StaticBody3D" parent="Walls" unique_id=634091672]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -32, 5, 0)
-
-[node name="Mesh" type="MeshInstance3D" parent="Walls/West" unique_id=158373678]
-mesh = SubResource("Mesh_wall_ew")
-surface_material_override/0 = SubResource("ShaderMaterial_ctatt")
-
-[node name="Collision" type="CollisionShape3D" parent="Walls/West" unique_id=221313045]
-shape = SubResource("Shape_wall_ew")
-
-[node name="Obstacles" type="Node3D" parent="." unique_id=638354537 groups=["scenery"]]
-
-[node name="Block1" type="StaticBody3D" parent="Obstacles" unique_id=27781205]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 7, -18)
-
-[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Block1" unique_id=440270789]
-mesh = SubResource("Mesh_block")
-surface_material_override/0 = SubResource("ShaderMaterial_xgqkh")
-
-[node name="Collision" type="CollisionShape3D" parent="Obstacles/Block1" unique_id=1706966893]
-shape = SubResource("Shape_block")
-
-[node name="Block2" type="StaticBody3D" parent="Obstacles" unique_id=731028130]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 7, -14)
-
-[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Block2" unique_id=1228591245]
-mesh = SubResource("Mesh_block")
-surface_material_override/0 = SubResource("ShaderMaterial_munwf")
-
-[node name="Collision" type="CollisionShape3D" parent="Obstacles/Block2" unique_id=1275610450]
-shape = SubResource("Shape_block")
-
-[node name="Block3" type="StaticBody3D" parent="Obstacles" unique_id=765453795]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 7, -2)
-
-[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Block3" unique_id=467064409]
-mesh = SubResource("Mesh_block")
-surface_material_override/0 = SubResource("ShaderMaterial_ts3gi")
-
-[node name="Collision" type="CollisionShape3D" parent="Obstacles/Block3" unique_id=1217289156]
-shape = SubResource("Shape_block")
-
-[node name="Block4" type="StaticBody3D" parent="Obstacles" unique_id=41529194]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 7, 8)
-
-[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Block4" unique_id=1119446617]
-mesh = SubResource("Mesh_block")
-surface_material_override/0 = SubResource("ShaderMaterial_0nbtd")
-
-[node name="Collision" type="CollisionShape3D" parent="Obstacles/Block4" unique_id=1738412547]
-shape = SubResource("Shape_block")
-
-[node name="Block5" type="StaticBody3D" parent="Obstacles" unique_id=1940376114]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 7, 21)
-
-[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Block5" unique_id=606991865]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.193013, 0, 0)
-mesh = SubResource("Mesh_block")
-surface_material_override/0 = SubResource("ShaderMaterial_37qwj")
-
-[node name="Collision" type="CollisionShape3D" parent="Obstacles/Block5" unique_id=2063749164]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.219114, 0, 0)
-shape = SubResource("Shape_block")
-
-[node name="Block6" type="StaticBody3D" parent="Obstacles" unique_id=1083788107]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23, 7, 20)
-
-[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Block6" unique_id=917722258]
-mesh = SubResource("Mesh_block")
-surface_material_override/0 = SubResource("ShaderMaterial_navra")
-
-[node name="Collision" type="CollisionShape3D" parent="Obstacles/Block6" unique_id=852850727]
-shape = SubResource("Shape_block")
-
-[node name="MediumCrate1" type="StaticBody3D" parent="Obstacles" unique_id=529881044]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 3, 4)
-
-[node name="Mesh" type="MeshInstance3D" parent="Obstacles/MediumCrate1" unique_id=1332259129]
-mesh = SubResource("Mesh_crate_medium")
-surface_material_override/0 = SubResource("ShaderMaterial_luhhm")
-
-[node name="Collision" type="CollisionShape3D" parent="Obstacles/MediumCrate1" unique_id=176553507]
-shape = SubResource("Shape_crate_medium")
-
-[node name="MediumCrate2" type="StaticBody3D" parent="Obstacles" unique_id=1077734994]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 3, -6)
-
-[node name="MediumCrate3" type="StaticBody3D" parent="Obstacles" unique_id=1926700657]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, -10)
-
-[node name="Mesh" type="MeshInstance3D" parent="Obstacles/MediumCrate3" unique_id=1829870488]
-mesh = SubResource("Mesh_crate_medium")
-surface_material_override/0 = SubResource("ShaderMaterial_fh13f")
-
-[node name="Collision" type="CollisionShape3D" parent="Obstacles/MediumCrate3" unique_id=229303002]
-shape = SubResource("Shape_crate_medium")
-
-[node name="MediumCrate4" type="StaticBody3D" parent="Obstacles" unique_id=1202622196]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 3, 9)
-
-[node name="Mesh" type="MeshInstance3D" parent="Obstacles/MediumCrate4" unique_id=344111394]
-mesh = SubResource("Mesh_crate_medium")
-surface_material_override/0 = SubResource("ShaderMaterial_rup4s")
-
-[node name="Collision" type="CollisionShape3D" parent="Obstacles/MediumCrate4" unique_id=509667385]
-shape = SubResource("Shape_crate_medium")
-
-[node name="MediumCrate5" type="StaticBody3D" parent="Obstacles" unique_id=564697205]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 3, -26)
-
-[node name="Mesh" type="MeshInstance3D" parent="Obstacles/MediumCrate5" unique_id=487964584]
-mesh = SubResource("Mesh_crate_medium")
-surface_material_override/0 = SubResource("ShaderMaterial_4kbfs")
-
-[node name="Collision" type="CollisionShape3D" parent="Obstacles/MediumCrate5" unique_id=267366674]
-shape = SubResource("Shape_crate_medium")
-
-[node name="MediumCrate6" type="StaticBody3D" parent="Obstacles" unique_id=235996302]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26, 3, -14)
-
-[node name="Mesh" type="MeshInstance3D" parent="Obstacles/MediumCrate6" unique_id=787955527]
-mesh = SubResource("Mesh_crate_medium")
-surface_material_override/0 = SubResource("ShaderMaterial_f17e3")
-
-[node name="Collision" type="CollisionShape3D" parent="Obstacles/MediumCrate6" unique_id=1603652664]
-shape = SubResource("Shape_crate_medium")
-
-[node name="SmallCrate1" type="StaticBody3D" parent="Obstacles" unique_id=997534327]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 1.5, 8)
-
-[node name="Mesh" type="MeshInstance3D" parent="Obstacles/SmallCrate1" unique_id=535117309]
-mesh = SubResource("Mesh_crate_small")
-surface_material_override/0 = SubResource("ShaderMaterial_x2olw")
-
-[node name="Collision" type="CollisionShape3D" parent="Obstacles/SmallCrate1" unique_id=407910446]
-shape = SubResource("Shape_crate_small")
-
-[node name="SmallCrate2" type="StaticBody3D" parent="Obstacles" unique_id=1606367004]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 1.5, -2)
-
-[node name="Mesh" type="MeshInstance3D" parent="Obstacles/SmallCrate2" unique_id=1136459400]
-mesh = SubResource("Mesh_crate_small")
-surface_material_override/0 = SubResource("ShaderMaterial_817gm")
-
-[node name="Collision" type="CollisionShape3D" parent="Obstacles/SmallCrate2" unique_id=1498286255]
-shape = SubResource("Shape_crate_small")
-
-[node name="SmallCrate3" type="StaticBody3D" parent="Obstacles" unique_id=45781042]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 1.5, 20)
-
-[node name="Mesh" type="MeshInstance3D" parent="Obstacles/SmallCrate3" unique_id=27468951]
-mesh = SubResource("Mesh_crate_small")
-surface_material_override/0 = SubResource("ShaderMaterial_ggc52")
-
-[node name="Collision" type="CollisionShape3D" parent="Obstacles/SmallCrate3" unique_id=844510079]
-shape = SubResource("Shape_crate_small")
-
-[node name="SmallCrate4" type="StaticBody3D" parent="Obstacles" unique_id=1062645687]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 1.5, 2)
-
-[node name="Mesh" type="MeshInstance3D" parent="Obstacles/SmallCrate4" unique_id=1122574622]
-mesh = SubResource("Mesh_crate_small")
-surface_material_override/0 = SubResource("ShaderMaterial_l8ah6")
-
-[node name="Collision" type="CollisionShape3D" parent="Obstacles/SmallCrate4" unique_id=2109681861]
-shape = SubResource("Shape_crate_small")
-
-[node name="SmallCrate5" type="StaticBody3D" parent="Obstacles" unique_id=607535201]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 17, 1.5, -8)
-
-[node name="Mesh" type="MeshInstance3D" parent="Obstacles/SmallCrate5" unique_id=1083450558]
-mesh = SubResource("Mesh_crate_small")
-surface_material_override/0 = SubResource("ShaderMaterial_e75v4")
-
-[node name="Collision" type="CollisionShape3D" parent="Obstacles/SmallCrate5" unique_id=812576796]
-shape = SubResource("Shape_crate_small")
-
-[node name="SmallCrate6" type="StaticBody3D" parent="Obstacles" unique_id=1477145299]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 1.5, 20)
-
-[node name="Mesh" type="MeshInstance3D" parent="Obstacles/SmallCrate6" unique_id=608548599]
-mesh = SubResource("Mesh_crate_small")
-surface_material_override/0 = SubResource("ShaderMaterial_8u370")
-
-[node name="Collision" type="CollisionShape3D" parent="Obstacles/SmallCrate6" unique_id=1708760894]
-shape = SubResource("Shape_crate_small")
-
-[node name="Column1" type="StaticBody3D" parent="Obstacles" unique_id=368364714]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 4, -21)
-
-[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Column1" unique_id=1531192281]
-mesh = SubResource("Mesh_column")
-surface_material_override/0 = SubResource("ShaderMaterial_rga7q")
-
-[node name="Collision" type="CollisionShape3D" parent="Obstacles/Column1" unique_id=1617692389]
-shape = SubResource("Shape_column")
-
-[node name="Column2" type="StaticBody3D" parent="Obstacles" unique_id=226502724]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 4, -21)
-
-[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Column2" unique_id=1635043667]
-mesh = SubResource("Mesh_column")
-surface_material_override/0 = SubResource("ShaderMaterial_6oujy")
-
-[node name="Collision" type="CollisionShape3D" parent="Obstacles/Column2" unique_id=1801258575]
-shape = SubResource("Shape_column")
-
-[node name="Column3" type="StaticBody3D" parent="Obstacles" unique_id=1704430060]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 4, -26)
-
-[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Column3" unique_id=1781048997]
-mesh = SubResource("Mesh_column")
-surface_material_override/0 = SubResource("ShaderMaterial_hi6a0")
-
-[node name="Collision" type="CollisionShape3D" parent="Obstacles/Column3" unique_id=1734182116]
-shape = SubResource("Shape_column")
-
-[node name="Column4" type="StaticBody3D" parent="Obstacles" unique_id=1935652570]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 4, -26)
-
-[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Column4" unique_id=566670278]
-mesh = SubResource("Mesh_column")
-surface_material_override/0 = SubResource("ShaderMaterial_eo1xk")
-
-[node name="Collision" type="CollisionShape3D" parent="Obstacles/Column4" unique_id=1584500374]
-shape = SubResource("Shape_column")
-
-[node name="Platform1" type="StaticBody3D" parent="Obstacles" unique_id=1141299144]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 4, 9)
-
-[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Platform1" unique_id=175169350]
-mesh = SubResource("Mesh_platform")
-surface_material_override/0 = SubResource("ShaderMaterial_18clu")
-
-[node name="Collision" type="CollisionShape3D" parent="Obstacles/Platform1" unique_id=1193985580]
-shape = SubResource("Shape_platform")
-
-[node name="Ramp1" type="StaticBody3D" parent="Obstacles" unique_id=1746651173]
-transform = Transform3D(1, 0, 0, 0, 0.9397, -0.342, 0, 0.342, 0.9397, 15, 1.75, 20.6)
-
-[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Ramp1" unique_id=405142041]
-mesh = SubResource("Mesh_ramp")
-surface_material_override/0 = SubResource("ShaderMaterial_4wdv8")
-
-[node name="Collision" type="CollisionShape3D" parent="Obstacles/Ramp1" unique_id=1931259616]
-shape = SubResource("Shape_ramp")
-
-[node name="Platform2" type="StaticBody3D" parent="Obstacles" unique_id=360026285]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 4, -9)
-
-[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Platform2" unique_id=1357574642]
-mesh = SubResource("Mesh_platform")
-surface_material_override/0 = SubResource("ShaderMaterial_d46x8")
-
-[node name="Collision" type="CollisionShape3D" parent="Obstacles/Platform2" unique_id=948259020]
-shape = SubResource("Shape_platform")
-
-[node name="Ramp2" type="StaticBody3D" parent="Obstacles" unique_id=1024697496]
-transform = Transform3D(1, 0, 0, 0, 0.9397, 0.342, 0, -0.342, 0.9397, -15, 1.75, -20.6)
-
-[node name="Mesh" type="MeshInstance3D" parent="Obstacles/Ramp2" unique_id=160702179]
-mesh = SubResource("Mesh_ramp")
-surface_material_override/0 = SubResource("ShaderMaterial_3l05q")
-
-[node name="Collision" type="CollisionShape3D" parent="Obstacles/Ramp2" unique_id=1740421227]
-shape = SubResource("Shape_ramp")
-
-[node name="Navigation" type="NavigationRegion3D" parent="." unique_id=1675674178]
+[node name="Navigation" type="NavigationRegion3D" parent="."]
 navigation_mesh = SubResource("Nav_mesh")
 script = ExtResource("6_navigation")
 
-[node name="Van" parent="." unique_id=391910572 groups=["scenery"] instance=ExtResource("1_van")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.3772902, 0.009373069, 22.022085)
+[node name="Van" parent="." groups=["scenery"] instance=ExtResource("1_van")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0.6, 0, -12.5)
 
-[node name="PS1" parent="Van" unique_id=1644828936 instance=ExtResource("3_75jji")]
+[node name="PS1" parent="Van" instance=ExtResource("3_75jji")]
 
-[node name="Doors" type="Node3D" parent="Van" unique_id=192847291]
+[node name="Doors" type="Node3D" parent="Van"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.16279936, -0.009373069, -0.02208519)
 script = ExtResource("30_doors")
 
-[node name="Ramp" type="StaticBody3D" parent="Van" unique_id=184918294 groups=["scenery"]]
+[node name="Ramp" type="StaticBody3D" parent="Van" groups=["scenery"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.16279936, -0.009373069, -0.02208519)
 collision_mask = 0
 
-[node name="Collision" type="CollisionShape3D" parent="Van/Ramp" unique_id=1711596389]
+[node name="Collision" type="CollisionShape3D" parent="Van/Ramp"]
 transform = Transform3D(1, 0, 0, 0, 0.9661, -0.2582, 0, 0.2582, 0.9661, 0, 0.2665, 4.45)
 shape = SubResource("Shape_box_van_ramp")
 
-[node name="Lamps" type="Node3D" parent="Van" unique_id=787649715]
+[node name="Lamps" type="Node3D" parent="Van"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.16279936, -0.009373069, -0.02208519)
 
-[node name="Front" type="OmniLight3D" parent="Van/Lamps" unique_id=182749182]
+[node name="Front" type="OmniLight3D" parent="Van/Lamps"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4, 0.4)
 light_color = Color(1, 0.96, 0.88, 1)
 omni_range = 6.0
 
-[node name="StoreTerminal" type="Area3D" parent="Van" unique_id=174902588 groups=["store_station"]]
+[node name="StoreTerminal" type="Area3D" parent="Van" groups=["store_station"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0066041946, 1.1405, -0.22593689)
 collision_layer = 8
 collision_mask = 0
@@ -1015,129 +129,107 @@ monitoring = false
 script = ExtResource("25_terminal")
 prompt = "PROMPT_USE_TERMINAL"
 
-[node name="Reach" type="CollisionShape3D" parent="Van/StoreTerminal" unique_id=1097252919]
+[node name="Reach" type="CollisionShape3D" parent="Van/StoreTerminal"]
 shape = SubResource("Shape_reach_terminal")
 
-[node name="Refused" type="AudioStreamPlayer3D" parent="Van/StoreTerminal" unique_id=396120280]
+[node name="Refused" type="AudioStreamPlayer3D" parent="Van/StoreTerminal"]
 unit_size = 3.0
 max_distance = 12.0
 
-[node name="Screen" type="MeshInstance3D" parent="Van/StoreTerminal" unique_id=1719331591]
+[node name="Screen" type="MeshInstance3D" parent="Van/StoreTerminal"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00175, 0.7501, 0.15)
 mesh = SubResource("Mesh_totem_screen")
 surface_material_override/0 = SubResource("ShaderMaterial_x28ej")
 
-[node name="Viewport" type="SubViewport" parent="Van/StoreTerminal/Screen" unique_id=83963028]
+[node name="Viewport" type="SubViewport" parent="Van/StoreTerminal/Screen"]
 size = Vector2i(640, 507)
 render_target_update_mode = 4
 
-[node name="TerminalScreen" parent="Van/StoreTerminal/Screen/Viewport" unique_id=890147873 instance=ExtResource("26_store")]
+[node name="TerminalScreen" parent="Van/StoreTerminal/Screen/Viewport" instance=ExtResource("26_store")]
 layout_mode = 3
 
-[node name="Spawns" type="Node3D" parent="." unique_id=335772048]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0, 27.5)
+[node name="Spawns" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -8.5)
 script = ExtResource("18_spawns")
 
-[node name="FrontDoor1" type="Marker3D" parent="Spawns" unique_id=1421365148]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 0.1, 0)
+[node name="FrontDoor1" type="Marker3D" parent="Spawns"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.1, 0.1, 0)
 
-[node name="FrontDoor2" type="Marker3D" parent="Spawns" unique_id=1366862167]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.2, 0.1, 0)
+[node name="FrontDoor2" type="Marker3D" parent="Spawns"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1, 0.1, 0)
 
-[node name="FrontDoor3" type="Marker3D" parent="Spawns" unique_id=1305067559]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 0.1, 1.6)
+[node name="FrontDoor3" type="Marker3D" parent="Spawns"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.55, 0.1, -1.5)
 
-[node name="FrontDoor4" type="Marker3D" parent="Spawns" unique_id=2127760512]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 0.1, 1.6)
+[node name="FrontDoor4" type="Marker3D" parent="Spawns"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.55, 0.1, -1.5)
 
-[node name="Player" parent="." unique_id=541805088 instance=ExtResource("2_player")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 0.68, 24)
+[node name="Player" parent="." instance=ExtResource("2_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, -8.5)
 
-[node name="Players" type="Node3D" parent="." unique_id=1407872889 groups=["player_avatars_root"]]
+[node name="Players" type="Node3D" parent="." groups=["player_avatars_root"]]
 script = ExtResource("14_players")
 
-[node name="Traps" type="Node3D" parent="." unique_id=84269803]
+[node name="Traps" type="Node3D" parent="."]
 
-[node name="TrapSpawner" type="MultiplayerSpawner" parent="Traps" unique_id=84269804]
+[node name="TrapSpawner" type="MultiplayerSpawner" parent="Traps"]
 _spawnable_scenes = PackedStringArray("res://scenes/traps/mousetrap.tscn", "res://scenes/traps/glue_trap.tscn", "res://scenes/traps/explosive_cheese.tscn", "res://scenes/traps/bait_pile.tscn")
 spawn_path = NodePath("..")
 
-[node name="Rats" type="Node3D" parent="." unique_id=1730976301]
+[node name="Rats" type="Node3D" parent="."]
 
-[node name="RatSpawner" type="MultiplayerSpawner" parent="Rats" unique_id=1730976302]
+[node name="RatSpawner" type="MultiplayerSpawner" parent="Rats"]
 _spawnable_scenes = PackedStringArray("uid://dmlgy5o48488h")
 spawn_path = NodePath("..")
 
-[node name="RatHoles" type="Node3D" parent="." unique_id=1309894906]
+[node name="RatHoles" type="Node3D" parent="."]
 
-[node name="HoleKitchen1" parent="RatHoles" unique_id=466245807 instance=ExtResource("17_hole")]
-transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -30, 0, -22)
-hole_name = "Kitchen Pantry Crack"
-linked_hole = NodePath("../HoleBackRoom")
-
-[node name="HoleKitchen2" parent="RatHoles" unique_id=1733486364 instance=ExtResource("17_hole")]
-transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, -12, 0, -30)
-hole_name = "Kitchen Sink Pipe Hole"
-linked_hole = NodePath("../HoleLiving2")
-
-[node name="HoleLiving1" parent="RatHoles" unique_id=627409768 instance=ExtResource("17_hole")]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 30, 0, -18)
+[node name="HoleSala" parent="RatHoles" instance=ExtResource("17_hole")]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -4.9, 0, 1.2)
 hole_name = "Living Room Baseboard Hole"
-linked_hole = NodePath("../HoleHallway")
+linked_hole = NodePath("../HoleBanheiro")
 
-[node name="HoleLiving2" parent="RatHoles" unique_id=9274890 instance=ExtResource("17_hole")]
-transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 14, 0, -30)
-hole_name = "Fireplace Hearth Flue"
+[node name="HoleCozinha" parent="RatHoles" instance=ExtResource("17_hole")]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 4.9, 0, -0.9)
+hole_name = "Kitchen Sink Pipe Hole"
+linked_hole = NodePath("../HoleSala")
 
-[node name="HoleHallway" parent="RatHoles" unique_id=654459344 instance=ExtResource("17_hole")]
-transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -30, 0, 9)
-hole_name = "Hallway Stair Baseboard"
+[node name="HoleBanheiro" parent="RatHoles" instance=ExtResource("17_hole")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.4, 0, 3.9)
+hole_name = "Bathroom Vent"
 
-[node name="HoleBackRoom" parent="RatHoles" unique_id=1156623626 instance=ExtResource("17_hole")]
-transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 30, 0, 16)
-hole_name = "Back Room Vent"
+[node name="Clues" type="Node3D" parent="."]
 
-[node name="Clues" type="Node3D" parent="." unique_id=1829402200]
+[node name="Streaks" type="Node3D" parent="Clues" groups=["streaks_root"]]
 
-[node name="Streaks" type="Node3D" parent="Clues" unique_id=270992587 groups=["streaks_root"]]
-
-[node name="StreakSpawner" type="MultiplayerSpawner" parent="Clues/Streaks" unique_id=1880020634]
+[node name="StreakSpawner" type="MultiplayerSpawner" parent="Clues/Streaks"]
 _spawnable_scenes = PackedStringArray("res://scenes/clues/rat_streak.tscn")
 spawn_path = NodePath("..")
 
-[node name="Garbage" type="Node3D" parent="Clues" unique_id=1300943916]
+[node name="Garbage" type="Node3D" parent="Clues"]
 
-[node name="GarbageKitchen" parent="Clues/Garbage" unique_id=1378356807 instance=ExtResource("31_garbage")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25, 0, -26)
+[node name="GarbageSala" parent="Clues/Garbage" instance=ExtResource("31_garbage")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0, 3.2)
 
-[node name="GarbageLiving" parent="Clues/Garbage" unique_id=1867281390 instance=ExtResource("31_garbage")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25, 0, -25)
+[node name="GarbageCozinha" parent="Clues/Garbage" instance=ExtResource("31_garbage")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.3, 0, -0.2)
 
-[node name="GarbageHallway" parent="Clues/Garbage" unique_id=1620725788 instance=ExtResource("31_garbage")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -27, 0, 14)
-
-[node name="GarbageBackRoom" parent="Clues/Garbage" unique_id=887396864 instance=ExtResource("31_garbage")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 0, 26)
-
-[node name="GarbageAlley" parent="Clues/Garbage" unique_id=1750700632 instance=ExtResource("31_garbage")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, 27)
-
-[node name="Droppings" type="Node3D" parent="Clues" unique_id=153882796]
+[node name="Droppings" type="Node3D" parent="Clues"]
 script = ExtResource("32_droppings")
 
-[node name="Geometry" type="Node3D" parent="." unique_id=646313865]
+[node name="Geometry" type="Node3D" parent="."]
 
-[node name="Audio" type="Node" parent="." unique_id=664511605]
+[node name="Audio" type="Node" parent="."]
 
-[node name="Screech" type="AudioStreamPlayer" parent="Audio" unique_id=882571525]
+[node name="Screech" type="AudioStreamPlayer" parent="Audio"]
 volume_db = -6.0
 
-[node name="HUD" parent="." unique_id=115506837 instance=ExtResource("29_hud_game")]
+[node name="HUD" parent="." instance=ExtResource("29_hud_game")]
 
-[node name="HUD_Phase" parent="." unique_id=1677183090 instance=ExtResource("20_hud_phase")]
+[node name="HUD_Phase" parent="." instance=ExtResource("20_hud_phase")]
 
-[node name="ResultScreen" parent="." unique_id=2047533472 instance=ExtResource("22_result")]
+[node name="ResultScreen" parent="." instance=ExtResource("22_result")]
 
-[node name="Scoreboard" parent="." unique_id=1487565446 instance=ExtResource("98_scoreboard")]
+[node name="Scoreboard" parent="." instance=ExtResource("98_scoreboard")]
 
-[node name="PauseMenu" parent="." unique_id=1466034551 instance=ExtResource("99_pause")]
+[node name="PauseMenu" parent="." instance=ExtResource("99_pause")]
