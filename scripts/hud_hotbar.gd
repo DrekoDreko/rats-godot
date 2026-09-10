@@ -203,8 +203,11 @@ func _model_viewport(item: StoreItem) -> SubViewport:
 	viewport.add_child(camera)
 	var light := OmniLight3D.new()
 	light.position = Vector3(1.0, 1.5, 2.0)
+	light.light_color = Color(0.847059, 0.913725, 0.815686)
+	light.light_specular = 0.0
 	light.light_energy = 2.0
-	light.omni_range = 8.0
+	light.omni_range = 15.0
+	light.omni_attenuation = 0.420448
 	viewport.add_child(light)
 	return viewport
 

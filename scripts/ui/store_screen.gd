@@ -217,22 +217,6 @@ const CREW_SIZE := 8
 const MODEL_SCENE := preload("res://scenes/player_model.tscn")
 const PS1_SCENE := preload("res://scenes/ps1.tscn")
 
-## The snapping grid the previews are pinned to, and the whole reason they need
-## pinning at all.
-##
-## The PS1 shader reads its grid off the viewport it is drawn in — the game's
-## own 854x480 lands on 156 — which is the right rule everywhere except a panel.
-## These previews are `SubViewport`s the size of the strip they sit in: 118x190
-## for the body, 44 tall for an icon. Left alone they snap onto grids of 38 and
-## 14, four and eleven times coarser than the world outside the windscreen, and
-## at fourteen a broom is not a low-poly broom, it is three vertices in a heap.
-## The hand was the giveaway — the fingers collapsed into one square.
-##
-## Pinning them to the game's own number is what makes a preview show the model
-## the player will be holding, snapped exactly as hard as everything else he can
-## see, instead of a ruin of it.
-const PREVIEW_JITTER_GRID := 156.0
-
 @onready var _root: Control = $Root
 @onready var _money: Label = $Root/Margin/Rows/Header/Money
 @onready var _player_name: Label = $Root/Margin/Rows/Body/Left/PlayerName
@@ -666,16 +650,27 @@ func _lay_flat(model_size: Vector3) -> Vector3:
 ## Two lamps per icon, from the same two sides as the ones over the man on the
 ## left, so that a thing in his hand and the same thing on the rack are not lit
 ## as though they were in two different rooms.
+## Omni rather than directional, and without specular: a directional light lays a
+## gradient across every face at once, which is exactly the shading the flat look
+## exists to avoid. These are the same warm/cool pair the world uses, placed
+## instead of aimed.
 func _build_icon_lights(view: SubViewport) -> void:
-	var key := DirectionalLight3D.new()
-	key.rotation_degrees = Vector3(-40, -35, 0)
+	var key := OmniLight3D.new()
+	key.position = Vector3(-1.3, 1.9, 1.7)
+	key.light_color = Color(0.847059, 0.913725, 0.815686)
+	key.light_specular = 0.0
 	key.light_energy = 2.2
+	key.omni_range = 15.0
+	key.omni_attenuation = 0.420448
 	view.add_child(key)
 
-	var fill := DirectionalLight3D.new()
-	fill.rotation_degrees = Vector3(-15, 130, 0)
-	fill.light_color = Color(0.63, 0.78, 1.0)
+	var fill := OmniLight3D.new()
+	fill.position = Vector3(1.5, 1.1, 1.4)
+	fill.light_color = Color(0.768627, 1.0, 1.0)
+	fill.light_specular = 0.0
 	fill.light_energy = 0.9
+	fill.omni_range = 15.0
+	fill.omni_attenuation = 0.420448
 	view.add_child(fill)
 
 
@@ -935,12 +930,10 @@ func _show_held_item(item: StoreItem) -> void:
 	model.add_child(_ps1_applier())
 
 
-## A PS1 applier for a model standing in one of this screen's `SubViewport`s,
-## with its snapping grid pinned to the game's own. See `PREVIEW_JITTER_GRID`.
+## A material applier for a model standing in one of this screen's
+## `SubViewport`s.
 func _ps1_applier() -> Node:
-	var applier := PS1_SCENE.instantiate()
-	applier.jitter_grid = PREVIEW_JITTER_GRID
-	return applier
+	return PS1_SCENE.instantiate()
 
 
 ## The box a model fills, in the coordinates of the node it is rooted at, merged

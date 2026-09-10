@@ -16,7 +16,7 @@ extends Control
 ##
 ## **Alpha is fine here, and it is worth saying why.** Everything on the floor in
 ## this game has to be opaque, because the PS1 shader discards any fragment below
-## full alpha (`scripts/ps1.gdshader`). That is a *spatial* shader built-in. This
+## full alpha (`shaders/level.gdshader`). That is a *spatial* shader built-in. This
 ## is a `CanvasItem` in a `CanvasLayer` with no shader on it at all, so the rule
 ## does not reach here — and piss on a lens is translucent, so translucent is what
 ## it should be.

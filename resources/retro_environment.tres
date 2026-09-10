@@ -1,0 +1,37 @@
+[gd_resource type="Environment" format=3 uid="uid://b7xk3mqvn2eyt"]
+
+[ext_resource type="Shader" uid="uid://dg6aa02ilm5cq" path="res://shaders/sky.gdshader" id="1_sky_shader"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_sky"]
+shader = ExtResource("1_sky_shader")
+shader_parameter/color_top = Color(0.09, 0.1, 0.14, 1)
+shader_parameter/color_horizon = Color(0.2, 0.2, 0.24, 1)
+shader_parameter/color_bottom = Color(0.05, 0.05, 0.06, 1)
+shader_parameter/exponent_factor_top = 1.0
+shader_parameter/exponent_factor_bottom = 1.0
+shader_parameter/intensity_amp = 1.0
+
+[sub_resource type="Sky" id="Sky_retro"]
+sky_material = SubResource("ShaderMaterial_sky")
+
+[resource]
+background_mode = 2
+sky = SubResource("Sky_retro")
+ambient_light_source = 2
+ambient_light_color = Color(0.873298, 0.873298, 0.873298, 1)
+ambient_light_energy = 1.1
+reflected_light_source = 1
+tonemap_mode = 2
+tonemap_white = 2.0
+fog_enabled = true
+fog_light_color = Color(0, 0, 0, 1)
+fog_density = 0.03
+fog_sky_affect = 0.0
+fog_depth_curve = 0.3
+fog_depth_begin = 20.0
+fog_depth_end = 50.0
+volumetric_fog_density = 0.0
+adjustment_enabled = true
+adjustment_brightness = 1.4
+adjustment_contrast = 1.02
+adjustment_saturation = 1.2

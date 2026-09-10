@@ -1,9 +1,8 @@
 extends Node
-## Every player-facing setting: fullscreen, the three volume buses, the PS1
-## post-process effect, streamer mode and the game's language. One autoload owns
-## it is the same shape — a value, a place it applies to, and a line in
-## `user://settings.cfg` — and a screen only ever needs to read the current
-## value or ask for a new one.
+## Every player-facing setting: fullscreen, the three volume buses, streamer mode
+## and the game's language. One autoload owns it and each is the same shape — a
+## value, a place it applies to, and a line in `user://settings.cfg` — and a
+## screen only ever needs to read the current value or ask for a new one.
 ##
 ## Applied immediately on every setter, not batched behind a "confirm"
 ## button: a fullscreen toggle or a volume slider is expected to take effect
@@ -21,7 +20,6 @@ const DEFAULT_LANGUAGE := "en"
 ## Streamer mode changed. Screens that show a Steam name or a lobby ID and
 ## are not already on a refresh loop of their own listen for this to redraw.
 signal streamer_mode_changed(enabled: bool)
-signal ps1_post_process_changed
 
 ## The game opens in a window, and stays in one until the player asks for
 ## anything else on the settings screen. A window is the mode you can get out
@@ -33,7 +31,6 @@ var fullscreen := false
 var sfx_volume := 1.0
 var music_volume := 1.0
 var voice_volume := 1.0
-var ps1_post_process_enabled := true
 var streamer_mode := false
 var language := DEFAULT_LANGUAGE
 
@@ -75,14 +72,6 @@ func set_streamer_mode(enabled: bool) -> void:
 	streamer_mode_changed.emit(enabled)
 
 
-func set_ps1_post_process_enabled(enabled: bool) -> void:
-	if ps1_post_process_enabled == enabled:
-		return
-	ps1_post_process_enabled = enabled
-	_save()
-	ps1_post_process_changed.emit()
-
-
 func set_language(code: String) -> void:
 	language = code
 	TranslationServer.set_locale(language)
@@ -98,9 +87,6 @@ func _load() -> void:
 	sfx_volume = config.get_value("audio", "sfx_volume", sfx_volume)
 	music_volume = config.get_value("audio", "music_volume", music_volume)
 	voice_volume = config.get_value("audio", "voice_volume", voice_volume)
-	ps1_post_process_enabled = config.get_value(
-		"video", "ps1_post_process_enabled", ps1_post_process_enabled
-	)
 	streamer_mode = config.get_value("privacy", "streamer_mode", streamer_mode)
 	language = config.get_value("locale", "language", language)
 
@@ -111,7 +97,6 @@ func _save() -> void:
 	config.set_value("audio", "sfx_volume", sfx_volume)
 	config.set_value("audio", "music_volume", music_volume)
 	config.set_value("audio", "voice_volume", voice_volume)
-	config.set_value("video", "ps1_post_process_enabled", ps1_post_process_enabled)
 	config.set_value("privacy", "streamer_mode", streamer_mode)
 	config.set_value("locale", "language", language)
 	config.save(SETTINGS_PATH)

@@ -1,7 +1,6 @@
 extends Control
-## The settings screen: fullscreen, the three volume sliders, the PS1 post-process
-## effects, Streamer Mode and the language switch — one popup, instanced
-## identically into the pause
+## The settings screen: fullscreen, the three volume sliders, Streamer Mode and
+## the language switch — one popup, instanced identically into the pause
 ## menu and the main menu, the same way `lobby.tscn` is instanced into
 ## `menu.tscn` as `LobbyModal`.
 ##
@@ -24,9 +23,6 @@ const LANGUAGES := [
 @onready var _sound: HSlider = $Center/Panel/Margin/Rows/SoundRow/Sound
 @onready var _music: HSlider = $Center/Panel/Margin/Rows/MusicRow/Music
 @onready var _voice: HSlider = $Center/Panel/Margin/Rows/VoiceRow/Voice
-@onready var _ps1_post_process: CheckButton = get_node(
-	^"Center/Panel/Margin/Rows/PS1PostProcessRow/PS1PostProcess"
-)
 @onready var _streamer: CheckButton = $Center/Panel/Margin/Rows/StreamerRow/Streamer
 @onready var _language: OptionButton = $Center/Panel/Margin/Rows/LanguageRow/Language
 
@@ -38,7 +34,6 @@ func _ready() -> void:
 	_sound.value = SettingsManager.sfx_volume
 	_music.value = SettingsManager.music_volume
 	_voice.value = SettingsManager.voice_volume
-	_ps1_post_process.button_pressed = SettingsManager.ps1_post_process_enabled
 	_streamer.button_pressed = SettingsManager.streamer_mode
 
 	for entry in LANGUAGES:
@@ -49,7 +44,6 @@ func _ready() -> void:
 	_sound.value_changed.connect(SettingsManager.set_sfx_volume)
 	_music.value_changed.connect(SettingsManager.set_music_volume)
 	_voice.value_changed.connect(SettingsManager.set_voice_volume)
-	_ps1_post_process.toggled.connect(SettingsManager.set_ps1_post_process_enabled)
 	_streamer.toggled.connect(SettingsManager.set_streamer_mode)
 	_language.item_selected.connect(_on_language_selected)
 

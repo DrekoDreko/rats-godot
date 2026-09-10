@@ -1,0 +1,11 @@
+[gd_resource type="ShaderMaterial" format=3 uid="uid://dn4tw8mqx6vbc"]
+
+[ext_resource type="Shader" path="res://shaders/viewmodel.gdshader" id="1_shader"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1_shader")
+shader_parameter/albedo_color = Color(1, 1, 1, 1)
+shader_parameter/alpha_scissor = 0.5
+shader_parameter/fov = 40.0
+shader_parameter/depth = 0.0

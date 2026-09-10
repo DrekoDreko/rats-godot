@@ -19,7 +19,7 @@
 [ext_resource type="Texture2D" path="res://assets/textures/crosshair_active.png" id="17_crosshair_active"]
 [ext_resource type="Script" path="res://scripts/hud_ready_prompt.gd" id="18_ready_prompt"]
 
-[node name="HUD" type="CanvasLayer" groups=["retrofx_hud"]]
+[node name="HUD" type="CanvasLayer"]
 
 [node name="Splatter" type="Control" parent="."]
 anchors_preset = 15

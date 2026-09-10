@@ -28,7 +28,7 @@ extends Node3D
 ## applied at another is a hazard the player cannot learn.
 ##
 ## **It has to be opaque, and that is not a style choice.** Every surface in this
-## game is drawn through the PS1 shader (`scripts/ps1.gdshader`), hung on it by the
+## game is drawn through the level shader (`shaders/level.gdshader`), hung on it by the
 ## applier at the root of the world — runtime-spawned nodes included
 ## (`PS1MaterialApplier._on_node_added`). That shader writes
 ## `ALPHA_SCISSOR_THRESHOLD = alpha_scissor`, and `alpha_scissor` defaults to 1, so

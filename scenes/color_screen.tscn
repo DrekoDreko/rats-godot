@@ -12,12 +12,21 @@ spacing_bottom = -1
 default_font = SubResource("Font_color")
 default_font_size = 16
 
+; See `store_screen.tscn`: the panel keeps its background, the model inside is
+; lit like the world so a suit picked here matches the suit worn in the house.
 [sub_resource type="Environment" id="Env_color"]
 background_mode = 1
 background_color = Color(0.05, 0.12, 0.21, 1)
 ambient_light_source = 2
-ambient_light_color = Color(0.44, 0.6, 0.8, 1)
-ambient_light_energy = 0.75
+ambient_light_color = Color(0.873298, 0.873298, 0.873298, 1)
+ambient_light_energy = 1.1
+reflected_light_source = 1
+tonemap_mode = 2
+tonemap_white = 2.0
+adjustment_enabled = true
+adjustment_brightness = 1.4
+adjustment_contrast = 1.02
+adjustment_saturation = 1.2
 
 [sub_resource type="StyleBoxFlat" id="Style_preview"]
 bg_color = Color(0.05, 0.12, 0.21, 1)
@@ -119,14 +128,19 @@ fov = 44.0
 
 [node name="Key" type="OmniLight3D" parent="Root/Margin/Rows/Body/Left/Preview/View"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.3, 1.9, -1.7)
+light_color = Color(0.847059, 0.913725, 0.815686, 1)
+light_specular = 0.0
 light_energy = 3.0
-omni_range = 9.0
+omni_range = 15.0
+omni_attenuation = 0.420448
 
 [node name="Fill" type="OmniLight3D" parent="Root/Margin/Rows/Body/Left/Preview/View"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 1.1, -1.4)
-light_color = Color(0.63, 0.78, 1, 1)
-light_energy = 1.3
-omni_range = 9.0
+light_color = Color(0.768627, 1, 1, 1)
+light_specular = 0.0
+light_energy = 1.0
+omni_range = 15.0
+omni_attenuation = 0.420448
 
 [node name="Seat" type="Node3D" parent="Root/Margin/Rows/Body/Left/Preview/View"]
 

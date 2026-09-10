@@ -9,7 +9,9 @@
 [ext_resource type="PackedScene" uid="uid://b4wetum1hnqtu" path="res://scenes/big_font_outlined_label.tscn" id="8_ufwb2"]
 [ext_resource type="Texture2D" uid="uid://d4n0gjqdch0t2" path="res://assets/textures/floor/concrete_floor_atlas.png" id="9_floor_tex"]
 [ext_resource type="PackedScene" uid="uid://dyb2bu6wxtp7m" path="res://models/van_exterior.glb" id="10_van"]
-[ext_resource type="Shader" uid="uid://bwmdy542q66bt" path="res://scripts/ps1.gdshader" id="12_floor_shader"]
+[ext_resource type="Shader" path="res://shaders/level.gdshader" id="12_floor_shader"]
+
+[ext_resource type="Environment" path="res://resources/retro_environment.tres" id="100_env"]
 
 [sub_resource type="PlaneMesh" id="Mesh_floor"]
 size = Vector2(40, 40)
@@ -22,20 +24,12 @@ shader = ExtResource("12_floor_shader")
 shader_parameter/albedo = ExtResource("9_floor_tex")
 shader_parameter/albedo_color = Color(1, 1, 1, 1)
 shader_parameter/uv_scale = Vector2(5, 10)
-shader_parameter/jitter = 0.2000000095
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
 
 [node name="Menu" type="Node3D" unique_id=2125750364]
 script = ExtResource("1_menu")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = ExtResource("100_env")
 
 [node name="PS1" parent="." unique_id=1777166207 instance=ExtResource("2_13sgg")]
 

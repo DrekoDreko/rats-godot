@@ -54,13 +54,6 @@ const PS1_SCENE := preload("res://scenes/ps1.tscn")
 ## What he is doing while he is being dressed: standing still.
 const PREVIEW_STATE := PlayerAvatar.State.IDLE
 
-## The snapping grid the preview is pinned to. The PS1 shader reads its grid off
-## the viewport it is drawn in, and this one is a 150 px strip rather than the
-## game's own 854x480 — left alone the suit would be snapped several times
-## harder here than out of the windscreen, which is a different model and not a
-## preview of this one. See `StoreScreen.PREVIEW_JITTER_GRID`.
-const PREVIEW_JITTER_GRID := 156.0
-
 ## How far the man turns per pixel the mouse is dragged across him. A little
 ## under half a turn for a drag the full width of the frame, which is enough to
 ## walk around the back of the suit without the pointer leaving the picture.
@@ -175,7 +168,6 @@ func _build_preview() -> void:
 	# The van dresses its models from an applier at the root of the scene, and
 	# that applier cannot see into another world. This one carries its own.
 	var applier := PS1_SCENE.instantiate()
-	applier.jitter_grid = PREVIEW_JITTER_GRID
 	_model.add_child(applier)
 	# The pose is set after the model is in the tree: `set_state` reaches for the
 	# `AnimationPlayer` through an `@onready`, which is not resolved before then.

@@ -41,15 +41,15 @@ ShiftReport="*res://scripts/session/shift_report.gd"
 Bank="*res://scripts/economy/bank.gd"
 SettingsManager="*res://scripts/settings/settings_manager.gd"
 AudioManager="*res://scripts/audio/audio_manager.gd"
-RetroFX="*res://scripts/retrofx/retro_fx.gd"
 
 [display]
 
-window/size/viewport_width=480
-window/size/viewport_height=270
-window/size/window_width_override=960
-window/size/window_height_override=540
+window/size/viewport_width=640
+window/size/viewport_height=360
+window/size/window_width_override=1920
+window/size/window_height_override=1080
 window/stretch/mode="viewport"
+window/stretch/aspect="keep_height"
 
 [editor_plugins]
 
@@ -295,15 +295,24 @@ locale/translations=PackedStringArray("res://localization/ui_strings.en.translat
 
 textures/canvas_textures/default_texture_filter=0
 rendering_device/driver.windows="d3d12"
-renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 lights_and_shadows/directional_shadow/size=512
 lights_and_shadows/directional_shadow/soft_shadow_filter_quality=0
 lights_and_shadows/positional_shadow/soft_shadow_filter_quality=0
+shading/overrides/force_lambert_over_burley=true
 textures/default_filters/use_nearest_mipmap_filter=true
 textures/default_filters/anisotropic_filtering_level=0
 textures/decals/filter=0
 textures/light_projectors/filter=0
+environment/defaults/default_clear_color=Color(0.151276, 0.151276, 0.151276, 1)
+occlusion_culling/use_occlusion_culling=true
 2d/snap/snap_2d_transforms_to_pixel=true
 2d/snap/snap_2d_vertices_to_pixel=true
 lights_and_shadows/positional_shadow/atlas_size=512
+
+[shader_globals]
+
+vertex_resolution={
+"type": "float",
+"value": 0.3
+}

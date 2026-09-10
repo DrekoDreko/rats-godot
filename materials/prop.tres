@@ -1,17 +1,12 @@
-[gd_resource type="ShaderMaterial" format=3 uid="uid://cacrbbtx4ntdk"]
+[gd_resource type="ShaderMaterial" format=3 uid="uid://bqp1r8yv3xk2m"]
 
-[ext_resource type="Shader" uid="uid://bwmdy542q66bt" path="res://scripts/ps1.gdshader" id="1_shader"]
+[ext_resource type="Shader" path="res://shaders/prop.gdshader" id="1_shader"]
 
 [resource]
 render_priority = 0
 shader = ExtResource("1_shader")
 shader_parameter/albedo_color = Color(1, 1, 1, 1)
 shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.2000000095
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = false
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
 shader_parameter/alpha_scissor = 1.0
 shader_parameter/recolor_target = Color(1, 1, 1, 1)
 shader_parameter/recolor_strength = 0.0

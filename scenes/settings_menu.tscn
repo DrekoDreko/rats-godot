@@ -169,18 +169,6 @@ max_value = 1.0
 step = 0.01
 value = 1.0
 
-[node name="PS1PostProcessRow" type="HBoxContainer" parent="Center/Panel/Margin/Rows" unique_id=2139669477]
-layout_mode = 2
-theme_override_constants/separation = 10
-
-[node name="Label" parent="Center/Panel/Margin/Rows/PS1PostProcessRow" unique_id=380865978 instance=ExtResource("3_big_font")]
-layout_mode = 2
-size_flags_horizontal = 3
-text = "SETTINGS_PS1_DITHERING"
-
-[node name="PS1PostProcess" type="CheckButton" parent="Center/Panel/Margin/Rows/PS1PostProcessRow" unique_id=568019005]
-layout_mode = 2
-
 [node name="Separator2" type="HSeparator" parent="Center/Panel/Margin/Rows" unique_id=983679153]
 layout_mode = 2
 
