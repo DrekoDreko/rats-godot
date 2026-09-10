@@ -13,3 +13,4 @@ furs = Array[Texture2D]([ExtResource("2_fur_1"), ExtResource("3_fur_2"), ExtReso
 base_value = 16
 variation = 0.0
 sprays = true
+glue_escape_seconds = 20.0

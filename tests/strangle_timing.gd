@@ -30,7 +30,7 @@ func _run() -> void:
 			var center: float = random_hands._previous_zone_center
 			assert(random_hands._zone_start >= 0.08 - 0.00001)
 			assert(random_hands._zone_start + random_hands._zone_width <= 0.92 + 0.00001)
-			assert(is_equal_approx(random_hands._zone_width, 0.36 if effort == 0.5 else 0.18))
+			assert(is_equal_approx(random_hands._zone_width, 0.36 if effort == 0.5 else 0.22))
 			if previous >= 0.0:
 				assert(absf(center - previous) >= random_hands.MIN_ZONE_SHIFT - 0.00001)
 			covered[clampi(int(center * 3.0), 0, 2)] = true

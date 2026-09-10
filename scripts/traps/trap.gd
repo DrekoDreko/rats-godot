@@ -8,10 +8,8 @@ extends Area3D
 ## `_catch_rat()`'s business, and it is the only thing that changes from one trap
 ## to the next.
 ##
-## What every trap has in common is that it is *used up*. It catches one rat and
-## it is over: the mousetrap goes off, the glue holds what it caught until
-## somebody comes for it, and neither of them is ever going to catch a second
-## one.
+## The default capture is single-use. GlueTrap overrides the entry handler
+## to own reusable capacity and timed release; the mousetrap keeps this default.
 ##
 ## A trap is deliberately **not** in the `scenery` group. The navigation mesh is
 ## baked from that group (`scripts/navigation.gd`), and a trap that joined it

@@ -186,6 +186,8 @@ var sync_yaw := 0.0
 var sync_state := State.IDLE
 ## What his hands are doing, as an `Arms`.
 var sync_arms := Arms.FREE
+## Hazards must not catch dead players on another machine.
+var sync_dead := false
 
 ## The character this avatar reads, on the machine it belongs to. Null on
 ## everybody else's, where the wire is the source instead.
@@ -290,6 +292,12 @@ func allow_sync_to(target_peer_id: int) -> void:
 ## In `_physics_process` because that is where the character moves — reading him
 ## between two of his own steps would put a stutter on the wire that no amount
 ## of smoothing at the other end could take back out.
+func is_dead() -> bool:
+	return sync_dead
+
+func is_seated() -> bool:
+	return sync_state == State.SITTING
+
 func _physics_process(_delta: float) -> void:
 	if _source == null:
 		return
@@ -297,6 +305,7 @@ func _physics_process(_delta: float) -> void:
 	sync_yaw = _source.rotation.y
 	sync_state = _source.animation_state()
 	sync_arms = _source.arms_state()
+	sync_dead = _source.is_dead()
 	# Read off the character rather than worked out from his last position: he is
 	# a `CharacterBody3D` and already knows, and the number he knows is the true
 	# one rather than one frame's approximation of it.

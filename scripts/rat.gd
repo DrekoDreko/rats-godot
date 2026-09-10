@@ -915,9 +915,8 @@ func pin(holder: Node3D = null) -> void:
 	animator.speed_scale = 1.0
 	_play_idle()
 
-## Let go of whatever was holding it down: killed where it lay, or torn off by a
-## hand that came for it. Whoever was holding it hears about it, once — a tray
-## with a rat's worth of fur pulled off it is not catching a second one.
+## Release on death, pickup, timed escape or glue expiration.
+## Notify the holder once so its capacity can be reused.
 func unpin() -> void:
 	if not _pinned:
 		return
@@ -933,6 +932,12 @@ func unpin() -> void:
 func is_pinned() -> bool:
 	return _pinned
 
+func glue_escape_time() -> float:
+	return species.glue_escape_seconds if species != null else 0.0
+
+func is_pinned_by(holder: Node3D) -> bool:
+	return _pinned and _pin == holder
+
 ## How much of a weapon's usual effort this rat is worth, from 0 to 1. A rat that
 ## cannot get away was already beaten when it was picked up; one caught loose
 ## costs the whole job. Every weapon that measures its work in *some number of
@@ -946,7 +951,10 @@ func effort() -> float:
 func _struggle_in_place(delta: float) -> void:
 	velocity.x = 0.0
 	velocity.z = 0.0
-	model.rotation.z = sin(_state_time * PIN_CADENCE) * PIN_SHAKE
+	var urgency := 1.0
+	if is_instance_valid(_pin) and _pin.has_method("escape_urgency"):
+		urgency += _pin.escape_urgency(self)
+	model.rotation.z = sin(_state_time * PIN_CADENCE * urgency) * PIN_SHAKE * urgency
 	model.scale = model.scale.lerp(Vector3.ONE, minf(delta * 6.0, 1.0))
 	_state_time += delta
 	_play_idle()
@@ -2702,6 +2710,9 @@ func _draw_remote(delta: float) -> void:
 	var wanted: Vector3 = CROUCH_SCALE if sync_crouched else Vector3.ONE
 	model.scale = model.scale.lerp(wanted, weight)
 
+	if _pinned and sync_state != State.DEAD:
+		_struggle_in_place(delta)
+		return
 	_draw_remote_animation()
 
 ## The animation a watched rat plays. It follows the same rule the host's does

@@ -23,8 +23,8 @@ const DOT_SIZE := 7.0
 const LINE_COLOR := Color(0.85, 0.85, 0.85)
 
 ## How much the card leans out of the row while the mouse is on it. The row
-## leaves 6px between cards (`contract_vote_screen.tscn`), and a card 96px
-## wide grows 6 of those, so it never touches its neighbour. Growing by
+## leaves 8px between cards (`contract_vote_screen.tscn`), and a card 112px
+## wide grows less than 7px, so it never touches its neighbour. Growing by
 ## `scale` and not by size is the point: a container lays its children out by
 ## size, so a card that grew by size would shove the other two sideways.
 const HOVER_SCALE := 1.06

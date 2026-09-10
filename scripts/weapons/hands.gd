@@ -6,8 +6,8 @@ extends Weapon
 signal timing_changed(pointer: float, zone_start: float, zone_width: float)
 
 const HITS_TO_KILL := 3
-const SWEEP_SECONDS := [1.6, 1.1, 0.65]
-const ZONE_WIDTH := 0.18
+const SWEEP_SECONDS := [1.6, 1.2, 0.8]
+const ZONE_WIDTH := 0.22
 const MIN_ZONE_SHIFT := 0.18
 
 @export_group("Hand")

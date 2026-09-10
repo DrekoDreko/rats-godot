@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://bvvcrva6c1ve"]
 
 [ext_resource type="Script" uid="uid://b8ngq8c3emtyi" path="res://scripts/player.gd" id="1_player"]
+[ext_resource type="Script" path="res://scripts/glue_hud.gd" id="glue_hud"]
 [ext_resource type="Script" uid="uid://cpie0sl72t3vp" path="res://scripts/weapons/hands.gd" id="2_hands"]
 [ext_resource type="Script" uid="uid://dximu67j2r1kf" path="res://scripts/weapons/inventory.gd" id="3_inventory"]
 [ext_resource type="Script" uid="uid://bgaqj05qp3ym" path="res://scripts/weapons/mousetrap_weapon.gd" id="4_mousetrap"]
@@ -26,6 +27,9 @@ script = ExtResource("1_player")
 [node name="Collision" type="CollisionShape3D" parent="." unique_id=496813555]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 shape = SubResource("Shape_body")
+
+[node name="GlueHUD" type="CanvasLayer" parent="."]
+script = ExtResource("glue_hud")
 
 [node name="Ceiling" type="ShapeCast3D" parent="." unique_id=1093428771]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)

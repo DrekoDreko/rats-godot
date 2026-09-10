@@ -332,6 +332,10 @@ var _arms_busy := 0.0
 ## Fixed to a van bench. Looking remains available, but movement, weapons and
 ## world interaction wait until the player presses Interact to stand.
 var _seated := false
+var _glue: GlueTrap
+var glue_progress := 0.0
+var _glue_anchor := Vector3.ZERO
+var _glue_jump_block := false
 var _dead_camera_center := Vector3.ZERO
 var _dead_camera_yaw := 0.0
 var _dead_camera_pitch := deg_to_rad(14.0)
@@ -517,6 +521,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	# closes it is the screen's own business, and it never reaches this far.
 	if _ui_open:
 		return
+	if is_glued() and event.is_action_pressed("jump"):
+		_glue_jump_block = true
+		_glue.press_escape()
+		get_viewport().set_input_as_handled()
+		return
 	# In either house phase, world stations, including their held jobs, are
 	# unavailable.
 	if event.is_action_pressed("interact") and not _can_interact(_focused):
@@ -610,13 +619,31 @@ func _unhandled_input(event: InputEvent) -> void:
 			# Clicking on the window gives camera control back to the mouse.
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	else:
-		_handle_slot_keys(event)
+		_handle_slot_input(event)
 
 ## `1`, `2` and `3`: the belt. `Q`: the hands, which are on no slot and are
 ## always there to come back to. Unlike the click, these work with the mouse
 ## loose too — they are keys, and they are not fighting anybody over the camera.
 ## The belt itself is what turns the swap down with a rat in hand.
-func _handle_slot_keys(event: InputEvent) -> void:
+## The mouse wheel cycles the slots while the mouse is captured.
+func _handle_slot_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton:
+		var button := event as InputEventMouseButton
+		if not button.pressed or Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+			return
+		var direction := 0
+		if button.button_index == MOUSE_BUTTON_WHEEL_UP:
+			direction = -1
+		elif button.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			direction = 1
+		var count := inventory.slot_count()
+		if direction != 0 and count > 0:
+			var current := inventory.index()
+			# From the hands, enter the belt at the end matching the scroll direction.
+			if current == Inventory.HANDS_INDEX:
+				current = count if direction < 0 else -1
+			inventory.equip(posmod(current + direction, count))
+		return
 	if event.is_action_pressed("hands"):
 		inventory.equip_hands()
 		return
@@ -637,6 +664,8 @@ func _open_terminal() -> bool:
 	return terminal != null and terminal.open(self)
 
 func _physics_process(delta: float) -> void:
+	if not Input.is_action_pressed("jump"):
+		_glue_jump_block = false
 	if is_dead():
 		_update_dead_camera()
 		return
@@ -659,6 +688,7 @@ func _physics_process(delta: float) -> void:
 	# from down on his knees — pressing jump while crouched only lets go of the
 	# crouch, and the jump belongs to whoever is standing when he presses it.
 	if not busy and not _seated and not _ui_open and not is_crouching() \
+			and not is_glued() and not _glue_jump_block \
 			and Input.is_action_just_pressed("jump") and _air_time <= COYOTE_TIME:
 		velocity.y = sqrt(2.0 * gravity * jump_height)
 		_air_time = COYOTE_TIME + 1.0
@@ -673,6 +703,9 @@ func _physics_process(delta: float) -> void:
 	var rate := acceleration if direction != Vector3.ZERO else deceleration
 	velocity.x = move_toward(velocity.x, target.x, rate * delta)
 	velocity.z = move_toward(velocity.z, target.z, rate * delta)
+	if is_glued():
+		global_position = _glue_anchor
+		velocity = Vector3.ZERO
 
 	if not _seated:
 		# Read before the move, because the move is what stops the fall:
@@ -757,6 +790,8 @@ func _target_speed(busy: bool) -> float:
 
 ## Movement direction on the XZ plane, relative to where the character faces.
 func _desired_direction() -> Vector3:
+	if is_glued():
+		return Vector3.ZERO
 	if _ui_open or _seated:
 		return Vector3.ZERO
 	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
@@ -766,6 +801,23 @@ func _desired_direction() -> Vector3:
 	var direction := base.z * input.y + base.x * input.x
 	direction.y = 0.0
 	return direction.normalized()
+
+
+func is_glued() -> bool:
+	return is_instance_valid(_glue) and not is_dead()
+
+
+func set_glue_state(glue: GlueTrap, stuck: bool, progress: float, anchor: Vector3) -> void:
+	if stuck and not is_dead() and not _seated:
+		if is_instance_valid(_glue) and _glue != glue:
+			return
+		_glue = glue
+		glue_progress = progress
+		_glue_anchor = anchor
+		velocity = Vector3.ZERO
+	elif _glue == glue:
+		_glue = null
+		glue_progress = 0.0
 
 # --- The sway ---------------------------------------------------------------
 
@@ -1006,6 +1058,9 @@ func spawn_point() -> Vector3:
 	return _start_position
 
 func respawn() -> void:
+	_glue = null
+	glue_progress = 0.0
+	_glue_jump_block = false
 	_death_started = false
 	_dead_camera_center = Vector3.ZERO
 	camera.top_level = false

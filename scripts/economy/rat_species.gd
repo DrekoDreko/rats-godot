@@ -40,6 +40,8 @@ func roll_fur() -> Texture2D:
 
 
 @export_group("Habits")
+## Zero stays caught until the glue expires; positive values allow escape.
+@export_range(0.0, 40.0, 1.0) var glue_escape_seconds := 0.0
 ## Whether this breed turns and sprays the man chasing it.
 ##
 ## It used to be `marks_territory`, and the difference is worth writing down. A

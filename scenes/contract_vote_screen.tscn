@@ -71,7 +71,7 @@ horizontal_alignment = 1
 
 [node name="CardsRow" type="HBoxContainer" parent="Margin/Center/Rows" unique_id=921466140]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 8
 alignment = 1
 
 [node name="ContractVoteCard" parent="Margin/Center/Rows/CardsRow" unique_id=1198769042 instance_placeholder="res://scenes/contract_vote_card.tscn"]

@@ -3,9 +3,9 @@ class_name BigFontOutlinedLabel
 extends MarginContainer
 
 
-@export_range(16, 64, 16) var font_size: int = 16:
+@export_range(8, 64, 1) var font_size: int = 16:
 	set(value):
-		font_size = clampi(roundi(float(value) / 16.0) * 16, 16, 64)
+		font_size = clampi(value, 8, 64)
 		_apply_font_size()
 
 
