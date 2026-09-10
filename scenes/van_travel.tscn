@@ -13,8 +13,6 @@
 [ext_resource type="Script" uid="uid://cxsl2rfdn2bvs" path="res://scripts/travel/road_scroll.gd" id="12_road"]
 [ext_resource type="Script" uid="uid://bsgt4sowfdofs" path="res://scripts/travel/cabin_shake.gd" id="13_shake"]
 [ext_resource type="PackedScene" path="res://scenes/terminal_screen.tscn" id="17_store"]
-[ext_resource type="PackedScene" uid="uid://dmio8uviym8en" path="res://models/totem.glb" id="18_totem"]
-[ext_resource type="Script" uid="uid://bcvx5d4kfjqk1" path="res://scripts/session/store_terminal.gd" id="19_terminal"]
 [ext_resource type="PackedScene" path="res://scenes/contract_vote_screen.tscn" id="20_vote"]
 [ext_resource type="PackedScene" path="res://scenes/hud_game.tscn" id="21_hud_game"]
 [ext_resource type="PackedScene" path="res://scenes/pause_menu.tscn" id="99_pause"]
@@ -316,29 +314,6 @@ shader_parameter/recolor_hue = 0.1406
 shader_parameter/recolor_hue_range = 0.09
 shader_parameter/recolor_min_saturation = 0.25
 
-[sub_resource type="BoxShape3D" id="Shape_reach_terminal"]
-size = Vector3(0.7, 1.2, 0.9)
-
-[sub_resource type="QuadMesh" id="Mesh_totem_screen"]
-size = Vector2(0.4293, 0.3398)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_vvayw"]
-render_priority = 0
-shader = ExtResource("4_8sque")
-shader_parameter/albedo_color = Color(1, 1, 1, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
 [node name="VanTravel" type="Node3D" unique_id=1899450859]
 script = ExtResource("11_travel")
 
@@ -454,35 +429,6 @@ script = ExtResource("22_doors")
 [node name="CabinShake" type="Node" parent="." unique_id=425989788]
 script = ExtResource("13_shake")
 
-[node name="Stations" type="Node3D" parent="." unique_id=973598005]
-
-[node name="StoreTerminal" type="Area3D" parent="Stations" unique_id=1816009273 groups=["store_station"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1405, -0.211)
-collision_layer = 8
-collision_mask = 0
-monitoring = false
-script = ExtResource("19_terminal")
-prompt = "PROMPT_USE_TERMINAL"
-
-[node name="Reach" type="CollisionShape3D" parent="Stations/StoreTerminal" unique_id=1525966248]
-shape = SubResource("Shape_reach_terminal")
-
-[node name="Refused" type="AudioStreamPlayer3D" parent="Stations/StoreTerminal" unique_id=1177400892]
-unit_size = 3.0
-max_distance = 12.0
-
-[node name="Screen" type="MeshInstance3D" parent="Stations/StoreTerminal" unique_id=658090853]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00175, 0.7501, 0.15)
-mesh = SubResource("Mesh_totem_screen")
-surface_material_override/0 = SubResource("ShaderMaterial_vvayw")
-
-[node name="Viewport" type="SubViewport" parent="Stations/StoreTerminal/Screen" unique_id=1816679350]
-size = Vector2i(640, 507)
-render_target_update_mode = 4
-
-[node name="TerminalScreen" parent="Stations/StoreTerminal/Screen/Viewport" unique_id=2043639294 instance=ExtResource("17_store")]
-layout_mode = 3
-
 [node name="Spawns" type="Node3D" parent="." unique_id=229546046]
 script = ExtResource("6_spawns")
 
@@ -523,6 +469,11 @@ spawn_radius = 0.0
 [node name="Scoreboard" parent="." instance=ExtResource("98_scoreboard")]
 
 [node name="PauseMenu" parent="." unique_id=388792559 instance=ExtResource("99_pause")]
+
+[node name="TerminalUI" type="CanvasLayer" parent="."]
+layer = 3
+
+[node name="TerminalScreen" parent="TerminalUI" instance=ExtResource("17_store")]
 
 [node name="VoteUI" type="CanvasLayer" parent="."]
 layer = 2

@@ -10,7 +10,7 @@ extends Control
 ##
 ## **It is drawn on the monitor and not over it.** This layer lives inside the
 ## `SubViewport` painted onto the glass of the totem at the front of the van
-## (`scripts/session/store_terminal.gd`), so the racks are pixels on a screen in
+## (`scripts/ui/terminal_screen.gd`), so the racks are pixels in the full-screen
 ## the room rather than a window in front of the room. The terminal walks the
 ## camera up until the monitor fills the view before showing any of it.
 ##
@@ -63,16 +63,16 @@ signal closed
 ## fill about half of whatever size they are asked for — the rest of the box is
 ## the room the font leaves for accents — so 24 here is the 12 px of ink that
 ## the old default font drew at 14.
-const FONT_SIZE := 24
+const FONT_SIZE := 10
 ## The size the column headers and the store's own title are set in.
-const HEADING_SIZE := 24
+const HEADING_SIZE := 10
 ## And the size an item's own name is set in, which is smaller than the price
 ## under it. There are three columns across 500 px and the longest name in the
 ## catalogue is "Queijo Explosivo": at the size the rest of the screen is set
 ## in, that is trimmed to "Queijo Expl…" on every rack. A shop where the names
 ## do not fit is a shop nobody can read, and the price is the line that has to
 ## stay large — it is the one a man is actually comparing.
-const NAME_SIZE := 16
+const NAME_SIZE := 8
 
 ## Green while the money is there, red while it is not — the two colours the
 ## health bar and the old shelf already use.
@@ -114,8 +114,8 @@ const SLOTS_PER_COLUMN := 5
 ## name, the picture and the price added up (`_tile_min_height`), and five of
 ## those stacked is already more than this. It is left here for the empty frames
 ## at the bottom of a rack, which have none of the three.
-const TILE_HEIGHT := 44
-const TILE_INSET := Vector2(6, 2)
+const TILE_HEIGHT := 28
+const TILE_INSET := Vector2(3, 1)
 
 ## The window the item's own model is drawn in, in the middle of its tile: the
 ## name over it, the price under it, and the thing itself between them, which is
@@ -125,7 +125,7 @@ const TILE_INSET := Vector2(6, 2)
 ## pixels on a screen that is stretched to the glass — so only the height is
 ## written here, and the framing below reads the width back off the container
 ## once the rack has been laid out.
-const ICON_HEIGHT := 44
+const ICON_HEIGHT := 10
 
 ## Where the icon camera stands, looking at the origin. Slightly above and to
 ## one side, orthogonal, so that the thing in the window reads as a *silhouette
@@ -195,7 +195,7 @@ const PREVIEW_HAND_BONE := &"mixamorig_LeftHand"
 ## What the buy button reads, and how wide it is kept so that the footer does not
 ## shuffle sideways as the word under it changes.
 const BUY_TEXT := "BUY"
-const BUY_WIDTH := 76
+const BUY_WIDTH := 38
 
 ## How long the button flashes green after a purchase goes through. It is the
 ## only thing that says "that worked" on a rack where the count on the tile may
@@ -203,33 +203,13 @@ const BUY_WIDTH := 76
 ## drawn off the same answer at the same moment.
 const BOUGHT_FLASH_TIME := 0.35
 
-## What the ready button reads in each of its two states, and how wide it is
-## kept so that the footer does not shuffle sideways as the word on it changes.
-##
-## The board that used to be bolted to the wall of the van is gone: the show of
-## hands is asked here, on the machine the crew is already stood at, because a
-## man buying a trap and a man saying he is done buying traps are the same man
-## a second apart.
-const READY_TEXT := "READY"
-const STAND_DOWN_TEXT := "STAND DOWN"
-const READY_WIDTH := 152
-
-## The two colours the ready button reads in — white while the crew is still
-## waiting on us, green once we have said it — and a third for the one state
-## that is neither: everybody has said it and the shift is still standing,
-## because nothing is signed yet (`ReadyManager.blocked`). It is the same amber
-## the wall board used, and the same the sheet prints an unsigned job in.
-const READY_COLOR := Color(0.55, 0.85, 0.45)
-const WAITING_COLOR := Color(1, 1, 1)
-const HELD_COLOR := Color(1, 0.7, 0.16)
-
 ## The crew list down the left: the dot in front of each name, and what a name
 ## and its dot are drawn in while that player has not said it yet. Dim rather
 ## than hidden, so the list keeps the shape of the van and a man can see how
 ## many he is waiting on without counting the ones that are missing.
 const CREW_SWATCH := "●"
 const CREW_DARK := Color(0.42, 0.45, 0.5)
-const CREW_SIZE := 16
+const CREW_SIZE := 8
 
 ## The body on the left, and the PS1 dressing that makes it match the one in the
 ## van. The preview renders in a world of its own, where the van's own applier
@@ -261,7 +241,6 @@ const PREVIEW_JITTER_GRID := 156.0
 @onready var _notice: Label = $Root/Margin/Rows/Footer/Notice
 @onready var _footer: HBoxContainer = $Root/Margin/Rows/Footer
 @onready var _close: Label = $Root/Margin/Rows/Footer/Close
-@onready var _preview: SubViewport = $Root/Margin/Rows/Body/Left/Preview/View
 @onready var _preview_seat: Node3D = $Root/Margin/Rows/Body/Left/Preview/View/Seat
 
 ## Our own character, so the store can take him over while it is up and hand him
@@ -295,11 +274,6 @@ var _selected: StoreItem
 ## The button that spends the money, built in code so that it wears the same
 ## frame as the rack it sits under.
 var _buy_button: Button
-## The button that says we are done, built in code for the same reason and put
-## in the same footer. What it draws is never this machine's opinion, only the
-## host's: pressing it asks `ReadyManager`, and the word on it only changes when
-## the answer lands.
-var _ready_button: Button
 ## What we last asked the host for, so that a refusal flashes the tile the man
 ## actually pressed. The refusal comes back off the wire without the item on it.
 var _pending_id := ""
@@ -313,7 +287,6 @@ func _ready() -> void:
 
 	_build_racks()
 	_build_preview()
-	_build_ready_button()
 	_build_buy_button()
 
 	ShopManager.item_bought.connect(_on_item_bought)
@@ -324,12 +297,9 @@ func _ready() -> void:
 	PhaseManager.phase_changed.connect(_on_phase_changed)
 	SettingsManager.streamer_mode_changed.connect(func(_enabled: bool) -> void: _refresh_player())
 
-	# The show of hands. Every one of these can change what the button reads or
-	# which lamps are lit, and nothing else can: there is no `_process` on the
-	# crew list for the same reason the wall board never had one.
+	# The crew list mirrors the ready flags the host last stated. There is no
+	# `_process`: its lamps only move when one of these signals says they did.
 	ReadyManager.ready_changed.connect(_on_ready_changed)
-	ReadyManager.hold_changed.connect(_on_hold_changed)
-	ReadyManager.request_refused.connect(_on_ready_refused)
 	SessionManager.player_joined.connect(_on_crew_changed)
 	SessionManager.player_left.connect(_on_crew_changed)
 
@@ -682,12 +652,12 @@ func _frame_icons() -> void:
 ## The turn puts the longest axis along `X` — the wide way of the window — and
 ## then tips the result back by `ICON_TILT` so that it sits on a diagonal rather
 ## than dead flat. An item that is already widest along `X` needs only the tip.
-func _lay_flat(size: Vector3) -> Vector3:
+func _lay_flat(model_size: Vector3) -> Vector3:
 	var tilt := Vector3(0, 0, ICON_TILT)
-	if size.y >= size.x and size.y >= size.z:
+	if model_size.y >= model_size.x and model_size.y >= model_size.z:
 		# Standing up: tipped over onto its side.
 		return tilt + Vector3(0, 0, -90)
-	if size.z >= size.x and size.z >= size.y:
+	if model_size.z >= model_size.x and model_size.z >= model_size.y:
 		# Running away from the camera: swung round to run across it.
 		return tilt + Vector3(0, 90, 0)
 	return tilt
@@ -760,10 +730,10 @@ func _frame_style(fill: float, stripe: float) -> StyleBoxFlat:
 	return style
 
 
-func _label(text: String, size: int) -> Label:
+func _label(text: String, text_size: int) -> Label:
 	var label := Label.new()
 	label.text = text
-	label.add_theme_font_size_override("font_size", size)
+	label.add_theme_font_size_override("font_size", text_size)
 	label.add_theme_color_override("font_color", Color(1, 1, 1, 1))
 	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 1))
 	label.add_theme_constant_override("outline_size", 2)
@@ -813,70 +783,6 @@ func _build_buy_button() -> void:
 	if _close != null:
 		_footer.move_child(_close, _footer.get_child_count() - 1)
 
-# --- The show of hands ------------------------------------------------------
-# The board that used to hang on the wall of the van (`ready_station.gd`, gone
-# with it) said two things: whether *we* have said we are ready, and who else
-# has. Both are said here now, in the two places on the glass where a man is
-# already looking — the button next to `BUY`, and the crew down the left under
-# his own name.
-#
-# **It decides nothing.** Pressing asks `ReadyManager`, the host answers, and
-# what comes back is what turns the button. The round trip is visible on
-# purpose: a button that goes green on our own say-so and back a moment later
-# when the host disagrees is worse than one that takes a beat to be right.
-
-## The button that says we are done, put in the footer to the left of `BUY` —
-## the last thing on the page, where a man's eye lands once he has stopped
-## shopping. Built in code so that it wears the same frame as the rack.
-func _build_ready_button() -> void:
-	if _footer == null:
-		return
-	_ready_button = _frame()
-	_ready_button.custom_minimum_size.x = READY_WIDTH
-	_ready_button.text = READY_TEXT
-	_ready_button.add_theme_font_size_override("font_size", FONT_SIZE)
-	_ready_button.add_theme_color_override("font_pressed_color", Color(1, 1, 1, 1))
-	_ready_button.add_theme_color_override("font_disabled_color", EMPTY_COLOR)
-	_ready_button.pressed.connect(_press_ready)
-	_footer.add_child(_ready_button)
-
-
-## Asks the host to flip our own flag. Nothing is written here and nothing is
-## drawn ahead of the answer.
-func _press_ready() -> void:
-	if not ReadyManager.is_active():
-		return
-	ReadyManager.request_toggle(_our_steam_id())
-
-
-## The button and the crew, from the flags as the host last stated them.
-func _refresh_ready() -> void:
-	_refresh_ready_button()
-	_refresh_crew()
-
-
-## What the button reads and what colour it reads in. Three states and not two:
-## green once we have said it, amber when everybody has said it and the van is
-## still standing because no job is signed (`ReadyManager.blocked`), and white
-## while the crew is still waiting on us.
-##
-## Dead where ready means nothing. Out in the hunt there is no show of hands to
-## take, so the button goes grey and unpressable rather than standing there
-## taking presses the host will refuse.
-func _refresh_ready_button() -> void:
-	if _ready_button == null:
-		return
-	var active := ReadyManager.is_active()
-	var said := active and ReadyManager.is_ready(_our_steam_id())
-	_ready_button.text = STAND_DOWN_TEXT if said else READY_TEXT
-	_ready_button.disabled = not active
-	var color := WAITING_COLOR
-	if said:
-		color = HELD_COLOR if ReadyManager.blocked else READY_COLOR
-	for state in ["font_color", "font_hover_color"]:
-		_ready_button.add_theme_color_override(state, color)
-
-
 ## The crew down the left: a dot and a name each, in the order they walked in,
 ## lit in that player's own colour when he has said it and left dim when he has
 ## not — so a man at the machine can see who he is waiting on without opening
@@ -890,7 +796,6 @@ func _refresh_crew() -> void:
 		return
 	for row in _crew.get_children():
 		row.queue_free()
-	var active := ReadyManager.is_active()
 	# Sorted by Steam ID and not by arrival: a dictionary's order is whatever
 	# order people happened to reach *this* machine in, which is not the order
 	# they reached the next one in — the same rule `crew_list.gd` follows, so a
@@ -1090,8 +995,8 @@ func _refresh() -> void:
 	var us := _our_steam_id()
 	_money.text = "$ %d" % ShopManager.money(us)
 	_refresh_player()
-	var open := ShopManager.is_open()
-	if not open:
+	var shop_open := ShopManager.is_open()
+	if not shop_open:
 		_notice.text = CLOSED_NOTICE
 	for tile in _tiles:
 		var item: StoreItem = tile["item"]
@@ -1108,10 +1013,10 @@ func _refresh() -> void:
 		# Every tile stays pressable, whatever it costs, and for the same reason
 		# a shut shelf takes that away entirely: there is nothing to turn over in
 		# his hand when there is nobody to sell it to him.
-		button.disabled = not open
+		button.disabled = not shop_open
 		_mark_selected(button, item == _selected)
 	_refresh_buy_button()
-	_refresh_ready()
+	_refresh_crew()
 
 
 ## The button that spends: what it costs to buy the thing in his hand, and
@@ -1218,7 +1123,7 @@ func _on_player_changed(steam_id: int) -> void:
 		return
 	# Somebody else's name, colour or flag. Nothing on the rack moves with it,
 	# and the crew list down the left moves with all three.
-	_refresh_ready()
+	_refresh_crew()
 
 
 func _on_bank_changed(_balance: int) -> void:
@@ -1230,38 +1135,22 @@ func _on_color_changed(steam_id: int, _color: Color) -> void:
 		_refresh_player()
 
 
-## Somebody's flag moved — ours or anybody's. Both halves are redrawn either
-## way: the button is only ours, and the list is everybody's, and working out
-## which of the two changed would cost more than drawing both.
+## Somebody's flag moved. The list is rebuilt from the host's answer so every
+## lamp agrees with the crew state.
 func _on_ready_changed(_steam_id: int, _value: bool) -> void:
-	_refresh_ready()
-
-
-## The van was held, or let go. Only the button moves with it — the crew lamps
-## are flags, not permission.
-func _on_hold_changed(_held: bool) -> void:
-	_refresh_ready_button()
-
-
-## The host turned our press down — the wrong phase, or a van with no job signed
-## to it. Only heard on the machine that asked, and put in the same line a
-## refused purchase goes in.
-func _on_ready_refused(reason: String) -> void:
-	_notice.text = reason
+	_refresh_crew()
 
 
 ## Somebody arrived or walked out. A man who left is a man nobody is waiting on,
 ## so the row goes with him.
 func _on_crew_changed(_steam_id: int) -> void:
-	_refresh_ready()
+	_refresh_crew()
 
 
 ## The van left the road with the store still up. The page is redrawn rather
 ## than shut: the racks are worth reading off the road — the prices and what is
-## already in the belt are the same question in the house as in the van — and
-## the show of hands in the footer is worth pressing in the survey, which is a
-## phase this page is now open in. What changes is that nothing on the rack is
-## pressable and the notice says why.
+## already in the belt are the same question in the house as in the van. What
+## changes is that nothing on the rack is pressable and the notice says why.
 ##
 ## Shutting it here would also leave the terminal up on a page that had put
 ## itself away, which is a blank monitor a man has to press an arrow to get out

@@ -517,6 +517,15 @@ func _unhandled_input(event: InputEvent) -> void:
 	# closes it is the screen's own business, and it never reaches this far.
 	if _ui_open:
 		return
+	# In either house phase, world stations, including their held jobs, are
+	# unavailable.
+	if event.is_action_pressed("interact") and not _can_interact(_focused):
+		get_viewport().set_input_as_handled()
+		return
+	if event.is_action_pressed("ready") and ReadyManager.is_active():
+		get_viewport().set_input_as_handled()
+		ReadyManager.request_toggle(LobbyManager.our_crew_id())
+		return
 	if _seated and event.is_action_pressed("interact"):
 		set_seated(false)
 		get_viewport().set_input_as_handled()
@@ -592,6 +601,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			var viewport := get_viewport()
 			if viewport != null:
 				viewport.set_input_as_handled()
+	elif event.is_action_pressed("interact") and _open_terminal():
+		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("attack"):
 		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 			inventory.try_use()
@@ -613,6 +624,17 @@ func _handle_slot_keys(event: InputEvent) -> void:
 		if event.is_action_pressed("slot_%d" % (i + 1)):
 			inventory.equip(i)
 			return
+
+
+## The terminal is a full-screen sibling in every gameplay scene. It is only
+## offered when the interaction ray found nothing, so E continues to operate
+## the object the player is deliberately looking at.
+func _open_terminal() -> bool:
+	var scene := get_parent()
+	if scene == null:
+		return false
+	var terminal := scene.get_node_or_null(^"TerminalUI/TerminalScreen") as TerminalScreen
+	return terminal != null and terminal.open(self)
 
 func _physics_process(delta: float) -> void:
 	if is_dead():
@@ -1110,6 +1132,14 @@ func _grip_drift() -> Vector3:
 
 # --- Hands on --------------------------------------------------------------
 
+## House fixtures may be used during survey and hunt; road stations stay blocked.
+func _can_interact(target: Interactable = null) -> bool:
+	var phase := PhaseManager.current()
+	if phase == Phase.Type.SURVEY or phase == Phase.Type.HUNT:
+		return target != null and target.usable_in_house
+	return true
+
+
 ## What the ray out of the camera is on, if anything. With a rat in hand, or with
 ## a screen already open, there is nothing to reach for: the prompt goes off the
 ## screen the same way the crosshair does.
@@ -1117,6 +1147,8 @@ func _update_focus() -> void:
 	var found: Interactable = null
 	if not _seated and not _ui_open and not inventory.is_busy():
 		found = interact_ray.get_collider() as Interactable
+		if not _can_interact(found):
+			found = null
 	if found == _focused:
 		return
 	_focused = found
@@ -1169,7 +1201,8 @@ func _update_hold(delta: float) -> void:
 	var target := _focused
 	if target != null and not target.is_held_work():
 		target = null
-	if target == null or _ui_open or not Input.is_action_pressed("interact"):
+	if target == null or _ui_open or not _can_interact(target) \
+			or not Input.is_action_pressed("interact"):
 		_cancel_hold()
 		return
 

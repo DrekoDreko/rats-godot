@@ -20,6 +20,7 @@ func _physics_process(_delta: float) -> bool:
 			_load_world()
 		20:
 			_check_doors()
+			_check_door_interaction()
 			_check_clues()
 			_check_house_geometry()
 		24:
@@ -73,6 +74,38 @@ func _check_doors() -> void:
 			p.collision_layer, p.get("prompt")])
 		if p.collision_layer != 8:
 			_fail("%s answers on layer %d, not the interactable one" % [p.name, p.collision_layer])
+
+
+func _check_door_interaction() -> void:
+	var player = _world.get_node("Player")
+	var session := root.get_node("SessionManager")
+	var previous_phase: int = session.phase
+	var station := Interactable.new()
+	var prompts := _prompts()
+	for phase in [Phase.Type.SURVEY, Phase.Type.HUNT]:
+		session.phase = phase
+		if player._can_interact(station) or player._can_interact():
+			_fail("road stations must remain blocked in house phases")
+		for prompt in prompts:
+			if not player._can_interact(prompt):
+				_fail("door must be usable in house phase %d" % phase)
+		if not prompts.is_empty():
+			var prompt = prompts[0]
+			var door = prompt.used.get_connections()[0].callable.get_object()
+			var was_open: bool = door.is_open()
+			player._focused = prompt
+			var event := InputEventKey.new()
+			event.physical_keycode = KEY_E
+			event.pressed = true
+			player._unhandled_input(event)
+			if door.is_open() == was_open:
+				_fail("E must toggle the focused door in house phase %d" % phase)
+	player._focused = null
+	session.phase = Phase.Type.TRAVEL
+	if not player._can_interact(station):
+		_fail("road stations must remain usable during travel")
+	session.phase = previous_phase
+	station.free()
 
 
 func _check_clues() -> void:

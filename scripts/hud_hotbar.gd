@@ -212,10 +212,10 @@ func _model_viewport(item: StoreItem) -> SubViewport:
 ## Places every catalogue model broadside to the icon camera. Store preview
 ## assets do not agree on their authored up axis, so their bounds are the only
 ## stable way to choose a readable pose.
-func _icon_rotation(size: Vector3) -> Vector3:
-	if size.y >= size.x and size.y >= size.z:
+func _icon_rotation(model_size: Vector3) -> Vector3:
+	if model_size.y >= model_size.x and model_size.y >= model_size.z:
 		return Vector3(0.0, 0.0, -90.0)
-	if size.z >= size.x and size.z >= size.y:
+	if model_size.z >= model_size.x and model_size.z >= model_size.y:
 		return Vector3(0.0, 90.0, 0.0)
 	return Vector3.ZERO
 

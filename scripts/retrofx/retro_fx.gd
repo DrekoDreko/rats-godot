@@ -181,16 +181,16 @@ func _ready() -> void:
 ## Applies one of `PRESETS` by name. Unknown names are ignored rather than
 ## raising: the panel builds its list from the same dictionary, so a bad name
 ## here can only come from a typo in code.
-func apply_preset(name: String) -> void:
-	var preset: Dictionary = PRESETS.get(name, {})
+func apply_preset(preset_name: String) -> void:
+	var preset: Dictionary = PRESETS.get(preset_name, {})
 	if preset.is_empty():
-		push_warning("RetroFX: unknown CRT preset %s" % name)
+		push_warning("RetroFX: unknown CRT preset %s" % preset_name)
 		return
 	_applying_preset = true
 	for key in preset:
 		set(key, preset[key])
 	_applying_preset = false
-	crt_preset = name
+	crt_preset = preset_name
 	changed.emit()
 
 

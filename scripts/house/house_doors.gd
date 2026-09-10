@@ -157,6 +157,7 @@ func _add_prompt(pivot: Node3D) -> void:
 	var prompt := Interactable.new()
 	prompt.name = str(pivot.name) + "_Use"
 	prompt.prompt = PROMPT_OPEN
+	prompt.usable_in_house = true
 	prompt.collision_layer = INTERACT_LAYER
 	prompt.collision_mask = 0
 	prompt.monitoring = false

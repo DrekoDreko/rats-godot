@@ -1,25 +1,10 @@
 extends CanvasLayer
-## The pause menu: the one screen a player can always get to, and the only one
-## that stops him without stopping anybody else.
+## The pause menu: a local overlay that keeps the online simulation running.
 ##
-## **The pause is local, and it is never anything else.** This is an online game.
-## `get_tree().paused` is a flag on *this* machine's scene tree — it travels
-## nowhere, and that is exactly what is wanted: a man who opens this menu to
-## answer the door does not put three other people's shift on hold. The game
-## keeps running for everybody, his own body keeps standing in the van where he
-## left it, and what he has bought himself is a loose mouse and a set of buttons.
-##
-## That is also the whole of the danger in it. A paused tree stops `_process` and
-## `_physics_process` on everything under it, and two of the things it would
-## otherwise stop are the ones that keep this player *visible* to the others:
-## the avatar that reads his character and the `MultiplayerSynchronizer` that
-## puts the reading on the wire (`scripts/steam/player_avatar.gd`). Stop those
-## and he does not merely stand still on their screens — he stops sending, and
-## what they see is a man frozen mid-stride, which is indistinguishable from a
-## man whose connection has died. So the avatar and its synchronizer are set to
-## `PROCESS_MODE_ALWAYS` in `player_avatar.tscn`, and they go on saying "here I
-## am, standing still" for as long as this menu is up. Standing still is the
-## truth; silence is not.
+## **The pause is only visual.** This is an online game, so the scene tree keeps
+## simulating rats and publishing their movement while this overlay is open.
+## `get_tree().paused` is deliberately never changed here. A host that opens the
+## menu must keep running the rat simulation and synchronizing its results.
 ##
 ## The session autoloads were already set the same way and their comments say so
 ## by name — `JoinGate`, `PhaseManager`, `ReadyManager`, `ColorManager`,
@@ -36,8 +21,7 @@ extends CanvasLayer
 ## alone — and it takes the key before anybody else can by sitting on
 ## `_input` with a `PROCESS_MODE_ALWAYS` node, marking the event handled and
 ## leaving nothing for the rest of them to find. That is also what makes closing
-## work: with the tree paused, a menu on `PROCESS_MODE_PAUSABLE` could never hear
-## the key that would let it go.
+## work even while the simulation continues underneath.
 ##
 ## **It is also where a player finds out who else is still here.** A man who has
 ## just watched somebody stop moving has one question, and it is not answered by
@@ -136,7 +120,7 @@ func toggle() -> void:
 		open()
 
 
-## Up: the tree stops for us alone and the mouse comes loose to click with.
+## Up: the overlay appears and the mouse comes loose to click with.
 func open() -> void:
 	if _open:
 		return
@@ -144,14 +128,13 @@ func open() -> void:
 	show()
 	# Always up on the buttons, whatever page was last read.
 	_show_menu()
-	get_tree().paused = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	# Focused so the menu can be driven from the keyboard, and so that a
 	# controller has somewhere to start.
 	_resume.grab_focus()
 
 
-## Down: the tree runs again and the camera gets the mouse back.
+## Down: the overlay disappears and the camera gets the mouse back.
 ##
 ## The cursor is only recaptured when the player is actually in the map. Closing
 ## the menu over a screen that wanted the mouse — or on a machine that has just
@@ -162,7 +145,6 @@ func close() -> void:
 		return
 	_open = false
 	hide()
-	get_tree().paused = false
 	if not _player_is_busy():
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
@@ -194,7 +176,6 @@ func _leave_match() -> void:
 	_open = false
 	hide()
 	var tree := get_tree()
-	tree.paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 	# A solo run never had a lobby, so `leave_lobby` will return without a word
@@ -229,7 +210,6 @@ func _leave_match() -> void:
 ## comes back null. Here that would have been a quit button that does not quit.
 func _quit_game() -> void:
 	var tree := get_tree()
-	tree.paused = false
 	LobbyManager.leave_lobby()
 	tree.quit()
 
@@ -242,7 +222,6 @@ func _on_host_disconnected(_reason: String) -> void:
 		return
 	_open = false
 	hide()
-	get_tree().paused = false
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 

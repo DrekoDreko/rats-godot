@@ -26,7 +26,6 @@ const ACCENT_COLOR := Color(0.45, 0.72, 0.9)
 @onready var _infestation: Label = $Root/Margin/Rows/Infestation
 @onready var _dots: HBoxContainer = $Root/Margin/Rows/TypesRow/Dots
 @onready var _hunt_length: Label = $Root/Margin/Rows/HuntLength
-@onready var _close: Label = $Root/Margin/Rows/Close
 
 
 ## Refreshes and shows the page. Called by the terminal every time it is

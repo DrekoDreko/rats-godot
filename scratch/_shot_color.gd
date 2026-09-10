@@ -19,6 +19,11 @@ const DRAG := Vector2(120, 0)
 var _view: SubViewport
 
 
+class PreviewUser extends Node3D:
+	func set_ui_open(_is_open: bool) -> void:
+		pass
+
+
 func _ready() -> void:
 	SessionManager.register_player(111, "Lucas", true)
 	SessionManager.set_color(111, SessionManager.COLORS[5])
@@ -30,8 +35,10 @@ func _ready() -> void:
 
 	var terminal := TERMINAL.instantiate()
 	_view.add_child(terminal)
+	var user := PreviewUser.new()
+	add_child(user)
 	await get_tree().process_frame
-	terminal.open()
+	terminal.open(user)
 	# One arrow to the left of the shop is the last page in the order.
 	terminal.get_node("Nav/Left").emit_signal("pressed")
 

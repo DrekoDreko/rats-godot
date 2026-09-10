@@ -167,10 +167,10 @@ func _ground_point() -> Vector3:
 	# without this that same length would also let him set a trap on the far side
 	# of the room. Aiming past the limit puts the trap down at the limit, which is
 	# how the glue already treats a strip stretched too far.
-	var reach := spot - player.global_position
-	reach.y = 0.0
-	if reach.length() > max_floor_distance:
-		spot = player.global_position + reach.normalized() * max_floor_distance
+	var floor_offset := spot - player.global_position
+	floor_offset.y = 0.0
+	if floor_offset.length() > max_floor_distance:
+		spot = player.global_position + floor_offset.normalized() * max_floor_distance
 		spot.y = (hit.position as Vector3).y + FLOOR_LIFT
 	return spot
 

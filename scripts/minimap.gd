@@ -86,6 +86,10 @@ func _draw() -> void:
 			# A room reaching past the rim comes back as its clipped pieces, and
 			# one lying wholly outside comes back as none.
 			for piece in Geometry2D.intersect_polygons(screen_polygon, dial):
+				# Tangencies at the rim can leave zero-area or collapsed pieces.
+				# The renderer cannot triangulate those clipping artifacts.
+				if Geometry2D.triangulate_polygon(piece).is_empty():
+					continue
 				draw_colored_polygon(piece, WALKABLE_COLOR)
 
 	for marker in _markers():
@@ -261,7 +265,7 @@ func _on_session_changed(_steam_id: int) -> void:
 ## The dial is off once the rats are loose. A corner map of the house would
 ## tell a hiding crew exactly where a strangled man last stood without them
 ## ever having to look away from the doorway — reading the house is the
-## terminal's job now (`scripts/session/store_terminal.gd`), which asks a man
+## terminal's job now (`scripts/ui/terminal_screen.gd`), which asks a man
 ## to actually leave the hunt to check it. The survey keeps the dial: nothing
 ## is loose yet, and a man walking the house for holes still wants to know
 ## where he is in it.

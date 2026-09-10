@@ -5,11 +5,8 @@ extends Node
 ## ready to get off the road, ready to let the rats out — and it is the same
 ## question every time, so it is answered in one place rather than three.
 ##
-## It is asked on the terminal in the front of the van, in the footer of the
-## store page (`scripts/ui/store_screen.gd`), next to the button that spends the
-## money — one screen for all three, because it is one question. The board that
-## used to be bolted to the wall beside it is gone: two things asking the same
-## question is two places for the answer to be drawn differently.
+## It is asked with F from the gameplay HUD (`scripts/player.gd`), so it remains
+## available while the crew is seated in the moving van or standing at the house.
 ##
 ## **The host holds the flags.** A player who presses it does not go ready;
 ## he *asks* to (`request_toggle`), the host decides, and the host tells

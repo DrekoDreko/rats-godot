@@ -332,8 +332,8 @@ func adopt_hunt_time(value: int) -> void:
 ## Takes a newcomer's copy of a vote already under way, the same way `adopt`
 ## takes a signature. Silently ignored when nobody is voting — a newcomer
 ## arriving between two shifts has no vote to catch up on.
-func adopt_votes(state_votes: Dictionary, is_open: bool) -> void:
-	voting_open = is_open
+func adopt_votes(state_votes: Dictionary, vote_is_open: bool) -> void:
+	voting_open = vote_is_open
 	votes.clear()
 	for steam_id in state_votes:
 		votes[int(steam_id)] = String(state_votes[steam_id])
@@ -426,9 +426,9 @@ func _winning_contract() -> String:
 	for contract in contracts:
 		if not can_afford(contract.id):
 			continue
-		var count := votes_for(contract.id)
-		if count > best_votes:
-			best_votes = count
+		var vote_count := votes_for(contract.id)
+		if vote_count > best_votes:
+			best_votes = vote_count
 			best_id = contract.id
 	return best_id
 

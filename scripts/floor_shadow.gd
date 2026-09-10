@@ -18,15 +18,15 @@ const RAY_START_HEIGHT := 0.1
 
 
 func _process(_delta: float) -> void:
-	var owner := get_parent() as Node3D
-	if owner == null:
+	var body := get_parent() as Node3D
+	if body == null:
 		return
-	if hide_while_captured and owner.has_method(&"is_captured") and owner.is_captured():
+	if hide_while_captured and body.has_method(&"is_captured") and body.is_captured():
 		visible = false
 		return
 
 	var space := get_world_3d().direct_space_state
-	var from := owner.global_position + Vector3.UP * RAY_START_HEIGHT
+	var from := body.global_position + Vector3.UP * RAY_START_HEIGHT
 	var query := PhysicsRayQueryParameters3D.create(
 		from,
 		from - Vector3.UP * RAY_LENGTH,
@@ -40,6 +40,6 @@ func _process(_delta: float) -> void:
 	visible = true
 	var floor_position: Vector3 = hit.position
 	global_position = floor_position + Vector3.UP * FLOOR_OFFSET
-	var height := maxf(owner.global_position.y - floor_position.y, 0.0)
+	var height := maxf(body.global_position.y - floor_position.y, 0.0)
 	var size := lerpf(1.0, MIN_SCALE, clampf(height / MAX_HEIGHT, 0.0, 1.0))
 	scale = Vector3.ONE * size

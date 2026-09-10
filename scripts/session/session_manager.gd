@@ -289,8 +289,8 @@ func money(steam_id: int) -> int:
 ## and nothing is paid on it, so the guard the bank puts around a balance would
 ## be a guard around a bragging right. See the wire section of `ShiftReport` for
 ## who is allowed to say it.
-func set_catches(steam_id: int, count: int) -> void:
-	_write(steam_id, "catches", maxi(0, count))
+func set_catches(steam_id: int, catch_count: int) -> void:
+	_write(steam_id, "catches", maxi(0, catch_count))
 
 
 ## How many he has taken.

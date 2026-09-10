@@ -29,10 +29,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -160.0
-offset_top = -140.0
-offset_right = 160.0
-offset_bottom = 140.0
+offset_left = -120.0
+offset_top = -92.0
+offset_right = 120.0
+offset_bottom = 92.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -61,26 +61,28 @@ mouse_filter = 2
 layout_mode = 1
 anchors_preset = 10
 anchor_right = 1.0
-offset_bottom = 40.0
+offset_bottom = 28.0
 grow_horizontal = 2
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 12
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 18
 
 [node name="Margin" type="MarginContainer" parent="Header"]
 layout_mode = 2
 
 [node name="HBox" type="HBoxContainer" parent="Header/Margin"]
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 6
 
 [node name="Title" type="Label" parent="Header/Margin/HBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.9, 0.94, 0.98, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 12
 text = "NO CONTRACT SIGNED"
+clip_text = true
+text_overrun_behavior = 3
 
 [node name="Info" type="Label" parent="Header/Margin/HBox"]
 layout_mode = 2
@@ -88,15 +90,17 @@ size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.68, 0.76, 0.86, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 10
 text = "STUDY THE CLIPBOARD FIRST"
+clip_text = true
+text_overrun_behavior = 3
 
 [node name="PinsCount" type="Label" parent="Header/Margin/HBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 10
 text = "PINS: 0/3"
 horizontal_alignment = 2
 
@@ -106,19 +110,19 @@ anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = -30.0
+offset_top = -20.0
 grow_horizontal = 2
 grow_vertical = 0
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_right = 12
-theme_override_constants/margin_bottom = 8
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 3
 
 [node name="Legend" type="Label" parent="Footer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.72, 0.78, 0.88, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 3
-theme_override_font_sizes/font_size = 13
+theme_override_font_sizes/font_size = 8
 text = "LMB: PLACE PIN (MAX 3)  |  RMB: REMOVE PIN  |  DRAG/ARROWS: PAN  |  WHEEL: ZOOM"
 horizontal_alignment = 1
 

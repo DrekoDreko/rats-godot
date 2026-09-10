@@ -5,6 +5,7 @@
 [ext_resource type="PackedScene" uid="uid://r6380qbonva8" path="res://scenes/black_button.tscn" id="3_button"]
 [ext_resource type="PackedScene" path="res://scenes/check_option.tscn" id="4_check"]
 [ext_resource type="PackedScene" uid="uid://b4wetum1hnqtu" path="res://scenes/big_font_outlined_label.tscn" id="5_big_font"]
+[ext_resource type="Texture2D" path="res://assets/textures/hud/icon_money.svg" id="6_money_icon"]
 
 [sub_resource type="FontVariation" id="FontVariation_vote"]
 base_font = ExtResource("2_font")
@@ -116,3 +117,25 @@ font_color = Color(1, 1, 1, 0.6)
 font_size = 16
 horizontal_alignment = 1
 autowrap_mode = 2
+
+[node name="MoneyRow" type="HBoxContainer" parent="."]
+offset_left = 8.0
+offset_top = 10.0
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Icon" type="TextureRect" parent="MoneyRow"]
+custom_minimum_size = Vector2(20, 20)
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+texture = ExtResource("6_money_icon")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Total" parent="MoneyRow" instance=ExtResource("5_big_font")]
+layout_mode = 2
+size_flags_vertical = 4
+mouse_filter = 2
+font_size = 16
+horizontal_alignment = 0

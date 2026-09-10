@@ -1,3 +1,4 @@
+@tool
 extends BigFontOutlinedLabel
 ## The line that says the rat in front of the player is close enough to grab.
 ##
@@ -12,6 +13,8 @@ extends BigFontOutlinedLabel
 
 func _ready() -> void:
 	super._ready()
+	if Engine.is_editor_hint():
+		return
 	hide()
 	# Wait one frame so the player is already in the tree. Held onto before the
 	# wait rather than fetched again after it: a phase can end on the frame this

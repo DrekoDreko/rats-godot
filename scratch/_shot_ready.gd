@@ -17,6 +17,11 @@ var _view: SubViewport
 var _terminal: Control
 
 
+class PreviewUser extends Node3D:
+	func set_ui_open(_is_open: bool) -> void:
+		pass
+
+
 func _ready() -> void:
 	# Our own Steam ID and not an invented one: the screen draws itself against
 	# whoever `our_steam_id` says we are, and a crew we are not in leaves it
@@ -46,8 +51,10 @@ func _ready() -> void:
 
 	_terminal = TERMINAL.instantiate()
 	_view.add_child(_terminal)
+	var user := PreviewUser.new()
+	add_child(user)
 	await get_tree().process_frame
-	_terminal.open()
+	_terminal.open(user)
 
 	await _settle()
 	await _shot("ready_shot.png")

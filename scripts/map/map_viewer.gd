@@ -15,7 +15,7 @@ extends Control
 ## **It does not close itself.** Esc and `E` used to shut this page directly;
 ## now that it lives inside the terminal's `SubViewport`, those keys never
 ## reach it — the terminal reads them from outside, the same way it always has
-## for the shop (`scripts/session/store_terminal.gd`), and closes whichever
+## for the full-screen terminal, and closes whichever
 ## page happens to be showing.
 
 signal closed()
@@ -54,6 +54,10 @@ var _active_contract: Contract
 func _ready() -> void:
 	# Keep input working even if tree is paused
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	# The terminal is attached below a CanvasLayer, so it can receive its final
+	# viewport size after this page is ready. Keep the blueprint centered in that
+	# final rectangle instead of leaving it positioned from a transient size.
+	resized.connect(_update_transform)
 
 	MapManager.pins_updated.connect(_on_pins_updated)
 	ContractManager.contract_signed.connect(_on_contract_signed)

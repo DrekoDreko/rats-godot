@@ -9,12 +9,12 @@ extends Area3D
 ## the scenery or over a rat.
 ##
 ## The area is not the object's body: it is the *reachable face* of it, the
-## screen and the keyboard of the computer and not the desk they sit on. Whatever
+## handle or switch a player can reach and not the object around it. Whatever
 ## has to stop the player from walking through it is a static body of its own,
 ## on the scenery layer, like every other solid thing in the map.
 ##
 ## What the thing does when used is nobody's business here: it announces `used`
-## and whoever cares listens (see `scripts/session/store_terminal.gd`).
+## and whoever cares listens.
 
 ## Somebody used it. `by` is the player who did.
 signal used(by: Node3D)
@@ -26,6 +26,9 @@ signal used(by: Node3D)
 ## instant it is asked. Anything above zero is work: the player stands there with
 ## his finger down and a bar on screen, and letting go throws it away.
 @export var hold_time := 0.0
+
+## House fixtures remain usable during survey and hunt; road stations do not.
+@export var usable_in_house := false
 
 ## Whether this is one of the slow ones. The player asks before deciding what a
 ## press of the key even means (`player.gd: _update_hold`).

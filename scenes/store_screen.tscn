@@ -59,14 +59,14 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 14
-theme_override_constants/margin_top = 16
-theme_override_constants/margin_right = 14
-theme_override_constants/margin_bottom = 16
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 6
 
 [node name="Rows" type="VBoxContainer" parent="Root/Margin"]
 layout_mode = 2
-theme_override_constants/separation = 6
+theme_override_constants/separation = 3
 
 [node name="Header" type="HBoxContainer" parent="Root/Margin/Rows"]
 layout_mode = 2
@@ -76,7 +76,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.45, 0.72, 0.9, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 12
 text = "STORE"
 
 [node name="Money" type="Label" parent="Root/Margin/Rows/Header"]
@@ -85,7 +85,7 @@ size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.55, 0.85, 0.45, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 12
 text = "$ 0"
 horizontal_alignment = 2
 
@@ -95,15 +95,15 @@ layout_mode = 2
 [node name="Body" type="HBoxContainer" parent="Root/Margin/Rows"]
 layout_mode = 2
 size_flags_vertical = 3
-theme_override_constants/separation = 8
+theme_override_constants/separation = 4
 
 [node name="Left" type="VBoxContainer" parent="Root/Margin/Rows/Body"]
-custom_minimum_size = Vector2(118, 0)
+custom_minimum_size = Vector2(84, 0)
 layout_mode = 2
 theme_override_constants/separation = 4
 
 [node name="Preview" type="SubViewportContainer" parent="Root/Margin/Rows/Body/Left"]
-custom_minimum_size = Vector2(118, 190)
+custom_minimum_size = Vector2(84, 110)
 layout_mode = 2
 size_flags_vertical = 3
 mouse_filter = 2
@@ -113,7 +113,7 @@ stretch = true
 [node name="View" type="SubViewport" parent="Root/Margin/Rows/Body/Left/Preview"]
 own_world_3d = true
 handle_input_locally = false
-size = Vector2i(118, 190)
+size = Vector2i(84, 110)
 render_target_update_mode = 2
 
 [node name="Environment" type="WorldEnvironment" parent="Root/Margin/Rows/Body/Left/Preview/View"]
@@ -141,7 +141,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 12
 text = "PLAYER"
 horizontal_alignment = 1
 text_overrun_behavior = 3
@@ -151,7 +151,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.45, 0.72, 0.9, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 8
 text = "CREW"
 
 [node name="Crew" type="VBoxContainer" parent="Root/Margin/Rows/Body/Left"]
@@ -161,11 +161,11 @@ theme_override_constants/separation = 2
 [node name="Columns" type="HBoxContainer" parent="Root/Margin/Rows/Body"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 6
+theme_override_constants/separation = 3
 
 [node name="Footer" type="HBoxContainer" parent="Root/Margin/Rows"]
 layout_mode = 2
-theme_override_constants/separation = 10
+theme_override_constants/separation = 4
 
 [node name="Notice" type="Label" parent="Root/Margin/Rows/Footer"]
 layout_mode = 2
@@ -175,13 +175,13 @@ autowrap_mode = 2
 theme_override_colors/font_color = Color(0.95, 0.32, 0.28, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 10
 
 [node name="Close" type="Label" parent="Root/Margin/Rows/Footer"]
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 1, 1, 0.7)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 2
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 10
 text = "E — CLOSE"
 horizontal_alignment = 2

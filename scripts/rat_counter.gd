@@ -1,3 +1,4 @@
+@tool
 extends BigFontOutlinedLabel
 ## Shows how many rats are still loose on the map.
 ##
@@ -10,6 +11,9 @@ var _time := 0.0
 
 func _ready() -> void:
 	super._ready()
+	if Engine.is_editor_hint():
+		set_process(false)
+		return
 	# Wait one frame so every rat is already in the tree.
 	# Held onto before the wait rather than fetched again after it: a phase can
 	# end on the frame this HUD is waiting through — the board in the van does

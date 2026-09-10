@@ -1,3 +1,4 @@
+@tool
 extends BigFontOutlinedLabel
 ## The prompt for the hands: what the player is looking at, and the key that
 ## uses it.
@@ -12,6 +13,8 @@ var _seated := false
 
 func _ready() -> void:
 	super._ready()
+	if Engine.is_editor_hint():
+		return
 	hide()
 	# Wait one frame so the player is already in the tree.
 	#

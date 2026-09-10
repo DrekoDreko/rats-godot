@@ -24,7 +24,6 @@ const ACTION := "player_list"
 const PHASES: Array[Phase.Type] = [Phase.Type.TRAVEL, Phase.Type.HUNT]
 
 @onready var _panel: Control = $Center
-@onready var _crew: CrewList = $Center/Panel/Margin/Rows/Crew
 
 ## Whether the key is down. Kept rather than polled, and crossed with the phase
 ## every time either of them moves.

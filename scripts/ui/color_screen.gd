@@ -39,7 +39,7 @@ const COLUMNS := 4
 ## The smallest a swatch is drawn. Smaller than it used to be because the man
 ## now has the left third of the glass: the grid is stretched to whatever is
 ## left over, and this is only the floor under it.
-const SWATCH_SIZE := Vector2(92, 52)
+const SWATCH_SIZE := Vector2(70, 40)
 
 ## How far a taken colour is darkened. Enough to read as unavailable without
 ## becoming a different colour.
@@ -77,7 +77,7 @@ var _model: PlayerModel
 ## Whether the man is being turned right now, and where the pointer was when he
 ## was last turned. The distance is measured here rather than read off the
 ## event: the monitor these pages are drawn on carries the mouse in by hand and
-## zeroes `relative` on the way (`scripts/session/store_terminal.gd`), so the
+## is relative to the terminal viewport, so the
 ## only honest delta is the one between two positions we saw ourselves.
 var _dragging := false
 var _drag_from := Vector2.ZERO

@@ -17,6 +17,7 @@
 [ext_resource type="Script" path="res://scripts/hud_crosshair.gd" id="15_crosshair"]
 [ext_resource type="Texture2D" path="res://assets/textures/crosshair.png" id="16_crosshair_idle"]
 [ext_resource type="Texture2D" path="res://assets/textures/crosshair_active.png" id="17_crosshair_active"]
+[ext_resource type="Script" path="res://scripts/hud_ready_prompt.gd" id="18_ready_prompt"]
 
 [node name="HUD" type="CanvasLayer" groups=["retrofx_hud"]]
 
@@ -127,6 +128,16 @@ grow_horizontal = 2
 grow_vertical = 0
 mouse_filter = 2
 theme_override_constants/separation = 4
+
+[node name="ReadyPrompt" parent="Belt" instance=ExtResource("1_big_font")]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 5
+text = "Press F to ready"
+font_size = 16
+horizontal_alignment = 1
+script = ExtResource("18_ready_prompt")
 
 [node name="Health" type="ProgressBar" parent="Belt"]
 custom_minimum_size = Vector2(0, 5)
@@ -440,11 +451,11 @@ text = "HUD_STRANGLE_BUTTON"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Bar" type="ProgressBar" parent="Strangle/VBoxContainer"]
-custom_minimum_size = Vector2(300, 10)
+[node name="Bar" type="Control" parent="Strangle/VBoxContainer"]
+custom_minimum_size = Vector2(160, 20)
 layout_mode = 2
-max_value = 1.0
-show_percentage = false
+size_flags_horizontal = 4
+mouse_filter = 2
 
 [node name="Instruction" parent="Strangle/VBoxContainer" instance=ExtResource("1_big_font")]
 layout_mode = 2

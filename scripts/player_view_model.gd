@@ -1106,10 +1106,10 @@ func _advance_swing() -> void:
 		_swing_angles = Vector3.ZERO
 		_swing_reach = 0.0
 		return
-	var t := 1.0 if is_zero_approx(swing_recover_time) else settling / swing_recover_time
-	var eased := smoothstep(0.0, 1.0, t)
-	_swing_angles = swing_follow.lerp(Vector3.ZERO, eased)
-	_swing_reach = swing_reach * (1.0 - eased)
+	var recovery_progress := 1.0 if is_zero_approx(swing_recover_time) else settling / swing_recover_time
+	var recovery_eased := smoothstep(0.0, 1.0, recovery_progress)
+	_swing_angles = swing_follow.lerp(Vector3.ZERO, recovery_eased)
+	_swing_reach = swing_reach * (1.0 - recovery_eased)
 
 
 ## Puts whatever hangs in the fist where the three `hold_*` knobs say, in the
@@ -1164,7 +1164,7 @@ func _apply() -> void:
 	var step := sin(_bob_phase) * _bob_weight
 	# The horizontal rides at half the rate, so a full stride is one sideways
 	# sweep across two vertical ones — which is what a stride is: two steps.
-	var swing := sin(_bob_phase * 0.5) * _bob_weight
+	var sideways_bob := sin(_bob_phase * 0.5) * _bob_weight
 
 	# The two poses first, and everything else on top of whichever the arm is
 	# between. Doing it in this order is what keeps a hand that is holding a rat
@@ -1199,7 +1199,7 @@ func _apply() -> void:
 
 	offset += CROUCH_PULL * _crouch
 	offset.y += step * bob_amount.y * travel
-	offset.x += swing * bob_amount.x * travel
+	offset.x += sideways_bob * bob_amount.x * travel
 	# The turn slides the arms as well as turning them. Yaw moves them sideways
 	# and pitch moves them up, both against the turn, which is the direction the
 	# lag is already rotating them in.

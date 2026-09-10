@@ -333,11 +333,11 @@ func _process_modification_with_delta(delta: float) -> void:
 	if _weight <= 0.0:
 		return
 
-	var squeeze := _squeeze()
+	var squeeze_amount := _squeeze()
 	# Root to tip, and the order is not a preference: every one of these hangs
 	# off the last, so the chest has to have leaned before the collarbones turn
 	# on it and the collarbones before the arms are solved off them.
-	var lean := _weight * (1.0 + squeeze * SQUEEZE_LEAN)
+	var lean := _weight * (1.0 + squeeze_amount * SQUEEZE_LEAN)
 	chest = _aim(skeleton, _chest, _neck, above, _centre, CHEST_TURN * lean)
 	_aim(skeleton, _neck, _head, chest, _centre, NECK_TURN * lean)
 
@@ -350,10 +350,10 @@ func _process_modification_with_delta(delta: float) -> void:
 	# Only now can the reach be checked, because only now is it known where the
 	# shoulders ended up. If either arm is being asked for more than it has, the
 	# animal comes in towards him — both hands together, so it stays in the grip.
-	_centre = _within_reach(skeleton, clavicle, _centre, squeeze)
+	_centre = _within_reach(skeleton, clavicle, _centre, squeeze_amount)
 
 	for side in 2:
-		_pose_arm(skeleton, side, clavicle[side], _centre, squeeze)
+		_pose_arm(skeleton, side, clavicle[side], _centre, squeeze_amount)
 
 
 ## One arm: upper to elbow, forearm to hand, wrist to the middle.
@@ -373,9 +373,9 @@ func _process_modification_with_delta(delta: float) -> void:
 ## the elbow has to be and become the direction it leans — which is what they
 ## were always for, and is now all they can get wrong.
 func _pose_arm(skeleton: Skeleton3D, side: int, shoulder: Transform3D, centre: Vector3,
-		squeeze: float) -> void:
+		squeeze_amount: float) -> void:
 	var sign_: float = SIDES[side]
-	var hand := _hand_target(centre, side, squeeze)
+	var hand := _hand_target(centre, side, squeeze_amount)
 	var joint := (shoulder * skeleton.get_bone_pose(_upper_arm[side])).origin
 	var pole := joint + _side * (sign_ * ELBOW_FLARE * _arm_length) \
 		- _up * (ELBOW_DROP * _arm_length)
@@ -395,11 +395,11 @@ func _pose_arm(skeleton: Skeleton3D, side: int, shoulder: Transform3D, centre: V
 ## The closing is the part of the gesture that reads from across a room, and the
 ## small pull towards the body is deliberately smaller — a man does not reel the
 ## animal in every time he tightens, he tightens on it where it is.
-func _hand_target(centre: Vector3, side: int, squeeze: float) -> Vector3:
+func _hand_target(centre: Vector3, side: int, squeeze_amount: float) -> Vector3:
 	var sign_: float = SIDES[side]
-	var spread := SPREAD - SQUEEZE_CLOSE * squeeze
+	var spread := SPREAD - SQUEEZE_CLOSE * squeeze_amount
 	return centre + _side * (sign_ * spread * _arm_length) \
-		- _forward * (SQUEEZE_PULL * squeeze * _arm_length)
+		- _forward * (SQUEEZE_PULL * squeeze_amount * _arm_length)
 
 
 ## The held point, brought in far enough that neither arm is stretched past
@@ -413,12 +413,12 @@ func _hand_target(centre: Vector3, side: int, squeeze: float) -> Vector3:
 ## to, and `_solve_elbow` clamps whatever is left. The difference is a degree or
 ## two of elbow.
 func _within_reach(skeleton: Skeleton3D, clavicle: Array[Transform3D], centre: Vector3,
-		squeeze: float) -> Vector3:
+		squeeze_amount: float) -> Vector3:
 	var limit := MAX_EXTENSION * _arm_length
 	var over := 0.0
 	for side in 2:
 		var joint := (clavicle[side] * skeleton.get_bone_pose(_upper_arm[side])).origin
-		over = maxf(over, joint.distance_to(_hand_target(centre, side, squeeze)) - limit)
+		over = maxf(over, joint.distance_to(_hand_target(centre, side, squeeze_amount)) - limit)
 	if over <= 0.0:
 		return centre
 	return centre - _forward * over

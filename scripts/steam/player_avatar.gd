@@ -281,9 +281,9 @@ func _ready() -> void:
 ## Lets this avatar's owner publish to one peer whose matching avatar is known
 ## to be in that peer's tree. Kept on the avatar because its synchronizer owns
 ## the visibility rule; the crowd only performs the cross-peer handshake.
-func allow_sync_to(peer_id: int) -> void:
-	if peer_id > 0:
-		_sync.set_visibility_for(peer_id, true)
+func allow_sync_to(target_peer_id: int) -> void:
+	if target_peer_id > 0:
+		_sync.set_visibility_for(target_peer_id, true)
 
 
 ## Ours, and only ours: the character is read, and the reading is what goes out.

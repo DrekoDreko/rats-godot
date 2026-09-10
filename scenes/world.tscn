@@ -11,7 +11,6 @@
 [ext_resource type="Script" uid="uid://cgmykbygxdhqj" path="res://scripts/session/house_spawns.gd" id="18_spawns"]
 [ext_resource type="PackedScene" path="res://scenes/hud_phase.tscn" id="20_hud_phase"]
 [ext_resource type="PackedScene" path="res://scenes/result_screen.tscn" id="22_result"]
-[ext_resource type="Script" uid="uid://bcvx5d4kfjqk1" path="res://scripts/session/store_terminal.gd" id="25_terminal"]
 [ext_resource type="PackedScene" path="res://scenes/terminal_screen.tscn" id="26_store"]
 [ext_resource type="PackedScene" path="res://scenes/hud_game.tscn" id="29_hud_game"]
 [ext_resource type="Script" uid="uid://c1brx5ynxvh6i" path="res://scripts/session/van_doors.gd" id="30_doors"]
@@ -33,6 +32,9 @@ size = Vector2(46, 46)
 [sub_resource type="BoxShape3D" id="Shape_ground"]
 size = Vector3(46, 1, 46)
 
+[sub_resource type="BoxShape3D" id="Shape_boundary"]
+size = Vector3(46, 20, 1)
+
 [sub_resource type="NavigationMesh" id="Nav_mesh"]
 geometry_parsed_geometry_type = 1
 geometry_collision_mask = 1
@@ -41,36 +43,13 @@ geometry_source_group_name = &"scenery"
 cell_size = 0.12
 cell_height = 0.1
 agent_height = 0.6
-agent_radius = 0.16
+agent_radius = 0.24
 agent_max_climb = 0.2
 
 [sub_resource type="BoxShape3D" id="Shape_box_van_ramp"]
 size = Vector3(2, 0.12, 2.4)
 
-[sub_resource type="BoxShape3D" id="Shape_reach_terminal"]
-size = Vector3(0.7, 1.2, 0.9)
-
-[sub_resource type="QuadMesh" id="Mesh_totem_screen"]
-size = Vector2(0.4293, 0.3398)
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_x28ej"]
-render_priority = 0
-shader = ExtResource("33_ps1_shader")
-shader_parameter/albedo_color = Color(1, 1, 1, 1)
-shader_parameter/uv_scale = Vector2(1, 1)
-shader_parameter/jitter = 0.50000002375
-shader_parameter/jitter_grid = 0.0
-shader_parameter/jitter_z_coordinate = true
-shader_parameter/jitter_depth_independent = true
-shader_parameter/affine_strength = 0.0
-shader_parameter/alpha_scissor = 1.0
-shader_parameter/recolor_target = Color(1, 1, 1, 1)
-shader_parameter/recolor_strength = 0.0
-shader_parameter/recolor_hue = 0.1406
-shader_parameter/recolor_hue_range = 0.09
-shader_parameter/recolor_min_saturation = 0.25
-
-[node name="World" type="Node3D"]
+[node name="World" type="Node3D" unique_id=896002135]
 script = ExtResource("16_house")
 
 [node name="PS1" parent="." instance=ExtResource("3_75jji")]
@@ -84,6 +63,28 @@ mesh = SubResource("Mesh_ground")
 [node name="Collision" type="CollisionShape3D" parent="Ground"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.52, 0)
 shape = SubResource("Shape_ground")
+
+[node name="MapBoundary" type="StaticBody3D" parent="." groups=["scenery"]]
+collision_layer = 1
+collision_mask = 0
+
+[node name="North" type="CollisionShape3D" parent="MapBoundary"]
+position = Vector3(0, 9, -22.5)
+shape = SubResource("Shape_boundary")
+
+[node name="South" type="CollisionShape3D" parent="MapBoundary"]
+position = Vector3(0, 9, 22.5)
+shape = SubResource("Shape_boundary")
+
+[node name="West" type="CollisionShape3D" parent="MapBoundary"]
+position = Vector3(-22.5, 9, 0)
+rotation = Vector3(0, 1.5707963, 0)
+shape = SubResource("Shape_boundary")
+
+[node name="East" type="CollisionShape3D" parent="MapBoundary"]
+position = Vector3(22.5, 9, 0)
+rotation = Vector3(0, 1.5707963, 0)
+shape = SubResource("Shape_boundary")
 
 [node name="House" parent="." groups=["minimap_floor", "scenery"] instance=ExtResource("4_house")]
 
@@ -120,33 +121,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.16279936, -0.009373069, -0
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4, 0.4)
 light_color = Color(1, 0.96, 0.88, 1)
 omni_range = 6.0
-
-[node name="StoreTerminal" type="Area3D" parent="Van" groups=["store_station"]]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.0066041946, 1.1405, -0.22593689)
-collision_layer = 8
-collision_mask = 0
-monitoring = false
-script = ExtResource("25_terminal")
-prompt = "PROMPT_USE_TERMINAL"
-
-[node name="Reach" type="CollisionShape3D" parent="Van/StoreTerminal"]
-shape = SubResource("Shape_reach_terminal")
-
-[node name="Refused" type="AudioStreamPlayer3D" parent="Van/StoreTerminal"]
-unit_size = 3.0
-max_distance = 12.0
-
-[node name="Screen" type="MeshInstance3D" parent="Van/StoreTerminal"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00175, 0.7501, 0.15)
-mesh = SubResource("Mesh_totem_screen")
-surface_material_override/0 = SubResource("ShaderMaterial_x28ej")
-
-[node name="Viewport" type="SubViewport" parent="Van/StoreTerminal/Screen"]
-size = Vector2i(640, 507)
-render_target_update_mode = 4
-
-[node name="TerminalScreen" parent="Van/StoreTerminal/Screen/Viewport" instance=ExtResource("26_store")]
-layout_mode = 3
 
 [node name="Spawns" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -8.5)
@@ -232,4 +206,9 @@ volume_db = -6.0
 
 [node name="Scoreboard" parent="." instance=ExtResource("98_scoreboard")]
 
-[node name="PauseMenu" parent="." instance=ExtResource("99_pause")]
+[node name="PauseMenu" parent="." unique_id=1466034551 instance=ExtResource("99_pause")]
+
+[node name="TerminalUI" type="CanvasLayer" parent="."]
+layer = 3
+
+[node name="TerminalScreen" parent="TerminalUI" instance=ExtResource("26_store")]

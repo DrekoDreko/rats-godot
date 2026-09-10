@@ -93,7 +93,7 @@ HUD_MONEY_TOTAL,$%d,$%d
 HUD_MONEY_NOTICE,+$%d  %s,+$%d  %s
 HUD_INTERACT_PROMPT,E — %s,E — %s
 HUD_STRANGLE_BUTTON,CLICK,CLIQUE
-HUD_STRANGLE_INSTRUCTION,hammer to strangle,martele para estrangular
+HUD_STRANGLE_INSTRUCTION,click in green - 3 hits; miss and it escapes,clique no verde - 3 acertos; errou ele escapa
 HUD_GRAB_PROMPT,CLICK TO STRANGLE,CLIQUE PARA ESGANAR
 PROMPT_USE_TERMINAL,use the terminal,use o terminal
 PROMPT_OPEN_DOOR,open the door,abra a porta

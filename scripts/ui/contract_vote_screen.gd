@@ -38,6 +38,7 @@ const CARD_SCENE := preload("res://scenes/contract_vote_card.tscn")
 @onready var _rate: BigFontOutlinedLabel = $Margin/Center/Rows/Rate
 @onready var _start: Button = $Margin/Center/Rows/Start
 @onready var _hint: BigFontOutlinedLabel = $Margin/Center/Rows/Hint
+@onready var _money: BigFontOutlinedLabel = $MoneyRow/Total
 
 ## Every card on screen, by the job it stands for. Built once — the board
 ## does not change while the game is running (`ContractManager.contracts`) —
@@ -181,6 +182,7 @@ func _show_hud(on: bool) -> void:
 # --- Drawing ------------------------------------------------------------------
 
 func _refresh_all() -> void:
+	_money.text = tr("HUD_MONEY_TOTAL") % SessionManager.bank_balance
 	var mine: String = ContractManager.votes.get(LobbyManager.our_crew_id(), "")
 	for contract_id in _card_of:
 		_card_of[contract_id].refresh(

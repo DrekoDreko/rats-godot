@@ -1,27 +1,14 @@
 class_name Hands
 extends Weapon
-## The hands: the game's first weapon, and the only one that does not kill in
-## one go.
-##
-## The click grabs the rat in the sights. It is torn off the ground, rises to the
-## hand and stays in the middle of the screen struggling. From then on the same
-## click is what kills: each one squeezes its neck a little harder, and the
-## pressure drains on its own while the player does not click again. Stopping
-## the hammering means losing the rat.
-##
-## What this node controls is the *rule* of the strangling — how much each
-## squeeze is worth, when the rat dies, when it gets loose. How the rat rises,
-## struggles and dies is `rat.gd`'s business. The capture signals are the ones
-## from `Weapon`.
+## Three timed squeezes kill a held rat. A miss or an expired sweep releases it.
+## Rat animation, ownership and payment keep their existing lifecycle.
 
-@export_group("Strangling")
-## Squeezes to kill a rat, if the player hammers without stopping. Hammering
-## slowly takes more, because the pressure drains between one click and the next.
-@export var squeezes_to_kill := 12
-## How much of the pressure drains per second with the player standing still.
-@export var decay := 0.32
-## Time with the pressure at zero before the rat gets loose from the hand.
-@export var time_to_escape := 1.6
+signal timing_changed(pointer: float, zone_start: float, zone_width: float)
+
+const HITS_TO_KILL := 3
+const SWEEP_SECONDS := [1.6, 1.1, 0.65]
+const ZONE_WIDTH := 0.18
+const MIN_ZONE_SHIFT := 0.18
 
 @export_group("Hand")
 ## Distance from the rat to the camera. It decides two things at once, and they
@@ -164,7 +151,11 @@ const DEATH_TYPE := Death.Type.STRANGULATION
 ## — and the hands quietly let go of a rat they never had. It is generous on
 ## purpose. A grab lost to a hiccup in the wire is worse than one that hangs a
 ## moment longer than it should.
-const CLAIM_TIMEOUT := 0.6
+# A guest needs a request to reach the host and the host's synchronised answer
+# to return.  The old 0.6-second grace was shorter than that exchange on a
+# normal higher-latency Steam connection, so player two released a valid grab
+# before `sync_holder` could confirm it.
+const CLAIM_TIMEOUT := 2.0
 
 ## The cry of a rat being squeezed, and how it climbs.
 ##
@@ -194,7 +185,11 @@ const BURST_RECOVERY := 0.18
 
 var _rat: Node3D
 var _pressure := 0.0
-var _empty_time := 0.0
+var _hits := 0
+var _pointer := 1.0
+var _zone_start := 0.0
+var _zone_width := ZONE_WIDTH
+var _previous_zone_center := -1.0
 ## How long we have been holding a rat the host has not yet confirmed is ours.
 ## Negative once it is confirmed, which is the ordinary case within a frame or
 ## two and for the whole of a solo hunt.
@@ -216,15 +211,12 @@ func _process(delta: float) -> void:
 	if _forget_lost_rat(delta):
 		return
 
-	_set_pressure(_pressure - decay * delta)
-
-	# While the rat is still rising it does not count as dropped: the escape
-	# clock only starts once it reaches the hand.
-	if _pressure > 0.0 or not _rat.is_in_hand():
-		_empty_time = 0.0
+	# The timing window starts once the rat reaches the hand.
+	if not _rat.is_in_hand():
 		return
-	_empty_time += delta
-	if _empty_time >= time_to_escape:
+	_pointer = maxf(0.0, _pointer - delta / SWEEP_SECONDS[_hits])
+	timing_changed.emit(_pointer, _zone_start, _zone_width)
+	if _pointer <= 0.0:
 		_release(false)
 
 func is_busy() -> bool:
@@ -248,21 +240,21 @@ func _use() -> void:
 	_rat = target
 	_effort = effort
 	_pressure = 0.0
-	_empty_time = 0.0
+	_hits = 0
 	_claim_time = 0.0
 	_add_recoil(GRAB_RECOIL)
 	caught.emit(_rat)
 	pressure_changed.emit(0.0)
+	_start_sweep()
 
-## One squeeze of the neck.
-##
-## How many it takes is the hands' rule, but the animal gets a say in it: one
-## that was already caught when it was picked up — stuck on the glue, and
-## tomorrow whatever else holds a rat down — gives in in a fraction of the
-## squeezes. The hands never learn what glue is; they only ask the rat how much
-## of the usual work it is worth (`rat.gd: effort()`).
+## Only clicks in the target count; trapped rats have a wider timing window.
 func press_secondary() -> void:
-	if not _is_holding():
+	if not _is_holding() or not _rat.is_in_hand():
+		return
+	if _rat.has_method("is_held_by_me") and not _rat.is_held_by_me():
+		return
+	if _pointer < _zone_start or _pointer > _zone_start + _zone_width:
+		_release(false)
 		return
 	_rat.squeeze()
 	_add_recoil(SQUEEZE_RECOIL)
@@ -270,15 +262,34 @@ func press_secondary() -> void:
 	# killing one is still seen as a squeeze: the last click of a strangling is
 	# the one a watcher most wants to see land.
 	squeezed.emit()
-	var goes := maxf(1.0, float(squeezes_to_kill) * _effort)
-	_set_pressure(_pressure + 1.0 / goes)
+	_hits += 1
+	_set_pressure(float(_hits) / HITS_TO_KILL)
 	# The cry, on the pressure *after* this squeeze rather than before it: the
 	# click the player just made is the one he should hear, and pitching it off
 	# the pressure he had a moment ago is an animal always one squeeze behind
 	# its own throat.
 	_cry()
-	if _pressure >= 1.0:
+	if _hits >= HITS_TO_KILL:
 		_release(true)
+	else:
+		_start_sweep()
+
+
+func _start_sweep() -> void:
+	_pointer = 1.0
+	# Glue makes the target wider while preserving the three-hit requirement.
+	_zone_width = clampf(ZONE_WIDTH / maxf(_effort, 0.5), ZONE_WIDTH, 0.36)
+	var min_center := 0.08 + _zone_width * 0.5
+	var max_center := 0.92 - _zone_width * 0.5
+	# Sample the full track, excluding nearby positions even across grabs.
+	var excluded_start := clampf(_previous_zone_center - MIN_ZONE_SHIFT, min_center, max_center)
+	var excluded_end := clampf(_previous_zone_center + MIN_ZONE_SHIFT, min_center, max_center)
+	var left_span := excluded_start - min_center
+	var offset := randf_range(0.0, left_span + max_center - excluded_end)
+	var center := min_center + offset if offset < left_span else excluded_end + offset - left_span
+	_zone_start = center - _zone_width * 0.5
+	_previous_zone_center = center
+	timing_changed.emit(_pointer, _zone_start, _zone_width)
 
 ## The rat's own voice, climbing with the pressure on its neck. See `HURT_PITCH`
 ## for why the climb is the point.
@@ -319,7 +330,7 @@ func _forget_lost_rat(delta: float) -> bool:
 	# release, and whoever does have it is holding it perfectly happily.
 	_rat = null
 	_pressure = 0.0
-	_empty_time = 0.0
+	_hits = 0
 	_effort = 1.0
 	_claim_time = 0.0
 	pressure_changed.emit(0.0)
@@ -345,7 +356,7 @@ func _release(killed: bool) -> void:
 	var rat := _rat
 	_rat = null
 	_pressure = 0.0
-	_empty_time = 0.0
+	_hits = 0
 	_effort = 1.0
 	_claim_time = 0.0
 	if killed:

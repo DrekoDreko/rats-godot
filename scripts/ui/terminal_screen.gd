@@ -9,13 +9,13 @@ extends Control
 ## always was, drawn
 ## and driven the same way it always has been. This node only decides which one
 ## is showing and hands the terminal's own bookkeeping (closing the rest of the
-## HUD, deciding what "open" and "closed" mean to `StoreTerminal`) up to itself,
+## HUD and keeps its own open and closed state up to itself,
 ## so that switching pages is never mistaken for shutting the terminal.
 ##
 ## **Switching pages is not closing one.** `StoreScreen.closed` and
 ## `MapViewer.closed` exist for benches that open them on their own; this node
 ## never connects to either, so pressing an arrow can never trigger the camera
-## trip `StoreTerminal` plays when the terminal itself shuts.
+## terminal from shutting when a page changes.
 
 signal closed
 
@@ -23,6 +23,9 @@ enum Page { SHOP, MAP, DIFFICULTY, COLOR }
 
 ## The order the arrows leaf through, left to right.
 const ORDER: Array[Page] = [Page.SHOP, Page.MAP, Page.DIFFICULTY, Page.COLOR]
+const OPEN_PHASES: Array[Phase.Type] = [
+	Phase.Type.TRAVEL, Phase.Type.SURVEY, Phase.Type.HUNT,
+]
 
 @onready var _shop: Control = $Pages/StoreScreen
 @onready var _map: Control = $Pages/MapViewer
@@ -33,6 +36,7 @@ const ORDER: Array[Page] = [Page.SHOP, Page.MAP, Page.DIFFICULTY, Page.COLOR]
 
 var _index := 0
 var _open := false
+var _user: Node3D
 
 
 func _ready() -> void:
@@ -58,16 +62,22 @@ func _ready() -> void:
 	hide()
 	_left.pressed.connect(_step.bind(-1))
 	_right.pressed.connect(_step.bind(1))
+	PhaseManager.phase_changed.connect(_on_phase_changed)
 
 
 ## Puts the terminal up on the page it was last left on.
-func open() -> void:
-	if _open:
-		return
+func open(by: Node3D) -> bool:
+	if _open or by == null or not by.has_method("set_ui_open"):
+		return false
+	if not OPEN_PHASES.has(PhaseManager.current()):
+		return false
 	_open = true
+	_user = by
+	_user.set_ui_open(true)
 	_show_rest_of_hud(false)
 	show()
 	_page(ORDER[_index]).open()
+	return true
 
 
 ## Takes the terminal down, wherever it was left leafed to.
@@ -75,14 +85,31 @@ func close() -> void:
 	if not _open:
 		return
 	_open = false
+	var user := _user
+	_user = null
 	_page(ORDER[_index]).close()
 	_show_rest_of_hud(true)
 	hide()
+	if is_instance_valid(user) and user.has_method("set_ui_open"):
+		user.set_ui_open(false)
 	closed.emit()
 
 
 func is_open() -> bool:
 	return _open
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not _open:
+		return
+	if event.is_action_pressed("interact") or event.is_action_pressed("toggle_mouse"):
+		close()
+		get_viewport().set_input_as_handled()
+
+
+func _on_phase_changed(_previous: Phase.Type, _current: Phase.Type) -> void:
+	if _open:
+		close()
 
 
 ## One arrow: the current page goes down, the next one comes up. `direction`
