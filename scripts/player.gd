@@ -29,11 +29,13 @@ extends CharacterBody3D
 ## anything, which is the only way a click can reach a button instead of being
 ## spent grabbing the camera back.
 ##
-## What he sees sways a little while he walks (`_update_bob`): the camera rides
-## up and down on a sine wave scaled by how fast he is actually moving, and comes
-## back to rest the moment he stops. It is drawn on the camera alone, so nothing
-## that aims — the ray out of it, the weapon on the head — is
-## moved by it.
+## What he sees sways while he walks (`_update_bob`): the camera rides up and
+## down on a sine wave scaled by how fast he is actually moving, and rolls and
+## swings sideways on the half of that wave — one lean per stride against two
+## dips, because a stride is two steps and the body comes back over itself only
+## once per pair. All three come back to rest the moment he stops. It is drawn on
+## the camera alone, so nothing that aims — the ray out of it, the weapon on the
+## head — is moved by it.
 ##
 ## And he is being watched. In a lobby, everything the other players see of him
 ## is read off four things — `animation_state()` and `arms_state()` for what he
@@ -117,6 +119,15 @@ signal seated_changed(seated: bool)
 ## Steps per second at a full run. Slower gaits use the same rhythm scaled down,
 ## so the sway keeps time with the legs instead of running away from them.
 @export var bob_frequency := 1.9
+## How far the camera swings sideways, in metres, at a full run. It runs at half
+## the rhythm of the vertical bob because a stride is two steps: the body throws
+## itself over the foot that is down, so the side-to-side comes back once per
+## pair while the height dips once per step.
+@export var bob_sway := 0.055
+## How far the view leans into that swing, in degrees, at a full run. The lean is
+## what turns a camera sliding sideways into a head being carried by a body —
+## the same trick the shake plays with `shake_roll`, slow instead of sharp.
+@export var bob_roll := 1.6
 
 ## How far the view is thrown by a shake of strength 1, in metres to the side
 ## and up. It is small because it is multiplied by a trauma that starts at one
@@ -264,6 +275,11 @@ var _air_time := 0.0
 ## he walks and is left where it stopped when he stands still — picked back up
 ## from there on the next step, so setting off again does not jerk the view.
 var _bob_phase := 0.0
+## Where he is in the stride — the pair of steps — rather than in the step. It
+## runs at half the speed of `_bob_phase` and is what the side-to-side swing and
+## the lean are drawn off, so that the body comes back over itself once for every
+## two dips of the head.
+var _stride_phase := 0.0
 ## Accumulated walking phase used to emit one footstep every half cycle.
 var _step_phase := 0.0
 ## How much of the sway is being applied, from 0 standing still to 1 at a full
@@ -840,6 +856,11 @@ func _update_bob(delta: float) -> void:
 	if moving:
 		var phase_delta := TAU * bob_frequency * gait * delta
 		_bob_phase = fposmod(_bob_phase + phase_delta, TAU)
+		# The stride runs at half the step, and is counted apart from it rather
+		# than divided out of it: `_bob_phase` is folded at `TAU` every step, and
+		# half of a number that keeps resetting would swing the body to one side
+		# and snap it back, never to the other.
+		_stride_phase = fposmod(_stride_phase + phase_delta * 0.5, TAU)
 		_step_phase += phase_delta
 		while _step_phase >= PI:
 			_step_phase -= PI
@@ -853,8 +874,16 @@ func _update_bob(delta: float) -> void:
 		view_model.bob(_bob_phase, _bob_weight)
 	if is_zero_approx(_bob_weight):
 		camera.position.y = _camera_rest_y
+		camera.position.x = 0.0
+		camera.rotation.z = 0.0
 		return
 	camera.position.y = _camera_rest_y + sin(_bob_phase) * bob_amount * _bob_weight
+	var stride := sin(_stride_phase)
+	camera.position.x = stride * bob_sway * _bob_weight
+	# Leaning the way he is thrown, not against it. `_bob_weight` carries the
+	# lean back down to nothing as he stops, so a man standing still is never
+	# left holding a tilt.
+	camera.rotation.z = -stride * deg_to_rad(bob_roll) * _bob_weight
 
 
 # --- The shake --------------------------------------------------------------
@@ -915,9 +944,11 @@ func _update_shake(delta: float) -> void:
 	if _shake <= SHAKE_EPSILON:
 		if _shake != 0.0:
 			_shake = 0.0
-			camera.position.x = 0.0
+			# Only the axis the sway does not own. `x` and `rotation.z` are the
+			# walk's now, written fresh every frame by `_update_bob`, and zeroing
+			# them here would knock the camera straight on the frame a shake ran
+			# out under a man still walking.
 			camera.position.z = 0.0
-			camera.rotation.z = 0.0
 		return
 	# Wrapped on the whole rattle rather than on a single turn. The waves below
 	# run at 1.7 and 2.1 times this phase, so folding it at `TAU` would land them
@@ -929,9 +960,12 @@ func _update_shake(delta: float) -> void:
 	# Squared, so that the tail of a shake dies away faster than its middle: a
 	# jolt that faded linearly reads as a rattle that will not stop.
 	var force := _shake * _shake
-	camera.position.x = (sin(t) * 0.7 + sin(t * 1.7 + 1.1) * 0.3) * shake_amount * force
+	# Added to the walk rather than written over it, the same way the dip above is
+	# added to the height: a jolt landing mid-stride should knock the head off
+	# where the stride had carried it, not teleport it to centre and back.
+	camera.position.x += (sin(t) * 0.7 + sin(t * 1.7 + 1.1) * 0.3) * shake_amount * force
 	camera.position.z = (sin(t * 1.3 + 2.4) * 0.6 + sin(t * 2.1) * 0.4) * shake_amount * force
-	camera.rotation.z = sin(t * 0.9 + 0.5) * deg_to_rad(shake_roll) * force
+	camera.rotation.z += sin(t * 0.9 + 0.5) * deg_to_rad(shake_roll) * force
 	_shake *= pow(SHAKE_DAMPING, delta)
 
 ## One footfall. The sample is a single short crack, so a fixed pitch turns a
@@ -1082,6 +1116,7 @@ func respawn() -> void:
 	# And with the camera where the scene put it. Waking up mid-step would leave
 	# the view a finger off its resting height until he walked again.
 	_bob_phase = 0.0
+	_stride_phase = 0.0
 	_bob_weight = 0.0
 	camera.position.y = _camera_rest_y
 	# And with nothing left of whatever knocked him down still knocking the view
