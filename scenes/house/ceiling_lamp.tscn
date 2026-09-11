@@ -1,0 +1,75 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Shader" uid="uid://x0hy8wdwbikq" path="res://shaders/level.gdshader" id="1_shader"]
+[ext_resource type="Script" uid="uid://0gbrn33wb41a" path="res://scripts/ps1_material_applier.gd" id="2_applier"]
+[ext_resource type="Texture2D" uid="uid://bwvk8sw8gswv1" path="res://assets/textures/lamp_halo.png" id="3_halo"]
+
+[sub_resource type="ShaderMaterial" id="Material_bulb"]
+shader = ExtResource("1_shader")
+shader_parameter/albedo_color = Color(1, 0.96, 0.85, 1)
+shader_parameter/uv_scale = Vector2(1, 1)
+shader_parameter/emission_color = Color(1, 0.95, 0.82, 1)
+shader_parameter/emission_energy = 1.6
+
+[sub_resource type="StandardMaterial3D" id="Material_halo"]
+render_priority = 1
+transparency = 1
+blend_mode = 1
+shading_mode = 0
+albedo_color = Color(1, 0.95, 0.82, 1)
+albedo_texture = ExtResource("3_halo")
+texture_filter = 0
+billboard_mode = 1
+billboard_keep_scale = true
+disable_receive_shadows = true
+no_depth_test = false
+
+[sub_resource type="StandardMaterial3D" id="Material_fixture"]
+shading_mode = 0
+albedo_color = Color(0.13, 0.12, 0.11, 1)
+
+[sub_resource type="SphereMesh" id="Mesh_bulb"]
+material = SubResource("Material_bulb")
+radius = 0.09
+height = 0.14
+radial_segments = 8
+rings = 4
+
+[sub_resource type="QuadMesh" id="Mesh_halo"]
+material = SubResource("Material_halo")
+size = Vector2(0.8, 0.8)
+
+[sub_resource type="CylinderMesh" id="Mesh_fixture"]
+material = SubResource("Material_fixture")
+top_radius = 0.17
+bottom_radius = 0.17
+height = 0.06
+radial_segments = 8
+rings = 1
+
+[node name="CeilingLamp" type="Node3D"]
+
+[node name="PS1" type="Node" parent="."]
+script = ExtResource("2_applier")
+enabled = false
+
+[node name="Fixture" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.03, 0)
+mesh = SubResource("Mesh_fixture")
+
+[node name="Bulb" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.12, 0)
+mesh = SubResource("Mesh_bulb")
+
+[node name="Halo" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.24, 0)
+mesh = SubResource("Mesh_halo")
+cast_shadow = 0
+
+[node name="Light" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.3, 0)
+light_color = Color(1, 0.93, 0.78, 1)
+light_energy = 1.1
+light_specular = 0.0
+omni_range = 4.5
+omni_attenuation = 2.0

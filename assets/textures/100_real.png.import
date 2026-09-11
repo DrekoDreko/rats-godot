@@ -2,19 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bit6lx06xngwe"
-path="res://.godot/imported/house_wood_floor.png-b55e3c71fd28d5bb5754dc97bdd792da.ctex"
+uid="uid://byf8mbi56wjcd"
+path="res://.godot/imported/100_real.png-66fc4789dd1993646e8d43df6ead6799.ctex"
 metadata={
 "vram_texture": false
-}
-generator_parameters={
-"md5": "9e0d897ba2a359cc637252e215a2aaee"
 }
 
 [deps]
 
-source_file="res://models/house_wood_floor.png"
-dest_files=["res://.godot/imported/house_wood_floor.png-b55e3c71fd28d5bb5754dc97bdd792da.ctex"]
+source_file="res://assets/textures/100_real.png"
+dest_files=["res://.godot/imported/100_real.png-66fc4789dd1993646e8d43df6ead6799.ctex"]
 
 [params]
 
@@ -26,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=1
 roughness/src_normal=""

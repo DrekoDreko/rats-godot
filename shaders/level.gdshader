@@ -27,6 +27,19 @@ uniform vec4 albedo_color : source_color = vec4(1.0);
 // tile across forty metres without this.
 uniform vec2 uv_scale = vec2(1.0);
 
+// --- Surfaces that are themselves a light source ----------------------------
+//
+// A ceiling lamp's bulb sits at the centre of its own OmniLight3D, and a light
+// does not illuminate the mesh it is inside: without emission the bulb would
+// render as the darkest thing in the brightest part of the room. Emission is
+// added after lighting, so the bulb keeps its full value whatever the ambient
+// is doing.
+//
+// Default 0.0, which leaves every existing surface exactly as it was — only a
+// material that asks for it glows.
+uniform vec4 emission_color : source_color = vec4(1.0);
+uniform float emission_energy : hint_range(0.0, 16.0) = 0.0;
+
 void vertex()
 {
 	vec4 snapped_position = snap_to_position(VIEWPORT_SIZE, PROJECTION_MATRIX * MODELVIEW_MATRIX * vec4(VERTEX, 1.0));
@@ -39,6 +52,7 @@ void fragment()
 	vec4 texture_color = texture(albedo, UV * uv_scale);
 	ALBEDO = (color_base * texture_color).rgb;
 	ALPHA = texture_color.a * color_base.a;
+	EMISSION = emission_color.rgb * emission_energy;
 }
 
 // ESSENTIAL: no NdotL. The light is applied equally to every face, whichever way

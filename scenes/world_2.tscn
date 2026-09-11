@@ -16,11 +16,13 @@
 [ext_resource type="Script" uid="uid://c1brx5ynxvh6i" path="res://scripts/session/van_doors.gd" id="30_doors"]
 [ext_resource type="PackedScene" path="res://scenes/clues/garbage_pile.tscn" id="31_garbage"]
 [ext_resource type="Script" uid="uid://bwwpqtsfjhflr" path="res://scripts/house/dropping_trail.gd" id="32_droppings"]
+[ext_resource type="Script" path="res://scripts/house/litter_scatter.gd" id="35_litter"]
 [ext_resource type="Shader" uid="uid://x0hy8wdwbikq" path="res://shaders/level.gdshader" id="33_ps1_shader"]
 [ext_resource type="Script" uid="uid://b8htkatu3cur8" path="res://scripts/house/house_doors.gd" id="34_house_doors"]
 [ext_resource type="PackedScene" path="res://scenes/scoreboard.tscn" id="98_scoreboard"]
 [ext_resource type="PackedScene" path="res://scenes/pause_menu.tscn" id="99_pause"]
 [ext_resource type="Environment" uid="uid://b7xk3mqvn2eyt" path="res://resources/retro_environment.tres" id="100_env"]
+[ext_resource type="PackedScene" path="res://scenes/house/ceiling_lamp.tscn" id="101_lamp"]
 
 [sub_resource type="StandardMaterial3D" id="Mat_ground"]
 albedo_color = Color(0.19, 0.2, 0.18, 1)
@@ -125,6 +127,32 @@ shape = SubResource("Shape_boundary")
 [node name="Doors" type="Node3D" parent="House" unique_id=317445833]
 script = ExtResource("34_house_doors")
 leaf_size = Vector3(0.92, 2.03, 0.06)
+
+[node name="Lamps" type="Node3D" parent="House" unique_id=1904779301]
+
+[node name="Sala" parent="House/Lamps" unique_id=1904779302 instance=ExtResource("101_lamp")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.6, 2.65, -1.6)
+
+[node name="Cozinha" parent="House/Lamps" unique_id=1904779303 instance=ExtResource("101_lamp")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.6, 2.65, 8.6)
+
+[node name="Banheiro" parent="House/Lamps" unique_id=1904779304 instance=ExtResource("101_lamp")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.6, 2.65, 6.4)
+
+[node name="Quarto1" parent="House/Lamps" unique_id=1904779305 instance=ExtResource("101_lamp")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.6, 2.65, -1.4)
+
+[node name="Quarto2" parent="House/Lamps" unique_id=1904779306 instance=ExtResource("101_lamp")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.2, 2.65, 8.6)
+
+[node name="CorredorNorte" parent="House/Lamps" unique_id=1904779307 instance=ExtResource("101_lamp")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.4, 2.65, -2.2)
+
+[node name="CorredorCentro" parent="House/Lamps" unique_id=1904779308 instance=ExtResource("101_lamp")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.0, 2.65, 4.0)
+
+[node name="CorredorLeste" parent="House/Lamps" unique_id=1904779309 instance=ExtResource("101_lamp")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.4, 2.65, 3.6)
 
 [node name="Navigation" type="NavigationRegion3D" parent="." unique_id=1517077930]
 navigation_mesh = SubResource("Nav_mesh")
@@ -248,6 +276,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.0, 0, 2.2)
 
 [node name="Droppings" type="Node3D" parent="Clues" unique_id=840647680]
 script = ExtResource("32_droppings")
+
+[node name="Litter" type="Node3D" parent="Clues" unique_id=840647681]
+script = ExtResource("35_litter")
 
 [node name="Geometry" type="Node3D" parent="." unique_id=562269019]
 
