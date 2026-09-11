@@ -1,0 +1,273 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" uid="uid://dlweiu424547o" path="res://models/rats_van.glb" id="1_van"]
+[ext_resource type="PackedScene" uid="uid://bvvcrva6c1ve" path="res://scenes/player.tscn" id="2_player"]
+[ext_resource type="PackedScene" uid="uid://bgordf5uoxh7c" path="res://scenes/ps1.tscn" id="3_75jji"]
+[ext_resource type="PackedScene" path="res://models/house_2.glb" id="4_house"]
+[ext_resource type="Script" uid="uid://x5twjg1fjgnu" path="res://scripts/navigation.gd" id="6_navigation"]
+[ext_resource type="Script" uid="uid://bv088710brpjr" path="res://scripts/steam/player_avatars.gd" id="14_players"]
+[ext_resource type="Script" uid="uid://p2qmhsntuqfu" path="res://scripts/house/house.gd" id="16_house"]
+[ext_resource type="PackedScene" path="res://scenes/clues/rat_hole.tscn" id="17_hole"]
+[ext_resource type="Script" uid="uid://cgmykbygxdhqj" path="res://scripts/session/house_spawns.gd" id="18_spawns"]
+[ext_resource type="PackedScene" path="res://scenes/hud_phase.tscn" id="20_hud_phase"]
+[ext_resource type="PackedScene" path="res://scenes/result_screen.tscn" id="22_result"]
+[ext_resource type="PackedScene" path="res://scenes/terminal_screen.tscn" id="26_store"]
+[ext_resource type="PackedScene" path="res://scenes/hud_game.tscn" id="29_hud_game"]
+[ext_resource type="Script" uid="uid://c1brx5ynxvh6i" path="res://scripts/session/van_doors.gd" id="30_doors"]
+[ext_resource type="PackedScene" path="res://scenes/clues/garbage_pile.tscn" id="31_garbage"]
+[ext_resource type="Script" uid="uid://bwwpqtsfjhflr" path="res://scripts/house/dropping_trail.gd" id="32_droppings"]
+[ext_resource type="Shader" uid="uid://x0hy8wdwbikq" path="res://shaders/level.gdshader" id="33_ps1_shader"]
+[ext_resource type="Script" uid="uid://b8htkatu3cur8" path="res://scripts/house/house_doors.gd" id="34_house_doors"]
+[ext_resource type="PackedScene" path="res://scenes/scoreboard.tscn" id="98_scoreboard"]
+[ext_resource type="PackedScene" path="res://scenes/pause_menu.tscn" id="99_pause"]
+[ext_resource type="Environment" uid="uid://b7xk3mqvn2eyt" path="res://resources/retro_environment.tres" id="100_env"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_ground"]
+albedo_color = Color(0.19, 0.2, 0.18, 1)
+
+[sub_resource type="PlaneMesh" id="Mesh_ground_ns"]
+material = SubResource("Mat_ground")
+size = Vector2(56, 26.35)
+
+[sub_resource type="PlaneMesh" id="Mesh_ground_south"]
+material = SubResource("Mat_ground")
+size = Vector2(56, 13.35)
+
+[sub_resource type="PlaneMesh" id="Mesh_ground_side"]
+material = SubResource("Mat_ground")
+size = Vector2(16.85, 16.3)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_7iits"]
+render_priority = 0
+shader = ExtResource("33_ps1_shader")
+shader_parameter/albedo_color = Color(0.19, 0.2, 0.18, 1)
+shader_parameter/uv_scale = Vector2(1, 1)
+
+[sub_resource type="BoxShape3D" id="Shape_ground"]
+size = Vector3(56, 1, 56)
+
+[sub_resource type="BoxShape3D" id="Shape_boundary"]
+size = Vector3(56, 20, 1)
+
+[sub_resource type="NavigationMesh" id="Nav_mesh"]
+geometry_parsed_geometry_type = 1
+geometry_collision_mask = 1
+geometry_source_geometry_mode = 1
+geometry_source_group_name = &"scenery"
+cell_size = 0.12
+cell_height = 0.1
+agent_height = 0.6
+agent_radius = 0.24
+agent_max_climb = 0.2
+
+[sub_resource type="BoxShape3D" id="Shape_box_van_ramp"]
+size = Vector3(2, 0.12, 2.4)
+
+[node name="World" type="Node3D" unique_id=896002135]
+script = ExtResource("16_house")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=922709288]
+environment = ExtResource("100_env")
+
+[node name="PS1" parent="." unique_id=1902333022 instance=ExtResource("3_75jji")]
+
+[node name="Ground" type="StaticBody3D" parent="." unique_id=2009462366 groups=["scenery"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -2.5)
+
+[node name="MeshNorth" type="MeshInstance3D" parent="Ground" unique_id=178841662]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.02, -14.825)
+mesh = SubResource("Mesh_ground_ns")
+surface_material_override/0 = SubResource("ShaderMaterial_7iits")
+
+[node name="MeshSouth" type="MeshInstance3D" parent="Ground" unique_id=178841663]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.02, 21.325)
+mesh = SubResource("Mesh_ground_south")
+surface_material_override/0 = SubResource("ShaderMaterial_7iits")
+
+[node name="MeshWest" type="MeshInstance3D" parent="Ground" unique_id=178841664]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -19.575, -0.02, 6.5)
+mesh = SubResource("Mesh_ground_side")
+surface_material_override/0 = SubResource("ShaderMaterial_7iits")
+
+[node name="MeshEast" type="MeshInstance3D" parent="Ground" unique_id=178841665]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19.575, -0.02, 6.5)
+mesh = SubResource("Mesh_ground_side")
+surface_material_override/0 = SubResource("ShaderMaterial_7iits")
+
+[node name="Collision" type="CollisionShape3D" parent="Ground" unique_id=463800529]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.52, 0)
+shape = SubResource("Shape_ground")
+
+[node name="MapBoundary" type="StaticBody3D" parent="." unique_id=1837119069 groups=["scenery"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -2.5)
+collision_mask = 0
+
+[node name="North" type="CollisionShape3D" parent="MapBoundary" unique_id=1059929765]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 9, -27.5)
+shape = SubResource("Shape_boundary")
+
+[node name="South" type="CollisionShape3D" parent="MapBoundary" unique_id=481168169]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 9, 27.5)
+shape = SubResource("Shape_boundary")
+
+[node name="West" type="CollisionShape3D" parent="MapBoundary" unique_id=655171643]
+transform = Transform3D(7.54979e-08, 0, 1, 0, 1, 0, -1, 0, 7.54979e-08, -27.5, 9, 0)
+shape = SubResource("Shape_boundary")
+
+[node name="East" type="CollisionShape3D" parent="MapBoundary" unique_id=367012042]
+transform = Transform3D(7.54979e-08, 0, 1, 0, 1, 0, -1, 0, 7.54979e-08, 27.5, 9, 0)
+shape = SubResource("Shape_boundary")
+
+[node name="House" parent="." unique_id=835097150 groups=["minimap_floor", "scenery"] instance=ExtResource("4_house")]
+
+[node name="PS1" parent="House" unique_id=1990782739 instance=ExtResource("3_75jji")]
+
+[node name="Doors" type="Node3D" parent="House" unique_id=317445833]
+script = ExtResource("34_house_doors")
+leaf_size = Vector3(0.92, 2.03, 0.06)
+
+[node name="Navigation" type="NavigationRegion3D" parent="." unique_id=1517077930]
+navigation_mesh = SubResource("Nav_mesh")
+script = ExtResource("6_navigation")
+
+[node name="Van" parent="." unique_id=885074566 groups=["scenery"] instance=ExtResource("1_van")]
+transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0.6, 0, -12.5)
+
+[node name="PS1" parent="Van" unique_id=1402249405 instance=ExtResource("3_75jji")]
+
+[node name="Doors" type="Node3D" parent="Van" unique_id=1495699596]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.16279936, -0.009373069, -0.02208519)
+script = ExtResource("30_doors")
+
+[node name="Ramp" type="StaticBody3D" parent="Van" unique_id=1680382542 groups=["scenery"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.16279936, -0.009373069, -0.02208519)
+collision_mask = 0
+
+[node name="Collision" type="CollisionShape3D" parent="Van/Ramp" unique_id=1879608300]
+transform = Transform3D(1, 0, 0, 0, 0.9661, -0.2582, 0, 0.2582, 0.9661, 0, 0.2665, 4.45)
+shape = SubResource("Shape_box_van_ramp")
+
+[node name="Lamps" type="Node3D" parent="Van" unique_id=517097645]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.16279936, -0.009373069, -0.02208519)
+
+[node name="Front" type="OmniLight3D" parent="Van/Lamps" unique_id=1215952498]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4, 0.4)
+light_color = Color(0.807843, 0.745098, 0.670588, 1)
+light_specular = 0.0
+omni_range = 15.0
+omni_attenuation = 0.420448
+
+[node name="Spawns" type="Node3D" parent="." unique_id=302877564]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -6)
+script = ExtResource("18_spawns")
+
+[node name="FrontDoor1" type="Marker3D" parent="Spawns" unique_id=1523863796]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.1, 0.1, 0)
+
+[node name="FrontDoor2" type="Marker3D" parent="Spawns" unique_id=782601038]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1, 0.1, 0)
+
+[node name="FrontDoor3" type="Marker3D" parent="Spawns" unique_id=102439215]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.55, 0.1, -1.5)
+
+[node name="FrontDoor4" type="Marker3D" parent="Spawns" unique_id=5879414]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.55, 0.1, -1.5)
+
+[node name="Player" parent="." unique_id=1873914301 instance=ExtResource("2_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0.1, -6)
+
+[node name="Players" type="Node3D" parent="." unique_id=2142481488 groups=["player_avatars_root"]]
+script = ExtResource("14_players")
+
+[node name="Traps" type="Node3D" parent="." unique_id=663174070]
+
+[node name="TrapSpawner" type="MultiplayerSpawner" parent="Traps" unique_id=1976074048]
+_spawnable_scenes = PackedStringArray("res://scenes/traps/mousetrap.tscn", "res://scenes/traps/glue_trap.tscn", "res://scenes/traps/explosive_cheese.tscn", "res://scenes/traps/bait_pile.tscn")
+spawn_path = NodePath("..")
+
+[node name="Rats" type="Node3D" parent="." unique_id=1572284546]
+
+[node name="RatSpawner" type="MultiplayerSpawner" parent="Rats" unique_id=2083403563]
+_spawnable_scenes = PackedStringArray("uid://dmlgy5o48488h")
+spawn_path = NodePath("..")
+
+[node name="RatHoles" type="Node3D" parent="." unique_id=1826213033]
+
+[node name="HoleSala" parent="RatHoles" unique_id=1392492980 instance=ExtResource("17_hole")]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 10.925, 0, -2.0)
+hole_name = "Living Room Baseboard Hole"
+linked_hole = NodePath("../HoleBanheiro")
+
+[node name="HoleCozinha" parent="RatHoles" unique_id=1532764062 instance=ExtResource("17_hole")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7.0, 0, 11.925)
+hole_name = "Kitchen Sink Pipe Hole"
+linked_hole = NodePath("../HoleQuarto1")
+
+[node name="HoleBanheiro" parent="RatHoles" unique_id=2040837290 instance=ExtResource("17_hole")]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -10.925, 0, 9.5)
+hole_name = "Bathroom Vent"
+
+[node name="HoleQuarto1" parent="RatHoles" unique_id=1392492981 instance=ExtResource("17_hole")]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -10.925, 0, -2.5)
+hole_name = "Bedroom Skirting Hole"
+linked_hole = NodePath("../HoleCozinha")
+
+[node name="HoleQuarto2" parent="RatHoles" unique_id=1392492982 instance=ExtResource("17_hole")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.0, 0, 11.925)
+hole_name = "Back Bedroom Floor Hole"
+linked_hole = NodePath("../HoleCorredor")
+
+[node name="HoleCorredor" parent="RatHoles" unique_id=1392492983 instance=ExtResource("17_hole")]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -0.925, 0, 8.0)
+hole_name = "Kitchen Partition Hole"
+
+[node name="Clues" type="Node3D" parent="." unique_id=800287402]
+
+[node name="Streaks" type="Node3D" parent="Clues" unique_id=229621562 groups=["streaks_root"]]
+
+[node name="StreakSpawner" type="MultiplayerSpawner" parent="Clues/Streaks" unique_id=1256026873]
+_spawnable_scenes = PackedStringArray("res://scenes/clues/rat_streak.tscn")
+spawn_path = NodePath("..")
+
+[node name="Garbage" type="Node3D" parent="Clues" unique_id=1480557833]
+
+[node name="GarbageSala" parent="Clues/Garbage" unique_id=129999125 instance=ExtResource("31_garbage")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8.2, 0, -2.6)
+
+[node name="GarbageCozinha" parent="Clues/Garbage" unique_id=1239765459 instance=ExtResource("31_garbage")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.4, 0, 10.2)
+
+[node name="GarbageBanheiro" parent="Clues/Garbage" unique_id=1239765460 instance=ExtResource("31_garbage")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.4, 0, 5.4)
+
+[node name="GarbageQuarto2" parent="Clues/Garbage" unique_id=1239765461 instance=ExtResource("31_garbage")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.6, 0, 10.4)
+
+[node name="GarbageCorredor" parent="Clues/Garbage" unique_id=1239765462 instance=ExtResource("31_garbage")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.0, 0, 2.2)
+
+[node name="Droppings" type="Node3D" parent="Clues" unique_id=840647680]
+script = ExtResource("32_droppings")
+
+[node name="Geometry" type="Node3D" parent="." unique_id=562269019]
+
+[node name="Audio" type="Node" parent="." unique_id=453679521]
+
+[node name="Screech" type="AudioStreamPlayer" parent="Audio" unique_id=2102943961]
+volume_db = -6.0
+
+[node name="HUD" parent="." unique_id=1645186933 instance=ExtResource("29_hud_game")]
+
+[node name="HUD_Phase" parent="." unique_id=764930680 instance=ExtResource("20_hud_phase")]
+
+[node name="ResultScreen" parent="." unique_id=597191254 instance=ExtResource("22_result")]
+
+[node name="Scoreboard" parent="." unique_id=531018294 instance=ExtResource("98_scoreboard")]
+
+[node name="PauseMenu" parent="." unique_id=1466034551 instance=ExtResource("99_pause")]
+
+[node name="TerminalUI" type="CanvasLayer" parent="." unique_id=746124135]
+layer = 3
+
+[node name="TerminalScreen" parent="TerminalUI" unique_id=1002222317 instance=ExtResource("26_store")]
+layout_mode = 3

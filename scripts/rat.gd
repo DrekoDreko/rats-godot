@@ -1973,6 +1973,12 @@ func _pick_bolt_hole() -> RatHole:
 ## towards a hideout it picked in another room.
 func _dive_into(hole: RatHole) -> void:
 	_bolt_hole = null
+	# A finished navigation path may stop below a mouth on another floor.
+	# The rat must physically reach the entrance before taking its wall route.
+	if global_position.distance_to(hole.mouth()) > MESH_TOLERANCE:
+		_clear_target()
+		_search_time = 0.0
+		return
 	_bolt_time = BOLT_COOLDOWN
 	_clear_target()
 	_search_time = 0.0
@@ -1983,6 +1989,7 @@ func _dive_into(hole: RatHole) -> void:
 	if out == INVALID_POINT:
 		out = far_end.mouth()
 	global_position = out
+	_clear_target()
 	velocity = Vector3.ZERO
 	# Where it stands is the one thing the watchers have no other way of
 	# learning, and a teleport is further than the easing will ever cover
@@ -2393,6 +2400,8 @@ func _path_to(point: Vector3) -> PackedVector3Array:
 	var map := agent.get_navigation_map()
 	var path := NavigationServer3D.map_get_path(map, global_position, point, true)
 	if path.size() < 2 or _flat_distance(path[-1], point) > MESH_TOLERANCE:
+		return PackedVector3Array()
+	if absf(path[-1].y - point.y) > MAX_HEIGHT_DROP:
 		return PackedVector3Array()
 	return path
 

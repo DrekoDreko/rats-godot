@@ -47,8 +47,8 @@ func _load_world() -> void:
 func _check_doors() -> void:
 	var doors := _scripted("hinged_door.gd")
 	print("\n--- DOORS (%d) ---" % doors.size())
-	if doors.size() != 6:
-		_fail("expected 6 doors, found %d" % doors.size())
+	if doors.size() != 8:
+		_fail("expected 8 doors, found %d" % doors.size())
 	for d in doors:
 		var n3 := d as Node3D
 		var body := d.get_node_or_null("Collision") as AnimatableBody3D
@@ -65,8 +65,8 @@ func _check_doors() -> void:
 
 	var prompts := _prompts()
 	print("\n--- PROMPTS (%d) ---" % prompts.size())
-	if prompts.size() != 6:
-		_fail("expected 6 door prompts, found %d" % prompts.size())
+	if prompts.size() != 8:
+		_fail("expected 8 door prompts, found %d" % prompts.size())
 	for p in prompts:
 		var n3 := p as Node3D
 		print("  %-28s at %s  layer=%d  prompt=%s" % [
@@ -113,17 +113,15 @@ func _check_clues() -> void:
 	var garbage := get_nodes_in_group("garbage")
 	print("\n--- CLUES ---")
 	print("  burrows: %d, rubbish: %d" % [holes.size(), garbage.size()])
-	if holes.size() != 6:
-		_fail("expected 6 burrows, found %d" % holes.size())
-	if garbage.size() != 5:
-		_fail("expected 5 rubbish heaps, found %d" % garbage.size())
-	# Every burrow's mouth has to be inside the house, or its rats walk out of a
-	# wall. The house is 22 x 16 metres with its facade on the van's side, so it
-	# runs from -11 to 11 across and from -4 (front door) to 12 (back wall).
+	if holes.size() != 8:
+		_fail("expected 8 burrows, found %d" % holes.size())
+	if garbage.size() != 2:
+		_fail("expected 2 rubbish heaps, found %d" % garbage.size())
+	# Every burrow's mouth has to be inside the house, or its rats walk out of a wall.
 	for h in holes:
 		var mouth: Vector3 = h.call("mouth")
 		print("    %-30s mouth=%s" % [h.get("hole_name"), mouth.snapped(Vector3.ONE * 0.1)])
-		if absf(mouth.x) > 11.0 or mouth.z < -4.0 or mouth.z > 12.0:
+		if absf(mouth.x) > 6.25 or absf(mouth.z) > 5.0:
 			_fail("burrow '%s' opens outside the house at %s" % [h.get("hole_name"), mouth])
 
 

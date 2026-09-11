@@ -30,14 +30,10 @@ extends Node3D
 const LEAF_PREFIX := "Door_"
 
 ## The leaf's collision box, in metres. Taken to match the modelled leaf
-## (0.92 x 2.03 x 0.05) rather than measured off the mesh: a box is what a door
+## (1.0 x 2.10 x 0.05) rather than measured off the mesh: a box is what a door
 ## should collide as, and an exact hull of a flat slab is a worse shape for a man
 ## to slide along than the slab's own dimensions.
-const LEAF_SIZE := Vector3(0.92, 2.03, 0.06)
-
-## How far out from the hinge the leaf's centre sits — half its width, which is
-## where a box covering it has to go.
-const LEAF_CENTRE_X := 0.46
+@export var leaf_size := Vector3(1.0, 2.10, 0.06)
 
 ## The reach of the prompt in the doorway: a box standing in the frame, wide and
 ## deep enough to be found from either side without being findable from the next
@@ -143,9 +139,9 @@ func _add_body(pivot: Node3D) -> void:
 
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
-	box.size = LEAF_SIZE
+	box.size = leaf_size
 	shape.shape = box
-	shape.position = Vector3(LEAF_CENTRE_X, LEAF_SIZE.y * 0.5, 0.0)
+	shape.position = Vector3(leaf_size.x * 0.5, leaf_size.y * 0.5, 0.0)
 	body.add_child(shape)
 
 
@@ -165,7 +161,7 @@ func _add_prompt(pivot: Node3D) -> void:
 	# middle of the shut leaf — but parented alongside the pivot rather than
 	# under it, so that the swing leaves it where the doorway is.
 	prompt.transform = pivot.transform.translated_local(
-		Vector3(LEAF_CENTRE_X, REACH_SIZE.y * 0.5, 0.0))
+		Vector3(leaf_size.x * 0.5, REACH_SIZE.y * 0.5, 0.0))
 	add_child(prompt)
 
 	var shape := CollisionShape3D.new()

@@ -184,6 +184,17 @@ func _owned_by_another_applier(node: Node) -> bool:
 
 func _apply_to(mesh_instance: MeshInstance3D) -> void:
 	for surface in mesh_instance.get_surface_override_material_count():
+		# Alpha-blended glass needs the native transparent pass. The opaque
+		# retro shader uses alpha scissoring and would discard the whole pane.
+		var source := mesh_instance.get_active_material(surface) as BaseMaterial3D
+		if source != null and source.transparency in [
+			BaseMaterial3D.TRANSPARENCY_ALPHA, BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS
+		]:
+			var glass := source.duplicate() as BaseMaterial3D
+			glass.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			mesh_instance.set_surface_override_material(surface, glass)
+			_handed_out.append({"mesh": mesh_instance, "material": glass})
+			continue
 		var texture := _albedo_of(mesh_instance, surface)
 		var color := _albedo_color_of(mesh_instance, surface)
 
