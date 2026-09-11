@@ -119,14 +119,17 @@ signal seated_changed(seated: bool)
 ## Steps per second at a full run. Slower gaits use the same rhythm scaled down,
 ## so the sway keeps time with the legs instead of running away from them.
 @export var bob_frequency := 1.9
-## How far the camera swings sideways, in metres, at a full run. It runs at half
-## the rhythm of the vertical bob because a stride is two steps: the body throws
-## itself over the foot that is down, so the side-to-side comes back once per
-## pair while the height dips once per step.
+## How far the camera swings sideways, in metres, at a full run *sideways*. It
+## runs at half the rhythm of the vertical bob because a stride is two steps: the
+## body throws itself over the foot that is down, so the side-to-side comes back
+## once per pair while the height dips once per step. Walking straight ahead it
+## is nothing: only the part of the movement that is a strafe swings the view.
 @export var bob_sway := 0.055
-## How far the view leans into that swing, in degrees, at a full run. The lean is
-## what turns a camera sliding sideways into a head being carried by a body —
-## the same trick the shake plays with `shake_roll`, slow instead of sharp.
+## How far the view leans into that swing, in degrees, at a full run sideways.
+## The lean is what turns a camera sliding sideways into a head being carried by
+## a body — the same trick the shake plays with `shake_roll`, slow instead of
+## sharp. Like the swing it belongs to the strafe alone, so a straight walk
+## forward never tilts the horizon.
 @export var bob_roll := 1.6
 
 ## How far the view is thrown by a shake of strength 1, in metres to the side
@@ -286,6 +289,13 @@ var _step_phase := 0.0
 ## run. It travels rather than switching so that stopping eases the camera back
 ## to its resting height instead of dropping it there.
 var _bob_weight := 0.0
+## How much of the *sideways* sway is being applied — the swing and the lean,
+## which are a strafe's and not a walk's. Drawn from the part of his velocity
+## that points along his own right, so walking straight ahead leaves it at zero
+## and the horizon stays level. It is kept signed and travels like `_bob_weight`
+## so that cutting from a left strafe to a right one swings the view through the
+## middle rather than snapping across it.
+var _strafe_weight := 0.0
 ## Initialized true so spawning on the floor is not mistaken for a landing.
 var _was_on_floor := true
 ## The camera's height in the head, read once off the scene: the sway is drawn
@@ -853,6 +863,17 @@ func _update_bob(delta: float) -> void:
 	var moving := is_on_floor() and speed >= IDLE_SPEED
 	var gait := clampf(speed / run_speed, 0.0, 1.0) if moving else 0.0
 	_bob_weight = move_toward(_bob_weight, gait, BOB_SETTLE * delta)
+	# Only the strafe swings him. A man walking straight at something keeps the
+	# horizon where it was; it is stepping sideways that throws the shoulders and
+	# takes the head with them, so the swing and the lean are drawn from the part
+	# of his velocity that runs along his own right and from nothing else.
+	var strafe := 0.0
+	if moving:
+		var right := global_transform.basis.x
+		strafe = clampf(
+			(velocity.x * right.x + velocity.z * right.z) / run_speed, -1.0, 1.0
+		)
+	_strafe_weight = move_toward(_strafe_weight, strafe, BOB_SETTLE * delta)
 	if moving:
 		var phase_delta := TAU * bob_frequency * gait * delta
 		_bob_phase = fposmod(_bob_phase + phase_delta, TAU)
@@ -872,18 +893,18 @@ func _update_bob(delta: float) -> void:
 	# would visibly beat against each other.
 	if view_model != null:
 		view_model.bob(_bob_phase, _bob_weight)
-	if is_zero_approx(_bob_weight):
+	if is_zero_approx(_bob_weight) and is_zero_approx(_strafe_weight):
 		camera.position.y = _camera_rest_y
 		camera.position.x = 0.0
 		camera.rotation.z = 0.0
 		return
 	camera.position.y = _camera_rest_y + sin(_bob_phase) * bob_amount * _bob_weight
 	var stride := sin(_stride_phase)
-	camera.position.x = stride * bob_sway * _bob_weight
-	# Leaning the way he is thrown, not against it. `_bob_weight` carries the
-	# lean back down to nothing as he stops, so a man standing still is never
-	# left holding a tilt.
-	camera.rotation.z = -stride * deg_to_rad(bob_roll) * _bob_weight
+	camera.position.x = stride * bob_sway * _strafe_weight
+	# Leaning the way he is thrown, not against it. `_strafe_weight` carries the
+	# lean back down to nothing as he stops strafing, so a man standing still —
+	# or walking straight ahead — is never left holding a tilt.
+	camera.rotation.z = -stride * deg_to_rad(bob_roll) * _strafe_weight
 
 
 # --- The shake --------------------------------------------------------------
@@ -1118,6 +1139,7 @@ func respawn() -> void:
 	_bob_phase = 0.0
 	_stride_phase = 0.0
 	_bob_weight = 0.0
+	_strafe_weight = 0.0
 	camera.position.y = _camera_rest_y
 	# And with nothing left of whatever knocked him down still knocking the view
 	# about. He fell a long way to get here, and the landing that killed him is

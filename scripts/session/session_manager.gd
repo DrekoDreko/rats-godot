@@ -60,7 +60,13 @@ const COLORS: Array[Color] = [
 
 ## What a player is worth on the first day, before anything is earned. It is
 ## here rather than in `Wallet` because it is per player and the wallet is not.
-const STARTING_MONEY := 100
+##
+## In a debug build it is a purse nobody can spend to the bottom, so that any
+## house on the vote board can be signed for without a shift being worked first
+## (`scripts/ui/contract_vote_screen.gd`). Exported builds get the real figure.
+## It is a `static var` and not a `const` only because the answer is not known
+## until the build is running; nothing writes it.
+static var STARTING_MONEY := 99999 if OS.is_debug_build() else 100
 
 ## The crew, by Steam ID. Each entry is a dictionary of `name`, `color`,
 ## `ready`, `catches`, `inventory` and `is_host` — see `_new_player`.
