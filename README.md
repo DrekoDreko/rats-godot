@@ -1,6 +1,14 @@
 # RATS
 
-3D game made in Godot 4.7 (Forward Plus, Jolt Physics).
+A co-op first-person pest-control game for one to four players, made in Godot
+4.7 (GL Compatibility, Jolt Physics) with a PS1-era look: 480×270 upscaled
+nearest-neighbour, vertex snapping, unshaded surfaces and black fog.
+
+A crew of exterminators rides a van to an infested house, gets one minute with
+the lights on to read the place, and then the rats are let out. The shift pays
+by the rat, and the crew books its own clock before walking in: a long, safe
+hunt pays little per animal; a ninety-second one pays five times as much and
+leaves whatever is still loose in the walls.
 
 ## Running the project
 
@@ -8,844 +16,553 @@
 2. Open Godot, click **Import** and pick this repository's `project.godot`.
 3. Run with `F5`.
 
-`F5` opens on the **menu** (`scenes/menu.tscn`), not on the map. The crew stands
-in front of the camera as hazmat suits, with each man's Steam name and picture
-over his head; the colour, the contract and who is ready are all controls on the
-screen. With no Steam client running it says so and `PLAY` starts a shift on your
-own, which is the normal development run. Either way `PLAY` carries the shift
-onto the road — `van_travel.tscn`, the moving van — where the crew shops and
-reads the floor plan. See [The lobby](#the-lobby), [The shift](#the-shift) and
-[The van](#the-van).
+Steam is optional. The GodotSteam GDExtension lives in `addons/godotsteam/`
+and `steam_appid.txt` borrows Valve's Spacewar (480) until the game has an app
+ID of its own. With the Steam client running you get your persona, your
+picture, invites and the lobby browser; without it the menu says so and `PLAY`
+starts a solo shift, which is the normal development run.
 
-To open the old hunting map on its own, without the shift around it, pass it as
-an argument: `godot res://scenes/world.tscn`.
+`F5` opens on the **menu** (`scenes/menu.tscn`), where the crew stands in
+front of the camera in hazmat suits. `PLAY` puts everybody in the back of the
+van and on the road; the job is voted on during the drive. See
+[The shift](#the-shift).
+
+Two windows on one machine, with no Steam involved:
+
+```
+godot --host                # first window: opens the wire and waits
+godot --join                # second window: dials 127.0.0.1
+godot --join 192.168.1.7    # or a machine on the same network
+```
+
+To open a house on its own, without the shift around it:
+`godot res://scenes/world.tscn`.
+
+The main scene is `scenes/game_post_process_wrapper.tscn`, a shell that owns
+the low-resolution viewport and the fade between screens; every game scene is
+loaded inside it.
 
 ## Controls
 
 | Key | Action |
 | --- | --- |
 | `WASD` / arrows | Move (relative to where you are looking) |
-| `Shift` | Run |
-| `Ctrl` | Crouch (held) |
+| `Shift` | Sprint (spends stamina) |
+| `Ctrl` (held) | Crouch — slower, quieter, half height |
 | `Space` | Jump |
 | Mouse | Look around |
-| Left button | Grab the rat |
-| Left button (with a rat in hand) | Strangle |
+| Left button | Use what is in hand: grab, squeeze, swing, set down |
 | Left button (stuck on glue) | Pull free, timed on the green |
-| `1` `2` `3` | Switch weapon |
+| `1` `2` `3` / mouse wheel | Switch belt slot |
 | `Q` | Back to your own hands |
-| `E` | Use what you are looking at (the computer in the van) |
-| `Esc` | Release/recapture the mouse — and close the shop |
-
-With your hands full the same click that grabbed starts strangling, and the
-player walks slowly: with a rat struggling in your hands there is no running and
-no jumping.
-
-`Ctrl` is held rather than toggled, and while it is held the player is about half
-his height and slower than he walks — `Shift` does nothing down there, and
-neither does `Space`. Letting go of `Ctrl` is a request and not an order: under
-something too low to stand up in he stays down until he walks out from under it,
-and then he gets up on his own.
-
-Down there he is also quieter, and that is what the speed is paying for. A rat
-sees and hears a kneeling man from closer in than a walking one — how much
-closer is the breed's own number, so a sprayer is harder to creep up on than a
-common rat — and an animal with its head in a heap of rubbish or in a tub of
-bait is taking less notice of anything at all. The two multiply, which is why
-the food is where the creeping is worth most: it is the difference between
-watching a rat bolt at six metres and getting a hand to it.
-
-None of it makes you invisible. The distances shrink; they never go to nothing,
-and a rat that has already bolted is not crept up on over its dinner.
-
-## The rats
-
-Ten rats live loose about the map. Each one has four behaviours:
-
-- **Wandering** — walks slowly to any point nearby and sometimes stops to sniff.
-- **Fleeing** — on hearing the player closer than 6 m, or seeing him closer than
-  16 m (further still if he is running, closer in if he is crouched), it bolts. The burst is faster than the
-  player's run, but then it tires and settles into something a little slower than
-  that — you can catch up.
-- **Hiding** — while fleeing, it looks at the obstacles around it and runs for the
-  blind spot behind one of them, out of the player's line of sight. Once there it
-  crouches and keeps still: it only bolts again if it is seen or if the player
-  comes closer than 3 m.
-- **Captured** — grabbed, it is torn off the ground and ends up in the player's hand.
-- **Dead** — strangled in the hand, or dropped on the ground already lifeless.
-
-The hunt, then, is about turning the corner: while the rat believes it is hidden
-it does not move, and that is when you can take it.
-
-## Killing a rat
-
-The game will have several weapons, and the first of them are your own hands.
-Every weapon lives under the player's head (`scripts/weapons/`), inherits from
-`Weapon` and looks for its target the same way: the closest rat within 2.6 m and
-within a 50° cone around the sights, as long as there is no wall in the way. What
-changes from one to the next is what it does with the rat it found.
-
-Hands do not kill: they **grab**. The rat hunches on the ground, is torn off in
-an arc, turns a somersault in the air and stops in the middle of the screen,
-held, struggling and trying to bite. From then on the same click is what kills:
-each one squeezes its neck a little harder, and the grip drains on its own while
-the player does not click again. Hammering without stopping takes twelve
-squeezes. Hammering slowly takes more — and if the bar reaches zero and stays
-there, the rat gets loose from the hand, leaps away and bolts with a few seconds'
-head start in which it cannot be re-grabbed.
-
-Hands are the only way to kill a rat for now. A weapon that settles it in a
-single blow just needs to inherit from `Weapon` and override `_use()`.
-
-### The belt
-
-The player carries three slots, swapped with `1`, `2` and `3`. At the foot of the
-screen they are three squares, in the shape everybody already knows from
-Minecraft: a dark cell each, and a bright frame around whichever one is in hand.
-There is no number written under them — the keys are `1`, `2` and `3` from left
-to right, and that is the whole of it.
-
-Every square is **bought**. The three of them are blank when the van is handed
-over — no name, no icon and no number, not even a zero — and a square only says
-what is in it once the player has bought something to put there. Until then it
-is a loop on the belt with nothing hanging from it: swapping to it is a player
-with nothing in his hands, who walks and looks around the same way, and whose
-click finds nothing to do.
-
-**No square belongs to any one thing.** The belt is three loops and nothing
-else: what hangs from each is read off the bag, in the order the crew bought it.
-The first purchase of the shift takes the first loop whatever it was — a tray of
-glue bought before any traps hangs on `1` — the second takes the second, and a
-fourth thing bought with every loop full stays in the van until one of them
-comes free. Spending the last unit of something is what frees its loop, and a
-bent trap picked back off the floor takes whichever loop is free by then, not
-necessarily the one it had.
-
-**The hands are on no square.** They were never bought, they cannot run out, and
-`Q` is what puts them back, whatever the belt was showing. That is what the
-shift starts on, and while they are out no square is framed — what the player is
-holding is not on the belt.
-
-A weapon that comes out of a box counts what is left of it in the corner of its
-square, and spending the last one empties the square again — the same blank
-square it was before the first purchase. The belt follows the count while the
-player is standing there: buying with that slot already picked puts the weapon
-in his hand on the spot, and using the last one takes it away the same way,
-without anybody swapping anything.
-
-A weapon shows its `icon` in the square. While it has none, the belt writes its
-name there instead, which is what the traps do today.
-
-**With a rat kicking in your hand nothing gets swapped**, `Q` included — the
-hands are the ones that are full. The same `is_busy()` that already takes away
-the running and the jumping locks the belt too, and the hotbar leaves the screen
-along with the crosshair while the strangling prompt is open.
-
-The belt is `scripts/weapons/inventory.gd`, and it does not own the weapons:
-every one of them goes on hanging off the player's head, where it can reach the
-camera and the capture point. What the belt takes care of is the *swap* — putting
-the last weapon away, with the swing halfway through and the shake it left in the
-camera, before the next one comes out. Hanging a new weapon on it means adding
-the node under `Head` with the name its catalogue entry asks for
-(`StoreItem.weapon_node`); no code, and nothing to point at it — the belt finds
-it when the thing is bought. How many loops there are is `slot_capacity` on the
-same node, and the hands hang off `hands_path` instead of on a loop.
-
-### What the player has to lose
-
-Over the three squares there is a bar, spanning exactly the width of them: the
-hundred points of flesh the player starts the shift with, and no number written
-anywhere — how far it has drained is the whole of what he is told. Like every
-other piece of this HUD it only mirrors what the player already knows — the
-count lives in `player.gd` and `take_damage()` is the one door into it, so a
-wound, a bandage or a respawn cannot leave the screen showing a health nobody
-has.
-
-The bar says how the beating is going by its colour: green while he is whole,
-the strangling prompt's own amber past the halfway mark, and its red down at the
-last quarter, where it also starts to breathe. Every fresh wound whitens it for
-a quarter of a second — with no number beside it, that whitening is what makes a
-hit read as a hit, and not as a bar that quietly got shorter.
-
-With a rat in hand it leaves the screen along with the hotbar and the crosshair,
-and for the same reason: it sits over the belt, and the belt is where the
-strangling prompt opens.
-
-**Nothing on the map bites yet.** The rats only run, so for now the bar is there
-waiting: whatever comes to hurt the player knocks on `take_damage()`, and the
-HUD hears of it by signal (`health_changed`, `damaged`). Running out of flesh is
-what falling off the map already was — `died` goes out for whoever wants to put
-an end-of-shift screen in the way, and then the player wakes up back where the
-shift started, whole, with everything he earned still in the wallet.
-
-## The reward
-
-A dead rat is merchandise, and whoever buys it wants the whole animal. The price
-comes from two things: **what the species is worth** and **what death it died of**.
-
-```
-reward = species value × what was left of it after that death
-```
-
-Strangulation is the ceiling of the table: strangled, the rat arrives without a
-hole in its fur, and that is why the hands pay in full — no weapon will ever earn
-more than they do. Every weapon from here on damages the goods a little and takes
-it off the price, from poison (which only rots the meat) to crushing (which
-leaves barely a rat at all). The table of discounts is in
-`scripts/economy/death.gd`. `trap` is the mousetrap's, at three quarters; the
-rest are written and waiting for the weapons that will use them: poison,
-piercing, gunshot and crushing.
-
-**The money lands when that rat's hunt comes to an end**, not when it dies.
-Strangled, that means at the waist: between the last squeeze and the body being
-stowed away a second still passes, and in it the player has nothing. Killing and
-losing the body pays nothing. Killed from a distance, the hunt ends where it
-falls, and that is where the account is settled. A rat that gets loose and
-escapes, of course, pays nothing at all.
-
-The one that holds the money is the `Wallet`, the project's only autoload — the
-map starts over, what was earned on it does not. It announces by signal
-(`money_changed`, `catch_recorded`), and who listens is `hud_money.gd`: the
-total in the top-right corner, and under it a passing notice with what the last
-animal paid and the death it died of.
-
-### Where the money goes
-
-The money turns back into something in exactly one place: the **store**, the
-screen the crew shops at while the van is on the road. It is described in full
-under [The store on the road](#the-store-on-the-road) — what is on sale, who
-decides whether you can afford it, and why it is only open between the lobby and
-the house.
-
-The price leaves the buyer's own purse on `SessionManager` and the units land in
-the `Stock`, and both outlive the map for the same reason: a box bought on one
-shift is still a box on the next. Money and stock are kept apart on purpose —
-the wallet counts what was earned, and nothing else.
-
-
-### The two traps
-
-Both come out of a box, both are put down on the floor, and there the likeness
-ends — they are the two halves of one trade.
-
-The **mousetrap** goes down in one click, wherever the player is pointing at the
-floor, and from then on it works while he is somewhere else entirely. The first
-rat to step on it dies on the spot, and dies *mangled*: `Death.Type.TRAP`, three
-quarters of the animal. It is the lazy option, and it pays like one.
-
-The **rat glue** is laid the way tape is laid. The first click pins the near end
-of the strip to the floor; from then on the strip stretches from that spot to
-wherever the player is pointing, following him while he walks, up to the length
-one tray makes. The second click puts the run down and spends the tray; Esc or
-the right button throws it away unspent. Laying a strip does not make the player
-*busy* — walking is the whole gesture — but it does hold the belt, because a
-strip abandoned between its two clicks is neither on the floor nor back in the
-box.
-
-And the glue **kills nothing**. What walks onto it stops being able to leave
-(`pin()` in `scripts/rat.gd`) and stays there until somebody comes for it. Being
-stuck is deliberately not one of the rat's states: it is something that happens
-*to* a rat that goes on being whatever it was, which is what lets the hand still
-take it off the glue as an ordinary capture, and what lets `take_damage` reach it
-with no exception written for it at all. So the player finishes it however he
-likes — strangled by hand for the whole price of the animal, or, the day the van
-sells a broom, with that instead and at the broom's own price.
-
-A pinned rat is also *less work*: it has nothing to brace against, and `effort()`
-says so as a plain fraction. The hands multiply their squeezes by it and never
-learn what glue is — which is the seam every weapon after them comes in through.
-
-The player is not exempt. Walk onto a strip and the boot stays where it is: the
-body is pinned to the spot it was caught at, the strip loses ten seconds of its
-own life for the trouble, and the way out is a bar across the bottom of the
-screen. A pointer sweeps it, the click only counts inside the green, and three
-of those pull the boot free — each one moving the green somewhere else and
-speeding the next sweep up. Missing costs no progress; it costs the sweep, which
-is time stood still in a house with rats in it.
-
-The aim is judged on the machine holding the mouse and only the hits it lands
-cross the wire, so a guest's escape does not wait a round trip to feel like one.
-Everything else about the strip — how long it lives, how many it holds, who is
-stuck to it — stays the host's (`glue_trap.gd`).
-
-That is the trade: the mousetrap works alone and pays three quarters; the glue
-does half the job, asks the player to walk over and finish it, and pays the lot.
-
-Neither trap joins the `scenery` group, and that is load-bearing: the navigation
-mesh is baked from that group, so a trap that joined it would be baked into the
-floor as an obstacle and every rat in the map would route politely around every
-trap the player ever set.
-
-### How the player reaches for things
-
-The player carries a short ray out of his camera (`Head/Camera/Interact`, 2.2 m)
-that only sees the *interactable* layer, so aiming at something costs one ray and
-never trips over the scenery or over a rat. Whatever he can put his hands on is
-an `Area3D` with `scripts/interaction/interactable.gd`: it says what the prompt
-reads and announces `used` when `E` comes, and what that means is the thing's own
-business. With a rat kicking in his hands there is nothing to reach for, and the
-prompt leaves the screen the same way the crosshair does.
-
-The area is not the object's body — it is the reachable face of it, the screen
-and the keyboard and not the desk they sit on. What stops the player walking
-through the desk is a static body of its own, on the scenery layer, like
-everything else solid in the map.
-
-### The species
-
-Each breed of rat is a file in `resources/species/`: what it is called, what furs
-it is born with, what it is worth whole and how much bigger or smaller an animal
-can be than the rest of its litter. Today only the **common rat** exists — the
-four furs from the pack and ten to the head. A new rat, rarer and pricier, means
-duplicating the `.tres` and changing the numbers; no code.
-
-### Where they walk
-
-The rats walk on a navigation mesh baked when the map opens, from the static
-bodies in the `scenery` group (`scripts/navigation.gd`). It is what solves the
-problem of a rat stuck against a wall: instead of running in the direction of its
-hideout and bumping into whatever appears, each one follows a path that already
-comes routed around the crates.
-
-Picking the hideout means scoring a dozen candidates — the blind spots behind
-nearby obstacles, plus a fan of points behind it. Points go to whatever is far
-from the player, whatever vanishes from his line of sight and whatever has a way
-out to run afterwards; points are lost by whatever is too far away and, above
-all, by whatever can only be reached by grazing past the one doing the hunting. A
-candidate inside a crate or on top of a platform that cannot be climbed does not
-even enter the reckoning — the path to it does not exist.
-
-There is still one way for the rat to get stuck all the same (pushed off the
-mesh, squeezed into a corner): if it spends half a second wanting to walk without
-going anywhere, it takes a step sideways and looks for another path.
-
-### The model
-
-The rat is the model in `mobs/rats/`, with a 13-bone skeleton and the animations
-that came in the pack: `Rat|Idle`, `Rat|Idle_Break` (the pause in which it sniffs
-the air), `Rat|Run`, `Rat|Death` and `Rat|Attack`. The chosen animation follows
-the rat's speed, and the run cycle speeds up along with it — wandering it trots,
-fleeing it bolts, and held in the hand the same cycle becomes the kicking of its
-legs in the air. The bite is the one thing this fearful rat never does loose
-about the map: it only shows up once it is already being strangled and has
-nothing left to lose.
-
-Each rat rolls one of the four furs from the pack (`Rat.png` to `Rat_4.png`) when
-it is born, so the pack comes out mottled with grey, brown and white.
-
-The FBX was exported with the whole Blender scene — the author's light and camera
-came along with it, and every animation has tracks pointing at them. What cleans
-this up on import is `mobs/rats/clean_import.gd`, a post-import script that also
-discards the duplicate animations and marks the idle and the run as looping.
-
-`Rat.blend` is kept as the source file, but what the project imports is
-`Rat_Fbx.fbx`. That is why `filesystem/import/blender/enabled` is off in the
-project settings: without it Godot tries to open the `.blend` and demands a
-Blender installation just to run the game.
-
-## The lobby
-
-The game opens on a waiting room. **CREATE LOBBY** opens one on Steam and makes
-you its host; **REFRESH LIST** shows what is open and clicking a row fills in its
-ID; **JOIN** walks into whatever ID is in the box, pasted from a friend or picked
-off the list. Whoever is in the lobby shows up in the panel on the right, the
-host with a `*` against their name, and the list moves as people come and go.
-**PLAY** is the host's to press, and everybody goes into the map at once.
-
-Two things are up at the same time and it helps to keep them apart. The **Steam
-lobby** is the guest list — Valve holds it, it survives the map loading, and it
-is what the panel reads. The **`SteamMultiplayerPeer`** is the wire: Godot's own
-`SceneMultiplayer`, running over Steam's peer-to-peer, and what the player
-synchronisation will speak over. `scripts/steam/lobby_manager.gd` opens both at
-the same moment and closes both at the same moment, so nothing else in the game
-has to wonder which of the two is up.
-
-Who hosts is not decided in our code: it is whoever Steam says owns the lobby.
-The owner calls `host_with_lobby()` and comes out as peer 1 — the network
-authority — and everybody else calls `connect_to_lobby()` and dials them. There
-is no host migration, and on purpose: Steam hands a lobby to whoever is left when
-the owner walks out, but the connection does not follow, so the honest answer is
-to drop everyone back to this screen.
-
-Lobbies are **public**, which is what lets two accounts that have never met find
-each other in the list. The catch is the app ID: until RATS has one of its own
-the game borrows Valve's Spacewar (480), and a plain search on 480 comes back
-full of strangers testing their own games — ten of them, on the first try. So
-every lobby is stamped `game=rats` on creation and the browser filters on it. A
-lobby just created takes Steam a few seconds to reach the index, so an empty list
-right after **CREATE LOBBY** is Steam catching up, not a fault.
-
-Nothing Steam is asked here is answered on the spot. `create_lobby()` and
-`join_lobby()` returning true only means the request went out; the answer lands
-later on `lobby_entered` or, if it went wrong, on `lobby_failed` — one sentence,
-which the screen puts straight on its bottom line in red. A lobby that is full, a
-lobby that is gone, an ID that is not a lobby at all, a host that stops answering
-and Steam not being there in the first place all come out that way.
-
-### The others, in the map
-
-Press **PLAY** and everybody in the lobby lands in the same map — and everybody
-who is not you is walking around it as a red capsule with their Steam name
-floating over it. It is the very capsule you are wearing yourself, the one you
-never see because you are looking out of it, so the placeholder reads as *a
-player* rather than as a prop, and the yellow nub on its chest says which way he
-is facing and doubles as the arm he swings.
-
-What crosses the wire is three things, twenty times a second: where he is
-standing, which way he is facing and what he is doing. The facing is the yaw
-only — where his head is pointing is his own camera's business and nothing on
-your screen is drawn from it — and what he is doing is one of six states
-(*idle*, *walking*, *running*, *airborne*, *holding a rat*, *crouching*), which
-the character reads off his own body rather than off his keyboard: a player
-walking into a wall is standing still, whatever he is pressing, and that is what
-you should see.
-
-On top of that there is the click. Using whatever is in his hands — a grab, a
-trap going down — is not a state, it is a thing that happens and is over, so it
-goes across as an RPC (`PlayerAvatar.act`) rather than as a value that gets
-sampled: one click is one arm going out, on every screen at once, and a click
-that lands between two packets is never quietly dropped.
-
-**Nobody is smoothed by teleporting.** What arrives is a target and not a place:
-the capsule eases towards the last position that landed rather than jumping to
-it, at a rate that leaves it about a third of a metre behind a running player and
-lets it catch up the moment he stops. The one thing that is *not* eased is the
-long jump — anything further than four metres is a respawn or a hole in the wire,
-and sliding across the map to it would read as flying. A capsule is not drawn at
-all until the first packet says where its player is, because an undrawn one
-stands at the origin, which is a lie the moment somebody looks at it.
-
-The animation is the one part that is honestly a placeholder: a capsule has
-nothing to animate, so the body bobs as he walks, harder and faster as he runs,
-sits low while he has a rat in his hands, lower still while he is down on his
-knees, and rides high while he is off the ground. When the real character model
-arrives, `_animate` is the one method to throw away — the state itself is already
-crossing.
-
-Everybody presses **PLAY** on the same starting point, which used to be fine
-because nobody moved and the capsules were parked in a ring around it. Now that
-the positions are real, each machine steps *its own* character onto a spot in
-that same ring on the way in — the peers sorted, ours found among them, the spot
-that falls to it taken — and the other screens see him walk out of the van from
-there like they see everything else about him. It is also where a respawn brings
-him back to, which is why it goes through `player.set_spawn()` and not through a
-bare move.
-
-#### Who owns what
-
-Every player owns his own body and nobody else's. The host is peer 1 and holds
-the lobby open, and that is all he holds: he has no more say over where you are
-standing than you have over where he is. That is what
-`set_multiplayer_authority(peer_id)` on each avatar says, and the
-`MultiplayerSynchronizer` under it obeys it in both directions — the machine that
-owns an avatar writes to it, everybody else reads.
-
-The consequence worth knowing is that there is one avatar per player *including
-you*. Godot replicates a node onto the node at the same path on the other
-machine, so the only way your position reaches anybody is for there to be a node
-on your machine that stands for you — the same node they have for you. So one
-goes up for every peer, named `Player<peer id>` on every machine, and yours is
-simply never drawn: you are already in the map as the character, and you are
-inside that capsule looking out of it. It reads `player.gd` every physics frame
-and never touches a packet by hand.
-
-Who puts them up is `scripts/steam/player_avatars.gd`, a node in `world.tscn`,
-and it is deliberately not in `LobbyManager`: the manager is an autoload that
-outlives the map and is up on the waiting-room screen too, where there is no
-world to put a capsule in. So the map is what listens, and the capsules die with
-it.
-
-What it listens to is the *wire* and not the guest list — `multiplayer.get_peers()`
-rather than `members_changed`. They are nearly the same list, and the wire is the
-truthful one: a player who is in the Steam lobby but not on the wire is a body
-nothing could ever move.
-
-Names come from the peers themselves. Every peer introduces itself to every other
-one the moment they are connected (`LobbyManager._introduce`), which happens on
-the waiting-room screen, long before the map opens; a name that lands after the
-capsule is already up lands *on* it, through `peer_identified`, without the
-capsule being taken down and put back up. It is asked of nobody — not of Steam,
-not of the transport — so a name can never come back as `[unknown]`, and nothing
-above the wire has to know what the wire is made of.
-
-Solo is untouched by all of it. With no lobby there is no peer, and with no peer
-this node puts nothing up and does nothing at all.
-
-### Testing it with two clients
-
-One machine cannot do it: Steam allows one running client per account. Two
-accounts on two machines, both with the game open:
-
-1. Both run the game and land on the lobby screen; the bottom line names the
-   account each one is signed in as.
-2. One presses **CREATE LOBBY**, then **COPY LOBBY ID** and sends the number
-   over — or **INVITE FRIENDS**, if they are on each other's lists.
-3. The other pastes it and presses **JOIN**, or waits a few seconds and presses
-   **REFRESH LIST** to find the row.
-4. Both panels should read `PLAYERS 2/4` with the same two names, the host's
-   marked. Closing one game takes that name off the other's list.
-5. The host presses **PLAY**. Both land in the back of the van, on **different
-   spawn spots**, and each sees one capsule with the other's name on it.
-6. Walk. The capsule on the other screen walks with you — a little behind, never
-   in jumps — turns when you turn, bobs when you run and drops low while you have
-   a rat in your hands. Click, and its arm goes out on both screens at once.
-   Jump, and it leaves the ground.
-7. Both slap the ready board. The lamp goes green on both screens, and the phase
-   only moves on once the second one has pressed it.
-8. Closing one game takes that capsule off the other's screen, and stops the
-   others waiting on the name that has gone.
-
-### Two windows on one machine
-
-Steam serves one account per computer, so two copies of the game opened side by
-side are the same person as far as Valve is concerned and cannot be two players
-in one lobby. Testing the wire that way needs two machines and two accounts,
-which is a slow loop to be held to for a change to how a body walks.
-
-So there is a second road in, for development only. `--host` and `--join` skip
-Steam entirely and open the same `SceneMultiplayer` over plain ENet on the
-loopback:
-
-```
-godot --host          # first window: opens the wire and waits
-godot --join          # second window: dials 127.0.0.1
-godot --join 192.168.1.7   # or a machine on the same network
-```
-
-Everything downstream of the wire behaves exactly as it does over Steam —
-`player_avatars.gd` reads `multiplayer.get_peers()`, the synchronisers replicate
-the same properties, and the phase, colour, ready and shop managers all identify
-people through `LobbyManager.our_steam_id()`, which answers on either road.
-Players are called `Player 1`, `Player 2` and so on, and are filed under
-stand-in account numbers (101, 102, …) that no real SteamID can collide with.
-
-What is genuinely missing is what only Valve can provide: real personas and
-avatars, the invite overlay, and the lobby browser. Those still need the
-acceptance run on two machines. Everything else — movement, animation, colours,
-the ready boards, contracts, the shop, the whole phase flow — can be watched on
-one desk.
+| `E` | Use what you are looking at, or open the terminal in the van |
+| `E` (held) | Slow jobs — cleaning a sprung trap |
+| Right button / `Esc` | Throw away a half-laid glue strip |
+| `F` | Ready — leave the van, pull off the road, let the rats out |
+| `Tab` (held) | Scoreboard: crew, tallies, distance |
+| `Esc` | Pause menu (the game keeps running underneath) |
+
+With a rat struggling in your hands there is no running, no jumping and no
+swapping weapons — `Q` included. Crouching is held, not toggled, and under
+something too low to stand in the player stays down until he walks out.
 
 ## The shift
 
-A shift is not one scene, it is five phases walked in order:
+A shift is five phases walked in order, and the host is the clock — only he
+runs a timer, only he decides a phase is over, and everybody else is told:
 
-`LOBBY` → `TRAVEL` (120 s) → `SURVEY` (60 s) → `HUNT` → `RESULT`
+```
+LOBBY → TRAVEL (120 s) → SURVEY (60 s) → HUNT (booked) → RESULT
+```
 
-Three of them happen in the van and the house rather than in five different
-maps: the van parked, the van moving, and then the house — where the survey and
-the hunt are **the same scene**, only with the rats let out. Reloading between
-those two would throw away every trap the crew spent a minute placing and put
-everybody back on the doorstep, so a phase change into the scene already open
-changes the phase and nothing else.
-
-Two autoloads carry it. `SessionManager` **holds** — the crew by Steam ID, each
-with a colour, a purse, a bag and a ready flag, plus the contract, the phase and
-the seed the house is built from. It is a plain store that announces its own
-changes and never touches the wire. `PhaseManager` **drives** — the clock, the
-scene each phase is played in, and the one decision that it is time to go.
-
-**The host is the clock.** Only he runs a timer, only he decides a phase is over
-and only he sends the change; everybody else is told and follows. Four machines
-each counting their own sixty seconds would end that minute at four different
-moments. He sends the time left twice a second and the clients count between the
-packets, so the number on screen moves every frame and never drifts more than
-half a second from his.
-
-Saying **ready** is the other way a phase ends, and it is one system used three
-times — in the van, on the road and in the hall of the house. Slapping the board
-does not set your own flag: it *asks* the host, he decides, and what comes back
-is what turns the lamp green on every screen at once. A player who drops out
-stops being somebody the others are waiting on, and no flag survives into the
-next phase.
-
-## The van
-
-`PLAY` puts the crew in the back of a parked pest-control truck, and that is the
-lobby phase: 3.2 m across, 7 m deep and 2.4 m of standing room, with the roller
-door up and a ramp down to the road. It is a second, bigger vehicle than the
-`models/van.glb` parked in the old map — that one is a panel van whose cargo bay
-is 2.38 m across, which four players and a wall of stations do not fit in.
-
-The truck is generated rather than sculpted: `models/box_van.py` is a Blender
-script that writes `models/box_van.glb`, so the shape is the numbers at the top
-of that file and moving a wall means changing one of them and running it again.
-It is flat-shaded boxes throughout, ~470 polygons, and shares its palette and
-material names with the older van so the two read as the same fleet.
-
-Along the walls are three stations, each a physical fitting the player looks at
-and presses `E` on:
-
-| Station | Wall | What it does |
+| Phase | Scene | What happens |
 | --- | --- | --- |
-| Colour panel | left, eight swatches | picks the colour of your overalls — working |
-| Ready board | left, by the door | says you are ready to leave — working |
-| Radio | right, by the door | invites a friend into the van — working |
-| Contract clipboard | right | picks the house — **card 08** |
+| `LOBBY` | `menu.tscn` | The crew assembles. No clock. |
+| `TRAVEL` | `van_travel.tscn` | Seated in the moving van: vote on the house, book the hunt, shop, plan. |
+| `SURVEY` | the house | Lights on, no rats. One minute to read the clues and set traps. |
+| `HUNT` | the same house | Rats loose. Ends when the house is clear or the clock runs out. |
+| `RESULT` | `van_travel.tscn` | The pay slip. The host's confirmation sends the van back onto the road for the next job. |
 
-The one that is not written yet is `PendingStation`: it is there at full
-size and in its real place, it offers a prompt, and pressing it says so out
-loud instead of doing nothing. That is deliberate — the arrangement of the van
-is exactly the thing that cannot be judged from bare walls, and swapping in the
-real script when its card lands is a one-line change with no re-lay-out.
+Survey and hunt are **the same scene**: the phase changes and nothing reloads,
+so the traps the crew spent a minute placing stay where they are. Pressing `F`
+asks the host to mark you ready; when the whole crew is ready the phase ends
+early. The loop after the first shift is van → house → van: the crew only sees
+the menu again by leaving the match.
 
-Four spawn markers sit down the middle, handed out by the order the crew joined
-— everybody works out the same seat for the same player from the one list every
-machine already agrees on, so nobody spawns inside anybody. The box is closed on
-all six faces and the yard outside is fenced: you can walk a few steps down the
-ramp and no further.
+Two autoloads carry it. `SessionManager` **holds** — the crew by Steam ID
+(colour, bag, catches, ready flag), the team bank, the contract, the booked
+hunt length, the phase and the seed the house is dressed from. `PhaseManager`
+**drives** — the clock, the scene each phase is played in, and the decision to
+move on.
 
-**Nothing is carried in the van.** The belt is barred here rather than the
-weapons being taken off the player, because the same player walks into the house
-two phases later with everything he bought. The lock is read off the phase and
-re-read on every change, so the road gives the belt back.
+### The hunt is a wager
 
-## The store on the road
+The crew books the hunt's length on the vote screen, next to the sheet that
+says how bad the house is (`scripts/session/hunt_time.gd`):
 
-Once the van pulls off, the crew has two minutes to spend what it earned. `E`
-anywhere in the back of the box opens the **store**: the man himself on the left
-with his name and his money over him, and three racks of slots on the right with
-what each thing costs. `E` again, or `Esc`, puts it away, and a line in the
-corner (`E — STORE`) says the key is there whenever it would do something.
+| Booking | Clock | Bounty per rat |
+| --- | --- | --- |
+| Long (default) | 5:00 | $20 |
+| Medium | 3:00 | $40 |
+| Short | 1:30 | $100 |
 
-It used to be a shelf bolted to the wall, aimed at box by box. That is gone. Two
-minutes of driving is the crew's shopping time, and making it a place in the room
-meant one man standing in the corner while the other three waited for the wall.
+A low infestation is a three-minute job; a house with twenty-four rats in it is
+not. Whatever is still loose when the clock runs out stays in the walls unpaid.
+
+## The menu
+
+The lobby opens itself: the menu asks Steam for one the moment it comes up, so
+the crew is already on screen. Each player is a hazmat suit standing on a seat,
+with their Steam name and picture floating over them; empty seats carry a `+`
+that opens Steam's invite window. **PUBLIC LOBBIES** opens the browser
+(`scenes/lobby.tscn`) — lobbies are stamped `game=rats` so the Spacewar crowd is
+filtered out — and **SETTINGS** the options popup.
+
+**PLAY** is the host's button and only lights once the crew is ready; on a
+guest's machine the same button toggles their own ready flag. Colours are no
+longer picked here — the palette moved onto the van's terminal.
+
+## The van on the road
+
+`PLAY` seats the crew in the back of the van (`models/rats_van.glb`, built by
+`models/rats_van_builder.py`) and pulls off. Nothing in the scene actually
+moves: the road texture scrolls, the poles and fences beside it are recycled
+past the windows (`scripts/travel/road_scroll.gd`), and the camera carries a
+small tremor that never repeats (`scripts/travel/cabin_shake.gd`).
+
+### The vote
+
+The job sheets go up on their own as the van pulls off, one card per contract
+in `resources/contracts/`: a photograph of the house, the client, the address,
+the notes, the infestation count, the breeds, a difficulty of one to five, what
+the job pays and what it costs to sign. **Every man votes**, and the screen
+holds the player while it is up — nobody is out of his seat until the house is
+chosen. The host books the hunt length beside the cards and presses **START**;
+the job with the most hands up is signed, its price leaves the team bank and
+the phase machine is pointed at its house. Three jobs ship today:
+
+| Contract | House | Rats | Difficulty | Price | Reward |
+| --- | --- | --- | --- | --- | --- |
+| 14 Hallow Street | `world.tscn` | 4 | 1 | $0 | $180 |
+| 8 Marrow Lane | `world_2.tscn` | 12 | 3 | $200 | $420 |
+| Pell House | `world.tscn` | 24 | 5 | $500 | $900 |
+
+A new job is a new `.tres` in that folder; every machine reads the folder off
+disk and a contract travels on the wire as its id alone.
+
+### The terminal
+
+Once the vote is settled, `E` anywhere in the van opens the CRT terminal
+(`scripts/ui/terminal_screen.gd`), four pages leafed through with the arrows:
+
+- **Store** — the racks, described below. Only sells on the road.
+- **Map** — the signed house's floor plan. Left-click plants a pin, right-click
+  lifts one, drag or `WASD` pans, the wheel zooms. Three pins per man, coloured
+  by his overalls, and the host holds the board so all four screens agree
+  (`scripts/session/map_manager.gd`).
+- **Job sheet** — the contract and the booked clock, read-only.
+- **Palette** — the eight crew colours, with the man himself standing beside
+  them in the one he is wearing. No two men in the same colour; the host
+  decides.
+
+The terminal is also up in the house, so the map and the job sheet can be read
+during the hunt. `E` or `Esc` puts it away.
+
+## The store
 
 | TRAPS | WEAPONS | SUPPLIES |
 | --- | --- | --- |
-| Ratoeira $25 | Vassoura $15 | |
-| Cola-rato $40 | Taco de Baseball $35 | |
-| Queijo Explosivo $120 | | |
+| Mousetrap $25 (3) | Broom $15 | Rat bait $40 (2) |
+| Rat glue $40 (2) | Baseball bat $35 | |
+| Explosive cheese $120 (1) | | |
 
-Every rack is padded out to five slots with empty frames, and that padding is the
-point: the weapons are being written one at a time, and a rack that shows where
-the next three are going is a rack nobody has to redraw when they arrive.
+What is on sale is `resources/store/*.tres`, one file each, sorted the same way
+on every machine. Each item carries a `kind` (`ONE_HAND`, `TWO_HANDS`, `TRAP`,
+`BAIT`, `PATCH`) that puts it on a rack and tells the survey which ones to
+bar. Pressing a tile puts the thing in the man's hand on the left of the
+screen; **BUY** is a second press.
 
-What is on sale is `resources/store/*.tres`, one file each, and every machine
-reads the folder off disk and sorts it the same way — cheapest first, the id
-breaking ties — so an item travels on the wire as its id alone and a new `.tres`
-fills the next empty slot in every van at once. Each carries a `kind`
-(`ONE_HAND`, `TWO_HANDS`, `TRAP`, `BAIT`, `PATCH`), which is both what puts it in
-one of the three racks and what the hand rules and the survey phase read: the
-two-handed things are what put the torch down, and the ones from `TRAP` down are
-what stay allowed once the killing weapons are barred.
+**The host holds the till.** A man at the store *asks* to buy
+(`ShopManager.request_buy`); the host checks the team bank and either the
+purchase is written on every machine or that one man is told why not.
+**Money is the crew's, the bag is the man's**: there is one bank
+(`SessionManager.bank_balance`, $100 per player at the start of a session, or
+a purse nobody can empty in debug builds), and what each player buys goes in
+his own `Stock` and onto his own belt.
 
-**The host holds the till.** A man at the store does not buy anything, he *asks*
-(`ShopManager.request_buy`); the host checks his pocket and either the purchase
-is written on every machine at once or that one man alone is told why not and the
-slot he pressed flashes red. No client ever writes its own balance, which is the
-point — money is the one thing in the van a tampered client would actually want
-to lie about.
+### The belt
 
-**Every purse is its own.** Money and bag are per player on `SessionManager`,
-keyed by the Steam ID that survives the scene change, so two men buying in the
-same second debit two different pockets. The box the weapons on *your* belt
-actually spend from is the `Stock` autoload, and it is credited only for your own
-purchases — his mousetraps go in his bag, not onto your belt.
+Three loops, swapped with `1`, `2`, `3` or the wheel, drawn as three squares
+at the foot of the screen. No loop belongs to any one thing: what hangs from
+each is read off the bag in the order it was bought, a loop comes free when the
+last unit of something is spent, and a fourth purchase waits in the van until
+one does. The hands are on no loop — they were never bought and `Q` puts them
+back. Boxed things count what is left in the corner of their square.
 
-**The store is only open on the road.** In the lobby and in the house the key
-does nothing, the corner hint does not show, and a screen still up when the van
-parks is shut by the phase rather than left standing over goods the host would
-refuse.
+On the road the belt is free; in the survey the killing weapons are barred and
+the traps, bait and hands stay (`house_spawns.gd`); in the hunt everything is
+allowed.
 
-**While it is up the player is out of the map.** The mouse comes loose to reach
-the slots and the body stops answering to anything (`set_ui_open` in
-`player.gd`). That is not a nicety — the click that buys is the same left click
-that grabs a rat. And `E` only means the store when he is not already looking at
-a station: the map table and the ready board take the key back for themselves.
+## The house
 
-## The contract on the wall
+Two houses are playable, both modelled in Blender and rebuilt by script:
+`world.tscn` instances `models/house.glb` (generated by
+`blender/build_house.py`, two floors, the doors as `Door_*` leaves with their
+origin on the hinge and their swing angles riding out as glTF extras) and
+`world_2.tscn` instances `models/house_2.glb`. The van is parked on the
+street outside with a ramp down, and the crew spawns at the front door.
 
-A sheet is pinned to the right-hand wall of the van, and it is read at two
-ranges. From across the box it is the summary the whole crew can see without
-picking anything up: who is paying, where the house is, how bad it is, what it
-pays and what clock the crew booked itself. Walk up to it and press `E` and the
-mouse comes loose over the paperwork behind it — the whole board of jobs, one
-page at a time, with the client's notes and a **box to sign in** at the bottom.
+**Doors swing over the wire.** `scripts/house/house_doors.gd` finds every
+door leaf in the imported model and rigs it at load — a `HingedDoor` pivot, an
+`AnimatableBody3D` so a shut door blocks and an open one does not, and an
+`Interactable` for `E`. Add a door in Blender and it works in the game with
+nothing written. A door moves because somebody pushed it, so the swing is
+announced by whoever reached it.
 
-**The job is taken by a signature, not a keypress.** The pen is a pad
-(`scripts/ui/signature_pad.gd`): the leader drags the cursor across the paper
-and what he scrawls is what goes on the sheet. Nothing reads the shape of it —
-the pad adds up how far the pen travelled and calls anything past a threshold a
-signature — so a scribble counts and a stray click does not. That is the whole
-of the rule, and the point of it is that a house the crew is about to walk into
-costs a deliberate movement.
+**Rooms are lit by ceiling lamps** (`scenes/house/ceiling_lamp.tscn`), and the
+house is dark around them: low ambient, exponential black fog closing in from
+three metres, and an emission term in the level shader for the bulbs.
 
-**The leader signs and nobody else.** The box is locked and the line under it
-says why on a machine that is not the host, the same way the menu's board draws
-a client's rows dim: the rule is something the crew reads rather than something
-they find out by being refused. Pressing through it anyway still gets an honest
-answer, because the refusal is `ContractManager`'s and not the furniture's.
+### The survey
 
-**The board closes at the doorstep, the clock closes at the kerb.** A job can
-still be signed on the road — the drive is exactly when somebody reads the small
-print and argues about it — but the hunt time cannot be moved once the van has
-pulled off, because that is the wager the crew shopped and bought traps against
-(`ContractManager.OPEN_PHASES` against `OPEN_TIME_PHASES`).
+Sixty seconds, lights on, no rats. What the crew reads:
 
-## Joining a shift
+- **Burrows** (`scripts/house/rat_hole.gd`) — slits in the skirting, highlighted
+  during the survey and not afterwards. They come in **pairs**: the crack behind
+  the pantry and the vent in the back room are two mouths of one run, and a rat
+  that dives into one comes out of the other. Noticing which two are the same
+  hole is what the minute is for.
+- **Droppings** (`dropping_trail.gd`) — laid along the navigation path from
+  each burrow to the nearest heap of rubbish, so the trail is true wherever the
+  furniture ends up. Follow it and you arrive at a burrow or a bin.
+- **Streaks of piss** (`rat_streak.gd`) — down the same routes, rat-sized, and
+  the one clue that bites: standing on one costs flesh. Placed by the host and
+  replicated; the wound is local.
+- **Heaps of rubbish** (`garbage_pile.gd`) — level furniture, where the rats
+  already eat and where they nest. The crew does nothing to them.
+- **Litter** (`litter_scatter.gd`) — banana skins, bin bags, a doll, scattered
+  over the walkable floor from the shift's seed. Not a clue; it hops and
+  rustles when you walk into it.
 
-The van has a **radio** on the right-hand wall, and pressing `E` on it opens
-Steam's own invite window over the game. A friend who accepts turns up on the
-wire a moment later and walks into the back of the van; there is no menu and no
-lobby code to read out, which is the point of it being a fitting on the wall
-rather than a button on a screen. The dial is lit while there is somebody to
-call and dark when there is not — no Steam, no lobby, or a shift already under
-way — and pressing a dead radio says which of the three it is instead of opening
-an overlay that leads nowhere.
+Everything drawn from the seed (droppings, litter) is the same on every machine
+without crossing the wire.
 
-There are three ways into a shift and they are all the same road. Pressing
-**PLAY** on the waiting-room screen, accepting an invite with the game already
-running, and accepting one with the game closed — where Steam relaunches it with
-`+connect_lobby <id>` on the command line — all end at the same place: a peer
-connected to the host with no crew entry yet. What happens next is
-`scripts/session/join_gate.gd`.
+### The hunt
 
-**The host is the doorman.** A newcomer's machine knows nothing worth trusting,
-so it does not announce itself, it *knocks*. The host looks at the phase, counts
-the crew, and either sends back the whole shift in one packet or a refusal in a
-sentence. Nothing about the newcomer is written anywhere until that answer lands,
-which is what stops two machines disagreeing about who is in the van.
+The host spawns the contract's `infestation` from the shift's seed, out of the
+heaps the crew baited first and then the burrows furthest from the front door.
+A quarter of them are **sprayers** and a sixth are **swift rats**. The screech
+plays, the highlights go out, the killing weapons unlock. The phase ends when
+the last rat is gone, when the booked clock runs out, or three seconds after
+the last man in the crew goes down.
 
-**The state goes out before the body does.** The welcome carries the crew with
-their colours, their money and their bags, plus the contract, the phase and the
-number the house is built from — all of it, in one packet, written down before
-the van scene is loaded. Half a crew would be worse than none: the van reads the
-crew list the frame it comes up to work out who stands on which spot, so a list
-still arriving would put two men on one marker. It is also why a second player
-sees the colours and the contract already settled rather than watching everybody
-flicker into them a moment after spawning.
+## The rats
 
-That is a change from how the crew used to be built. Up to here every machine
-made its own copy out of Steam's guest list, which worked only because everybody
-had the same guest list in the same order — and stops working the instant
-somebody can arrive *after* the van is standing. Now the host fills his own crew
-and everybody else is handed it.
+Each rat is a `CharacterBody3D` on a navigation mesh baked when the map opens
+from everything in the `scenery` group (`scripts/navigation.gd`). Its states
+are wandering, idle, fleeing, hiding, captured, dead and spraying:
 
-**A shift under way is closed.** Four is the van, and the fifth man is turned
-away at Steam's own door. Somebody who was already through it when the van pulled
-away is caught at the gate instead and told "that shift is already under way" —
-a sentence, not a silence. The door is shut on the phase leaving `LOBBY` and
-opened again if the crew ever comes back to it, so the two checks agree without
-either one having to ask the other.
+- **Wandering / idle.** Walks to points nearby, stops to sniff, and drifts
+  towards food: heaps of rubbish and any tub of bait the crew put down
+  (`lures` group). At the food it feeds for five to eleven seconds and takes
+  much less notice of anything.
+- **Fleeing.** On hearing a man closer than 6 m or seeing him closer than
+  16 m — further if he is running, closer if he is crouched — it bolts, faster
+  than the player for a moment and then a little slower than his walk. A
+  sprung trap with a body in it is a `fear` spot the flight avoids.
+- **Bolting through the walls.** A fleeing rat within 12 m of a paired burrow
+  whose far mouth is further from the hunters dives in and comes out at the
+  other end, then will not do it again for six seconds.
+- **Hiding.** Scores a dozen blind spots behind nearby obstacles — far from
+  the player, out of his line of sight, with a way out — and crouches still
+  there until seen or approached within 3 m.
+- **Spraying.** A sprayer cornered inside 2.6 m stops, turns, winds up for a
+  third of a second and gets the man in the face: 12 damage, a lens full of
+  yellow and a fresh streak on the boards. Step back during the wind-up and it
+  misses. Seven seconds before it can do it again.
+- **Captured / dead.** Grabbed, it is torn off the ground and struggles in the
+  hand; strangled, it bursts in the fist.
 
-**What leaves is cleaned up.** A peer dropping off the wire is a man out of the
-crew: his entry goes, which is what puts his colour back on the rack, and
-whoever is left is asked again whether they are all ready — so two men are not
-held at the door by a third who is no longer there. Only the host does the
-removing; a client noticing a dropped peer waits to be told, because two machines
-removing on their own timing is two machines disagreeing about who is still owed
-a flag.
+A rat that has stopped moving for half a second steps sideways and looks for
+another path. All of it is thought for on the host; guests draw puppets.
 
-The acceptance test needs two Steam accounts and is done by hand:
+### The species
 
-1. Both run the game. One presses **CREATE LOBBY**, then **PLAY**, and lands in
-   the van.
-2. The host walks to the radio on the right-hand wall and presses `E`. Steam's
-   invite window opens over the game; he invites the second account.
-3. The second player accepts. Their game joins and loads straight into the van —
-   past the waiting-room screen, not onto it.
-4. Before they have taken a step, the crew list on the HUD already shows both
-   names in their own colours, and the contract on the wall is the one the host
-   signed. Nothing flickers into place afterwards.
-5. The host presses READY on the terminal; the newcomer's terminal shows one of
-   two lit in the crew list. Close the second game and the host's list drops back
-   to one of one rather than waiting forever on a name that is gone.
+`resources/species/*.tres`. A new breed is a copy of one of these with the
+numbers changed.
+
+| Species | Runs at | Crouch notice | Feeding notice | Habit |
+| --- | --- | --- | --- | --- |
+| Common rat | 1.0× | 0.55 | 0.70 | — |
+| Swift rat | 1.2× | 0.60 | 0.70 | Faster than a walk, slower than a sprint: the sprint key is the answer. |
+| Sprayer rat | 1.0× | 0.80 | 0.85 | Turns and sprays whoever corners it. Works free of the glue in 20 s. |
+
+*Crouch notice* is how much of its sight and hearing a breed keeps against a
+kneeling man; *feeding notice* the same with its nose in the food. The two
+multiply, which is why creeping is worth most over the bait.
+
+### The model
+
+`mobs/rats/Rat_Fbx.fbx`: a 13-bone skeleton with `Rat|Idle`, `Rat|Idle_Break`,
+`Rat|Run`, `Rat|Death` and `Rat|Attack`, cleaned on import by
+`mobs/rats/clean_import.gd`. Each rat rolls one of four furs at birth. A rat in
+the sights is outlined (`materials/rat_outline.tres`) and the crosshair goes
+taut on it.
+
+## Hunting on foot
+
+### The hands
+
+Every weapon lives under the player's head (`scripts/weapons/`), inherits from
+`Weapon` and finds its target the same way: the closest rat within 2.6 m and a
+50° cone, with no wall in between. The hands **grab**. The rat rises to the
+middle of the screen kicking and biting, and from then on the same click
+squeezes: twelve squeezes hammered without a pause kill it, the grip drains
+while you stop, and a grip that reaches zero lets the animal loose with a head
+start. A rat that was already stuck on glue takes about a third of the
+squeezes. The kill costs stamina (40 % of the bar, 20 % for a pinned rat) and
+ends in a burst of red shards (`scripts/fx/blood_burst.gd`) rather than a body
+to carry.
+
+### Stamina
+
+Four seconds of sprint (`hud_stamina.gd`, the thin bar over the health bar).
+It drains while `Shift` and a direction are held, recovers after a second's
+pause, and an emptied reserve stays red and unusable until a third of it is
+back. Getting a boot caught in glue takes 30 % of it. The swift rat is the
+breed that makes it matter.
+
+### Crouching
+
+Half height, slower than a walk, no sprint and no jump — and quieter: a rat
+sees and hears a kneeling man from closer in, by its breed's own fraction.
+
+### Melee
+
+The **broom** and the **baseball bat** (`melee_weapon.gd`) settle a rat in one
+swing. The swing happens whether or not anything is in the sights — the miss is
+the game. What they leave is a crushed body (`Death.Type.CRUSHING`).
+
+### Traps and bait
+
+Everything left on the floor goes through `TrapManager`: the player *asks*, the
+host checks the phase and the bag, and the node arrives on every machine
+through a `MultiplayerSpawner` with its pose in the spawn data. A translucent
+ghost follows the sights while a trap weapon is out; it never crosses the wire.
+
+- **Mousetrap** — one click, armed, works while you are elsewhere. The first
+  rat on it dies mangled (`TRAP`) and stays in it: the trap joins the `fear`
+  group and the floor around it empties until somebody holds `E` over it. The
+  sprung trap goes back in the bag *bent*, and setting a bent one down again
+  costs a $2 spring, shown in red over the sights.
+- **Rat glue** — laid like tape: the first click pins the near end, the strip
+  stretches to where you point (up to 2.4 m), the second click lays it, right
+  button or `Esc` throws it away. A strip lives forty seconds and holds five
+  rats. It kills nothing — a stuck rat stays whatever it was, and the hand takes
+  it off the glue as an ordinary capture. **The player is not exempt**: walk
+  onto a strip and the boot stays put, the strip loses ten seconds, and the way
+  out is a sweeping bar — three clicks inside the green, each moving the green
+  and speeding the sweep. The aim is judged on the machine holding the mouse.
+- **Rat bait** — a handful of food where you point. Catches nothing: it is a
+  preference written on the map, and rats with nothing more urgent drift to it
+  and feed. It is where the creeping pays.
+- **Explosive cheese** — a bait that goes off when the first rat reaches it,
+  killing everything within 4 m (`GUNSHOT`).
+
+Traps deliberately stay out of the `scenery` group, or they would be baked into
+the navigation mesh and every rat would route around them.
+
+### Reaching for things
+
+A short ray out of the camera (`Head/Camera/Interact`, 2.2 m) only sees the
+`interactable` layer. Anything the player can put his hands on is an `Area3D`
+with `scripts/interaction/interactable.gd`: it says what the prompt reads, may
+ask for the key to be *held* (`hold_time`, drawn by `hud_hold.gd`), and
+announces `used`.
+
+## Flesh
+
+A hundred points, drawn as a bar over the belt: green, amber past halfway, red
+and breathing in the last quarter, whitening on every hit. What hurts: standing
+on a streak, a sprayer's faceful (12), and nothing else yet. `take_damage()` on
+`player.gd` is the one door in.
+
+**Dying does not end the match.** The body falls, the view becomes a
+third-person camera the dead man can turn, the HUD gives way to the death
+screen, and he sits the rest of the phase out. If the whole crew goes down the
+shift moves to the pay slip three seconds later, and the slip has a word for
+it.
+
+## The money
+
+**Every rat pays the booked bounty** — $20, $40 or $100 by the hunt length — into
+a **crew wallet** mirrored on every machine. The host decides every death and
+broadcasts the credit; only the killer's machine counts the catch for the
+scoreboard. The tables of species value (`rat_species.gd`) and death discount
+(`death.gd`: strangulation 100 %, poison 85 %, trap 75 %, piercing 65 %,
+gunshot 50 %, crushing 40 %) are still here and still travel with each catch
+onto the slip, but they do not change the pay today.
+
+The bank moves twice (`scripts/economy/bank.gd`): on the doorstep the team
+balance is copied into `Wallet`, so what the shop closed on is what the HUD
+opens on; on the pay slip what is left, plus the contract's reward, is written
+back absolute — idempotent, so a phase entered twice cannot pay twice. Only
+the host settles.
+
+The **result screen** (`scripts/ui/result_screen.gd`) is drawn in the van from
+`ShiftReport`, which tallies catches as they happen. Anybody can put his slip
+down; the host's press sends the van back onto the road and opens the next
+vote.
+
+## On screen
+
+`scenes/hud_game.tscn` is drawn at 480×270 in a pixel font with a hard black
+outline, through `scenes/big_font_outlined_label.tscn` for every line of text.
+Every piece mirrors an autoload and keeps no count of its own:
+
+- the phase strip (`hud_phase.gd`) — clock on top, phase under it, the crew's
+  ready count, a blink and a beep through the last ten seconds;
+- the belt (`hud_hotbar.gd`), the health bar (`hud_health.gd`) and the stamina
+  bar (`hud_stamina.gd`) over it;
+- the crew wallet (`hud_money.gd`) with a passing notice of the last catch, and
+  the count of rats still loose (`rat_counter.gd`);
+- the crosshair, the grab prompt, the strangling prompt, the glue escape bar,
+  the hold bar, the `E` prompt, the ready prompt and the splatter on the lens;
+- the **minimap** (`minimap.gd`) — a round dial cut from the navigation mesh
+  with the crew as coloured dots.
+
+`Tab` holds the **scoreboard**: crew, colours, rats taken and distance. `Esc`
+opens the **pause menu**, which never pauses the tree — the wire does not stop
+for a menu — and carries the same crew list with a ping against each name,
+plus the settings and the way out. **Settings** (`settings_manager.gd`,
+`user://settings.cfg`): fullscreen, three volume buses, streamer mode (hides
+Steam names and lobby IDs) and the language, English or Brazilian Portuguese
+(`localization/ui_strings.csv`).
+
+## Multiplayer
+
+Two things are up at once. The **Steam lobby** is the guest list — Valve holds
+it and the menu reads it. The **`SteamMultiplayerPeer`** is the wire — Godot's
+`SceneMultiplayer` over Steam P2P, or over plain ENet with `--host`/`--join`.
+`scripts/steam/lobby_manager.gd` opens and closes both together. Whoever owns
+the lobby is peer 1; there is no host migration, and a host that leaves drops
+everybody back to the menu (`network_guard.gd`), with the reason on the status
+line.
+
+**The pattern everywhere is ask → host decides → everybody writes.** Colours,
+ready flags, votes, the hunt length, purchases, map pins, trap placement, the
+phase change — a client never writes its own copy first. The autoloads that
+hold state (`SessionManager`, `Stock`, `Wallet`) never touch the wire; the
+managers above them do.
+
+**Every player owns his own body.** One `PlayerAvatar` per peer — the hazmat
+suit with the Steam name over it — is put up on every machine by
+`player_avatars.gd`; yours is never drawn because you are inside it. Position,
+yaw and state cross twenty times a second and are eased on arrival; grabs and
+squeezes cross as RPCs so a click between two packets is never dropped. The
+suit (`player_model.gd`) plays the legs off the state and poses the arms over
+them (`player_arms.gd`) so a man strangling a rat is seen doing it.
+
+**Rats are the host's.** Guests draw puppets off a synchroniser; a guest that
+grabs, squeezes or kills asks the host, and the animal comes back over the
+wire already caught or dead. The same rule holds for traps catching, glue
+holding and cheese going off.
+
+**Joining a shift.** `PLAY` on the menu, accepting an invite with the game
+running, or being relaunched with `+connect_lobby <id>` all end at
+`scripts/session/join_gate.gd`: the newcomer knocks, the host sends the whole
+shift in one packet — crew, colours, bank, bags, contract, phase, seed — or a
+refusal in a sentence. A shift past the lobby is closed; four is the van.
+
+### Testing with two clients
+
+Steam allows one running client per account, so real invites and the browser
+need two machines. Everything else — movement, animation, colours, votes, the
+shop, traps, the whole phase flow — runs on one desk with `--host` and
+`--join`; those players are called `Player 1`, `Player 2` … under stand-in
+account numbers.
+
+## The look
+
+`VISUAL.md` is the recipe. The world is drawn at 480×270 into a `SubViewport`
+and upscaled nearest-neighbour; there is no screen-space filter. What makes it
+retro is the renderer itself: `shaders/level.gdshader` snaps every vertex to a
+grid (`common.gdshaderinc`, driven by the `vertex_resolution` project global)
+and lights every face flat, `sky.gdshader` is a three-band gradient,
+`viewmodel.gdshader` draws the first-person arm (`models/hazmat_hand.glb`)
+with its own FOV, and `scripts/ps1_material_applier.gd` hangs the level
+material on every mesh under it — spawned nodes included, which is why anything
+on the floor must be opaque: the shader scissors any alpha below one.
+
+## Tests
+
+Headless benches, one per claim, in `tests/` and a few older ones at the root:
+
+```
+godot --headless --path . --script tests/strangle.gd
+```
+
+`strangle`, `burst`, `stamina`, `stealth`, `feeding`, `swift_rat`,
+`glue_trap`, `glue_multiplayer` (two real ENet peers in one tree),
+`death_screen`, `result_flow`, `screen_fade`, `map_selection`,
+`minimap_navigation`, `house_model`, `house_routes`, and at the root
+`_test_house`, `_test_clues`, `_test_litter`, `_test_contract_vote`,
+`_test_van_vote`. `scratch/` holds preview and probe scripts that are not
+tests.
 
 ## Structure
 
-- `scenes/` — the game's scenes (`menu.tscn` is the main scene, where the crew
-  assembles and the shift is configured, `lobby.tscn` is the lobby browser that
-  opens over it, `van_travel.tscn` is the van on the road,
-  `world.tscn` is the map, `player.tscn` is the character,
-  `player_avatar.tscn` is the capsule a player stands as on the other players'
-  screens, `hud_phase.tscn` is the strip showing the phase, the clock and who is ready,
-  `rat.tscn` is the mob and `traps/` holds the two things the player leaves on
-  the floor)
-- `scripts/session/` — the shift: `phase.gd` is the table of phases and how long
-  each lasts, `session_manager.gd` is the autoload holding the crew and the state
-  that outlives a scene change, `join_gate.gd` is the door a newcomer knocks at
-  and what he is handed on the way through, `radio_station.gd` is a handset that opens
-  Steam's invite window, kept for a van that wants one now that inviting is a
-  button on the menu, `phase_manager.gd` the one that
-  drives the clock
-  and the scene, `ready_manager.gd` the show of hands that ends a phase,
-  `van_spawns.gd` the node that
-  seats the crew in the van and bars the belt while it is parked, and
-  `pending_station.gd` the stand-in for a station whose card is not written yet;
-  `shop_manager.gd` is the till on the road, the autoload that reads the store's
-  catalogue off disk and lets the host alone decide who can afford what
-- `scripts/` — GDScript scripts (`player.gd` handles first-person movement,
-  `rat.gd` the rats' AI and the capture, `navigation.gd` bakes the mesh they walk
-  on, `rat_counter.gd` the HUD scoreboard, `hud_money.gd` the wallet on screen,
-  `hud_strangle.gd` the strangling prompt, `glue_hud.gd` the bar a stuck player
-  beats to get off the glue, `hud_hotbar.gd` the belt's three
-  slots, `hud_health.gd` the health bar over them, `hud_prompt.gd` the line that
-  says what `E` would do)
-- `scripts/weapons/` — the player's weapons: `weapon.gd` is the base of them all,
-  `hands.gd` is the first one, the one that grabs and strangles, `trap_weapon.gd`
-  is the base of the ones that come out of a box, run out and leave something on
-  the floor — it carries the ground ray and the trap-to-be that follows it —
-  with `mousetrap_weapon.gd` (one click, one trap) and `glue_weapon.gd` (two
-  clicks, the strip laid like tape) on top of it, and `inventory.gd` is the belt
-  that decides which one is out
-- `scripts/traps/` — what gets left on the floor: `trap.gd` is the base that
-  watches the rats' layer and catches one, `mousetrap.gd` kills what it catches
-  and `glue_trap.gd` only holds it
-- `scripts/interaction/` — `interactable.gd`, the reachable face of anything the
-  player can put his hands on
-- `scripts/steam/` — everything that talks to Steam: `steam_manager.gd` is the
-  autoload that brings the API up and keeps its callbacks flowing, and
-  `lobby_manager.gd` the autoload that holds the lobby, the multiplayer peer and
-  who each peer on it is; `lobby_screen.gd` is the lobby browser drawn on
-  `scenes/lobby.tscn`, `steam_avatars.gd` is the cache that turns a Steam account
-  into a picture, `player_avatars.gd` is the node in the map that puts up
-  one body per player on the wire and `player_avatar.gd` is one of those bodies,
-  the piece that reads the character on the machine it belongs to and follows the
-  wire on everybody else's
-- `scripts/ui/` — the screens: `menu_screen.gd` drives `scenes/menu.tscn` and is
-  the one place that listens to every autoload the menu draws from,
-  `menu_crew.gd` puts a hazmat on the floor per man in the crew,
-  `menu_player_card.gd` is the picture and name floating over one of them,
-  `color_popup.gd` is the palette a man picks his colour from, `contract_panel.gd`
-  the board of jobs the leader signs one off, `store_screen.gd` the store the
-  crew shops at on the road — which is also where the show of hands is now, the
-  READY button in its footer and the crew list down its left saying who is still
-  being waited on — and `pause_menu.gd` the menu the Esc key opens in a
-  shift
-- `scripts/economy/` — the money from the hunt: `death.gd` is the table of death
-  types, `rat_species.gd` is the mould of a breed of rat, `store_item.gd` is a
-  line on the store's catalogue, `wallet.gd` is the autoload that holds what
-  was earned and `stock.gd` the one that holds what was bought
-- `resources/species/` — the breeds of rat, one per file (`common_rat.tres`)
-- `resources/store/` — what the store sells, one per file (`broom.tres`,
-  `mousetrap.tres`, `baseball_bat.tres`, `rat_glue.tres`,
-  `explosive_cheese.tres`)
-- `models/` — the vehicles: `van.glb` is the panel van parked in the old map, and
-  `box_van.glb` is the walk-in truck the shift is run out of, written by the
-  `box_van.py` beside it (run it in Blender to rebuild the model)
-- `assets/traps/` — the two traps as they are modelled: `traps.blend` is the
-  source and `glb/` the exports the scenes actually instance
-- `assets/computer/` — the desk, the CRT, the tower, the keyboard and the rest of
-  the machine in the van
-- `models/` — 3D models (`.glb`) and their import files
-- `mobs/rats/` — the rat model: `Rat_Fbx.fbx` (mesh, skeleton and animations), the
-  four fur textures, the source `Rat.blend` and the post-import script
-- `icon.svg` — the project icon
-
-The map is a grey 60x60-unit square, walled in and filled with blocks, crates,
-columns, ramps and platforms made of simple geometric shapes — which are also the
-rats' hiding places.
-
-Parked on it is the van, which has an interior now: a collision shell around the
-cargo bay (floor, sides, roof and a wall closing off the cab), the rear doors
-swung wide open and a ramp up to the floor, since the bay stands half a metre off
-the ground and the character does not climb a step on its own. The shell is in
-the `scenery` group like everything else solid, so the rats' navigation mesh
-knows about the van too.
+- `scenes/` — `menu.tscn` (main screen), `lobby.tscn` (the public lobby
+  browser, instanced into the menu), `van_travel.tscn` (the van on the road and
+  the pay slip), `world.tscn` / `world_2.tscn` (the two houses), `player.tscn`,
+  `player_avatar.tscn`, `player_model.tscn` (the suit), `player_view_model.tscn`
+  (the arm), `rat.tscn`, `hud_game.tscn`, `hud_phase.tscn`, `minimap.tscn`,
+  `scoreboard.tscn`, `pause_menu.tscn`, `settings_menu.tscn`,
+  `terminal_screen.tscn`, `store_screen.tscn`, `color_screen.tscn`,
+  `difficulty_screen.tscn`, `contract_vote_screen.tscn`, `result_screen.tscn`,
+  `death_screen.tscn`, `traps/` (mousetrap, glue, bait, cheese), `clues/`
+  (hole, streak, litter, garbage), `house/ceiling_lamp.tscn`,
+  `map/map_viewer.tscn`
+- `scripts/session/` — the shift: `phase.gd`, `hunt_time.gd`, `contract.gd`,
+  `session_manager.gd`, `phase_manager.gd`, `ready_manager.gd`,
+  `color_manager.gd`, `contract_manager.gd`, `shop_manager.gd`, `map_manager.gd`,
+  `trap_manager.gd`, `clue_manager.gd`, `join_gate.gd`, `network_guard.gd`,
+  `shift_report.gd`, `van_spawns.gd`, `house_spawns.gd`
+- `scripts/house/` — `house.gd`, `house_doors.gd`, `hinged_door.gd`,
+  `rat_hole.gd`, `dropping_trail.gd`, `rat_streak.gd`, `garbage_pile.gd`,
+  `floor_litter.gd`, `litter_scatter.gd`
+- `scripts/weapons/` — `weapon.gd`, `hands.gd`, `melee_weapon.gd`,
+  `trap_weapon.gd` with `mousetrap_weapon.gd`, `glue_weapon.gd`,
+  `bait_weapon.gd`, `explosive_cheese_weapon.gd`, and `inventory.gd` (the belt)
+- `scripts/traps/` — `trap.gd`, `mousetrap.gd`, `glue_trap.gd`, `bait_pile.gd`,
+  `explosive_cheese.gd`
+- `scripts/economy/` — `death.gd`, `rat_species.gd`, `store_item.gd`,
+  `wallet.gd`, `stock.gd`, `bank.gd`
+- `scripts/steam/` — `steam_manager.gd`, `lobby_manager.gd`, `lobby_screen.gd`,
+  `steam_avatars.gd`, `player_avatars.gd`, `player_avatar.gd`
+- `scripts/ui/` — the screens: menu, crew, cards, invite slots, terminal and
+  its four pages, vote, result, death, scoreboard, pause, settings, crew list
+- `scripts/travel/` — `van_travel.gd`, `road_scroll.gd`, `cabin_shake.gd`,
+  `van_seat.gd`
+- `scripts/` — `player.gd`, `player_model.gd`, `player_arms.gd`,
+  `player_view_model.gd`, `rat.gd`, `navigation.gd`, the `hud_*.gd` pieces,
+  `minimap.gd`, `ps1_material_applier.gd`, `game_post_process_wrapper.gd`,
+  `floor_shadow.gd`, `fx/blood_burst.gd`, `audio/audio_manager.gd`,
+  `settings/settings_manager.gd`, `interaction/interactable.gd`,
+  `map/map_viewer.gd`
+- `resources/` — `contracts/` (with `plans/` and `photos/`), `species/`,
+  `store/`, `retro_environment.tres`, `seated_animations.tres`
+- `shaders/`, `materials/` — the level, sky, viewmodel and death-screen shaders
+- `models/` — `rats_van.glb` (+ `rats_van_builder.py`), `house.glb`,
+  `house_2.glb`, `hazmat.glb`, `hazmat_hand.glb`, `van_exterior.glb` (the menu),
+  the weapon and trap models
+- `blender/` — `build_house.py`, `kit_casa.py`, `build_shed_scene.py`, `van/`
+  and the `.blend` sources (`.gdignore`d)
+- `assets/` — the house kit pieces, the shed yard, the traps and the computer
+- `mobs/rats/` — the rat model, its furs and the post-import script
+- `localization/` — `ui_strings.csv` and its `en` / `pt_BR` translations
+- `tests/`, `scratch/` — benches and probes
 
 The physics layers are `1: scenery`, `2: player`, `3: rats` and
-`4: interactable`. The rats do not bump into the player or into each other; only
-the scenery stops them.
-
-The `.godot/` folder is generated by the engine and is not versioned.
+`4: interactable`. Rats do not bump into the player or each other; only the
+scenery stops them. `.godot/` is generated and not versioned.
