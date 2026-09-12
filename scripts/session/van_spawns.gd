@@ -132,7 +132,7 @@ func _place_player() -> void:
 	player.set_spawn(seat.origin)
 	# The road opens with everybody secured on a bench. Player owns the lock and
 	# the E press that releases it; this node only owns the scene's initial state.
-	player.set_seated(PhaseManager.current() == Phase.Type.TRAVEL)
+	player.set_seated(PhaseManager.current() in [Phase.Type.TRAVEL, Phase.Type.RESULT])
 
 
 ## Puts the belt where the phase says it should be: barred in the parked van,

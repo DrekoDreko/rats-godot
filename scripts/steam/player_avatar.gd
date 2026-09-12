@@ -298,6 +298,17 @@ func is_dead() -> bool:
 func is_seated() -> bool:
 	return sync_state == State.SITTING
 
+## Down on his knees, creeping or waiting. It is answered off the pose he is
+## being drawn in and not off a variable of its own, because the pose already
+## crosses the wire and a second bit saying the same thing would be one more
+## thing to get out of step with it.
+##
+## What asks is the rats: a man on his knees is noticed from closer in
+## (`rat.gd: _notice`), and this is how a guest's creeping is worth the same to
+## the animals on the host's machine as the host's own.
+func is_crouching() -> bool:
+	return sync_state == State.CROUCHING or sync_state == State.CROUCH_WALKING
+
 func _physics_process(_delta: float) -> void:
 	if _source == null:
 		return

@@ -10,7 +10,7 @@
 [ext_resource type="PackedScene" path="res://scenes/clues/rat_hole.tscn" id="17_hole"]
 [ext_resource type="Script" uid="uid://cgmykbygxdhqj" path="res://scripts/session/house_spawns.gd" id="18_spawns"]
 [ext_resource type="PackedScene" path="res://scenes/hud_phase.tscn" id="20_hud_phase"]
-[ext_resource type="PackedScene" path="res://scenes/result_screen.tscn" id="22_result"]
+[ext_resource type="PackedScene" path="res://scenes/death_screen.tscn" id="30_death"]
 [ext_resource type="PackedScene" path="res://scenes/terminal_screen.tscn" id="26_store"]
 [ext_resource type="PackedScene" path="res://scenes/hud_game.tscn" id="29_hud_game"]
 [ext_resource type="Script" uid="uid://c1brx5ynxvh6i" path="res://scripts/session/van_doors.gd" id="30_doors"]
@@ -291,7 +291,7 @@ volume_db = -6.0
 
 [node name="HUD_Phase" parent="." unique_id=764930680 instance=ExtResource("20_hud_phase")]
 
-[node name="ResultScreen" parent="." unique_id=597191254 instance=ExtResource("22_result")]
+[node name="DeathScreen" parent="." instance=ExtResource("30_death")]
 
 [node name="Scoreboard" parent="." unique_id=531018294 instance=ExtResource("98_scoreboard")]
 

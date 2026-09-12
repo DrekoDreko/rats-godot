@@ -8,9 +8,10 @@
 
 [resource]
 script = ExtResource("1_species")
-display_name = "Common rat"
+display_name = "Swift rat"
 furs = Array[Texture2D]([ExtResource("2_fur_1"), ExtResource("3_fur_2"), ExtResource("4_fur_3"), ExtResource("5_fur_4")])
-base_value = 10
+base_value = 14
 variation = 0.0
-crouch_notice = 0.55
+swiftness = 1.2
+crouch_notice = 0.6
 feeding_notice = 0.7

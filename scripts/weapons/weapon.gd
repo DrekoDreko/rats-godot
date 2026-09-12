@@ -177,6 +177,21 @@ func is_attack_weapon() -> bool:
 func press_secondary() -> void:
 	pass
 
+## How much of this weapon's usual work the thing in its grip is worth, from 0
+## to 1 — the rat's own `effort()` (`rat.gd`) latched at the moment of the grab.
+##
+## It is latched and not asked for again because taking an animal off the glue
+## is what un-sticks it: by the time it is in the hand it no longer remembers
+## having been stuck. The weapon needs it to know how many goes the job takes,
+## and the player needs the same number to know what the job cost him
+## (`player.gd: _on_weapon_finished`), so it is asked for here rather than kept
+## twice.
+##
+## A weapon that settles everything in one blow holds nothing and is never
+## worth less than the whole job.
+func capture_effort() -> float:
+	return 1.0
+
 ## What the weapon does. Every weapon overrides this.
 func _use() -> void:
 	pass

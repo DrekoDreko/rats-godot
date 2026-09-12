@@ -1,0 +1,46 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/death_screen.gd" id="1_script"]
+[ext_resource type="Shader" path="res://shaders/death_screen.gdshader" id="2_shader"]
+[ext_resource type="PackedScene" path="res://scenes/big_font_outlined_label.tscn" id="3_label"]
+
+[sub_resource type="ShaderMaterial" id="Material_gray"]
+shader = ExtResource("2_shader")
+
+[node name="DeathScreen" type="CanvasLayer"]
+layer = 8
+script = ExtResource("1_script")
+
+[node name="Grayscale" type="ColorRect" parent="."]
+material = SubResource("Material_gray")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Center" type="CenterContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Rows" type="VBoxContainer" parent="Center"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Title" parent="Center/Rows" instance=ExtResource("3_label")]
+layout_mode = 2
+font_size = 32
+text = "DEATH_TITLE"
+horizontal_alignment = 1
+
+[node name="Waiting" parent="Center/Rows" instance=ExtResource("3_label")]
+layout_mode = 2
+font_size = 12
+text = "DEATH_WAITING"
+horizontal_alignment = 1

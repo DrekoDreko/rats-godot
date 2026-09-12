@@ -1,14 +1,8 @@
 extends CanvasLayer
-## The pay slip: what the shift caught, what it left in the walls, and what the
-## whole of it came to. Shown when the phase turns to `RESULT`, dismissed with
-## one button, and the button is the road back to the van, where the crew keeps
-## what it made and signs for the next house.
+## The pay slip appears in the Van during RESULT. Host confirmation advances
+## to TRAVEL and opens the next map vote without reloading the Van.
 ##
-## **Drawn over the house, not instead of it.** `RESULT` has no scene of its own
-## (`PhaseManager.scenes`), so the room the crew has just cleared is still
-## standing behind this panel. That is deliberate: a slip read in the hallway
-## reads as the end of *that* job, where the same numbers on a black screen read
-## as a menu.
+## ShiftReport survives the return trip and is cleared only after confirmation.
 ##
 ## **The numbers are this player's.** `ShiftReport` tallies each machine's own
 ## catches, the same way `Wallet` holds each machine's own money, so what a man
@@ -23,9 +17,11 @@ extends CanvasLayer
 ## sees after he puts it down is the house, and then the van when the host has
 ## pressed his.
 
-const FONT_SIZE := 8
-const OUTLINE_COLOR := Color(0, 0, 0, 1)
-const OUTLINE_SIZE := 4
+## The UI face is a pixel font drawn on a 16 px grid. Below that the rasteriser
+## eats pieces of the glyphs and the slip cannot be read at all — what gives way
+## when a line does not fit is the panel width, never the letter size.
+const FONT_SIZE := 16
+const LABEL_SCENE := preload("res://scenes/big_font_outlined_label.tscn")
 
 const TITLE_CLEARED := "HOUSE CLEARED"
 const TITLE_TIME_UP := "TIME UP"
@@ -53,16 +49,16 @@ const CARRIED_TEXT := "CARRIED TO THE VAN   $ %d"
 @export var hud_path: NodePath = ^"../HUD"
 
 @onready var _rows: VBoxContainer = $Center/Panel/Margin/Rows
-@onready var _title: Label = $Center/Panel/Margin/Rows/Title
-@onready var _subtitle: Label = $Center/Panel/Margin/Rows/Subtitle
+@onready var _title: BigFontOutlinedLabel = $Center/Panel/Margin/Rows/Title
+@onready var _subtitle: BigFontOutlinedLabel = $Center/Panel/Margin/Rows/Subtitle
 @onready var _lines: VBoxContainer = $Center/Panel/Margin/Rows/Lines
-@onready var _total: Label = $Center/Panel/Margin/Rows/Total
+@onready var _total: BigFontOutlinedLabel = $Center/Panel/Margin/Rows/Total
 @onready var _ok: Button = $Center/Panel/Margin/Rows/OK
-@onready var _waiting: Label = $Center/Panel/Margin/Rows/Waiting
+@onready var _waiting: BigFontOutlinedLabel = $Center/Panel/Margin/Rows/Waiting
 
 ## The line under the total, built here rather than in the scene: it is one label
 ## in the house style, and `_label` already knows what that is.
-var _carried: Label
+var _carried: BigFontOutlinedLabel
 
 var _player: Node
 
@@ -96,7 +92,7 @@ func _ready() -> void:
 	# house is entered in survey — but a bench that loads the scene straight
 	# into the pay phase should still be shown one.
 	if PhaseManager.current() == Phase.Type.RESULT:
-		_open()
+		_open.call_deferred()
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
@@ -175,7 +171,11 @@ func _on_phase_changed(_previous: Phase.Type, current: Phase.Type) -> void:
 func _draw() -> void:
 	var cleared := ShiftReport.is_clear()
 	_title.text = TITLE_CLEARED if cleared else TITLE_TIME_UP
-	_title.add_theme_color_override("font_color", CLEARED_COLOR if cleared else TIME_UP_COLOR)
+	if PhaseManager.returning_after_team_death:
+		_title.text = "RESULT_TEAM_DEAD"
+	_title.font_color = CLEARED_COLOR if cleared else TIME_UP_COLOR
+	if PhaseManager.returning_after_team_death:
+		_title.font_color = ESCAPED_COLOR
 
 	var contract := ContractManager.current()
 	_subtitle.text = "" if contract == null else "%s — %s" % [
@@ -244,7 +244,7 @@ func _show_hud(on: bool) -> void:
 
 func _add_line(label_text: String, value_text: String, color := Color.WHITE) -> void:
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
+	row.add_theme_constant_override("separation", 13)
 
 	var name_label := _label(label_text, color)
 	# The name takes whatever width is going, which is what pins every value to
@@ -263,11 +263,9 @@ func _add_separator() -> void:
 	_lines.add_child(HSeparator.new())
 
 
-func _label(text: String, color: Color) -> Label:
-	var label := Label.new()
+func _label(text: String, color: Color) -> BigFontOutlinedLabel:
+	var label := LABEL_SCENE.instantiate() as BigFontOutlinedLabel
 	label.text = text
-	label.add_theme_font_size_override("font_size", FONT_SIZE)
-	label.add_theme_color_override("font_color", color)
-	label.add_theme_color_override("font_outline_color", OUTLINE_COLOR)
-	label.add_theme_constant_override("outline_size", OUTLINE_SIZE)
+	label.font_size = FONT_SIZE
+	label.font_color = color
 	return label

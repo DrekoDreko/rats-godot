@@ -125,12 +125,16 @@ func _ready() -> void:
 ## It is here and not on the screen because the vote is this autoload's state:
 ## a screen that opened its own vote would be one machine's UI deciding what
 ## every machine writes down, and a client's van has no business doing that.
-func _on_phase_changed(_previous: Phase.Type, phase: Phase.Type) -> void:
+func _on_phase_changed(previous: Phase.Type, phase: Phase.Type) -> void:
 	if phase != Phase.Type.TRAVEL:
 		return
 	if not PhaseManager.is_host() or voting_open or is_signed():
 		return
-	open_voting()
+	if previous == Phase.Type.RESULT:
+		# Let the report release the HUD and player before the vote takes them.
+		open_voting.call_deferred()
+	else:
+		open_voting()
 
 
 ## How many jobs are on the board.

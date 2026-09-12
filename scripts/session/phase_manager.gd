@@ -49,10 +49,8 @@ signal timer_expired(phase: Phase.Type)
 
 ## The scene each phase is played in. Survey and hunt share one deliberately —
 ## see the note above about not throwing the traps away. A phase absent from
-## here stays wherever it is and only changes the phase, which is how `RESULT`
-## works: the pay slip is a panel drawn over the house the crew has just
-## cleared, not a room they are moved to, and the house standing behind it is
-## most of what makes it read as the end of that shift rather than a menu.
+## here stays wherever it is and only changes the phase. RESULT and TRAVEL
+## share the Van: read the report first, then select the next map.
 ##
 ## A `var` and not a `const`, because the house is not one scene: the contract
 ## the host signs is what says which one, and `set_scene` is how the clipboard
@@ -62,6 +60,7 @@ signal timer_expired(phase: Phase.Type)
 var scenes := {
 	Phase.Type.LOBBY: "res://scenes/menu.tscn",
 	Phase.Type.TRAVEL: "res://scenes/van_travel.tscn",
+	Phase.Type.RESULT: "res://scenes/van_travel.tscn",
 	Phase.Type.SURVEY: "res://scenes/world.tscn",
 	Phase.Type.HUNT: "res://scenes/world.tscn",
 }
@@ -110,6 +109,10 @@ var _until_sync := 0.0
 ## back equal to anything (see `_current_scene_path`).
 var _changing_scene := false
 
+const TEAM_DEATH_DELAY := 3.0
+var _team_death_elapsed := 0.0
+var returning_after_team_death := false
+
 
 func _ready() -> void:
 	# A phase can end while the game is paused — a pause menu is not a hiding
@@ -133,6 +136,7 @@ func _ready() -> void:
 ## `Timer` is the real thing and he reads it back rather than guess at it.
 func _process(delta: float) -> void:
 	if is_host():
+		_check_team_death(delta)
 		_tick_host(delta)
 		return
 	if seconds_left <= 0.0:
@@ -143,6 +147,38 @@ func _process(delta: float) -> void:
 	# its way.
 	seconds_left = maxf(0.0, seconds_left - delta)
 	timer_updated.emit(seconds_left)
+
+
+## Read the existing replicated death state; missing avatars are not dead players.
+func _all_players_dead() -> bool:
+	var player := get_tree().get_first_node_in_group("player")
+	if player == null or not player.is_dead():
+		return false
+	for peer_id in multiplayer.get_peers():
+		var found := false
+		for node in get_tree().get_nodes_in_group("player_avatars"):
+			var avatar := node as PlayerAvatar
+			if avatar != null and avatar.peer_id == peer_id:
+				if not avatar.is_dead():
+					return false
+				found = true
+				break
+		if not found:
+			return false
+	return true
+
+
+func _check_team_death(delta: float) -> void:
+	if _changing_scene or current() not in [Phase.Type.SURVEY, Phase.Type.HUNT] \
+			or not _all_players_dead():
+		_team_death_elapsed = 0.0
+		return
+	_team_death_elapsed += delta
+	if _team_death_elapsed < TEAM_DEATH_DELAY:
+		return
+	# Pass through RESULT so the existing bank settlement and report still run.
+	go_to(Phase.Type.RESULT)
+
 
 # --- What everybody can ask ------------------------------------------------
 
@@ -251,10 +287,13 @@ func go_to(phase: Phase.Type) -> void:
 		return
 	if phase == current():
 		return
+	var team_dead := phase == Phase.Type.RESULT and _all_players_dead()
+	if team_dead and _team_death_elapsed < TEAM_DEATH_DELAY:
+		return
 	if _on_the_wire():
-		_apply.rpc(phase)
+		_apply.rpc(phase, team_dead)
 	else:
-		_apply(phase)
+		_apply(phase, team_dead)
 
 
 ## The clock ran out. Kept apart from `advance()` so that the reason the shift
@@ -288,7 +327,7 @@ func _on_timeout() -> void:
 ## check below is belt and braces: a client that somehow got one through is
 ## refused here and says so, which is the audit the robustness card asks for.
 @rpc("authority", "call_local", "reliable")
-func _apply(phase: Phase.Type) -> void:
+func _apply(phase: Phase.Type, team_dead := false) -> void:
 	var sender := multiplayer.get_remote_sender_id()
 	if sender != 0 and sender != HOST_PEER:
 		push_warning("PhaseManager: phase change from peer %d, which is not the host — ignored."
@@ -298,6 +337,9 @@ func _apply(phase: Phase.Type) -> void:
 	var previous: Phase.Type = SessionManager.phase
 	if previous == phase:
 		return
+	returning_after_team_death = phase == Phase.Type.RESULT and team_dead
+	if phase == Phase.Type.RESULT:
+		ShiftReport.finish()
 
 	# Cleared here and not in `go_to`, because `SessionManager` never touches the
 	# wire: a reset done on the host alone leaves every client still holding the

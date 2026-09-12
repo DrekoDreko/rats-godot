@@ -1,4 +1,8 @@
 keys,en,pt_BR
+RESULT_TEAM_DEAD,CREW LOST,EQUIPE ELIMINADA
+RESULT_NEXT_MAP,Select next map,Selecionar próximo mapa
+DEATH_TITLE,YOU DIED,VOCÊ MORREU
+DEATH_WAITING,Waiting for the match to end...,Aguardando a partida finalizar...
 PAUSE_TITLE,PAUSED,PAUSADO
 PAUSE_HINT,The match keeps running for everyone else.,A partida continua para os outros.
 PAUSE_CREW_TITLE,IN THE MATCH,NA PARTIDA
@@ -92,8 +96,10 @@ HUD_MONEY_TOTAL,$%d,$%d
 HUD_MONEY_NOTICE,+$%d  %s,+$%d  %s
 HUD_INTERACT_PROMPT,E — %s,E — %s
 HUD_STRANGLE_BUTTON,CLICK,CLIQUE
-HUD_STRANGLE_INSTRUCTION,click in green - 3 hits; miss and it escapes,clique no verde - 3 acertos; errou ele escapa
+HUD_STRANGLE_INSTRUCTION,keep clicking or it gets loose,clique sem parar ou ele escapa
 HUD_GRAB_PROMPT,CLICK TO STRANGLE,CLIQUE PARA ESGANAR
+HUD_GLUE_BUTTON,CLICK  %d / %d,CLIQUE  %d / %d
+HUD_GLUE_INSTRUCTION,click in the green to pull free,clique no verde para se soltar
 PROMPT_USE_TERMINAL,use the terminal,use o terminal
 PROMPT_OPEN_DOOR,open the door,abra a porta
 PROMPT_CLOSE_DOOR,close the door,feche a porta

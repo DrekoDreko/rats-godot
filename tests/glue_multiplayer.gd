@@ -10,6 +10,17 @@ var _failures := 0
 func _initialize() -> void:
 	call_deferred("_run")
 
+## Put the pointer in the middle of the green: the bench has no hands, and the
+## sweep only runs on the machine whose player is stuck.
+func _aim(glue) -> void:
+	glue.sweep_pointer = glue.sweep_zone_start + glue.sweep_zone_width * 0.5
+
+## Just past the green, which is what a mistimed click is. Above it rather than
+## below: the first sweep of all starts with the green at the foot of the track,
+## where "a little before it" is inside it.
+func _miss(glue) -> void:
+	glue.sweep_pointer = minf(1.0, glue.sweep_zone_start + glue.sweep_zone_width + 0.05)
+
 func _check(condition: bool, message: String) -> void:
 	if not condition:
 		push_error(message)
@@ -71,20 +82,26 @@ func _run() -> void:
 	_check(host._players.size() == 2 and host.remaining == 20.0, "Two players each consume ten seconds")
 	_check(guest._players.size() == 2 and guest.remaining == host.remaining, "Guest receives player capture and lifetime")
 	_check(guest_root.get_node("Rat").is_pinned(), "Rat capture reaches guest")
-	# Sender identity controls whose progress changes.
-	for index in 4:
+	# The escape is timed on the machine holding the mouse, and only the hits it
+	# lands cross the wire.
+	_miss(guest)
+	guest.press_escape()
+	await _pump(0.06)
+	_check(host._players[guest_id].progress == 0.0, "A mistimed guest click sends nothing")
+	for index in 2:
 		host._physics_process(0.2)
+		_aim(guest)
 		guest.press_escape()
 		await _pump(0.06)
-	_check(host._players[1].progress == 0.0 and host._players[guest_id].progress == 4.0,
-		"Guest presses affect only the sender")
+	_check(host._players[1].progress == 0.0 and host._players[guest_id].progress == 2.0,
+		"Guest hits affect only the sender")
 	host._physics_process(2.35)
 	await _pump()
-	_check(guest._players[guest_id].progress == 0.0, "Host decay reaches guest")
-	for index in 6:
-		host._physics_process(0.2)
-		guest.press_escape()
-		await _pump(0.06)
+	_check(guest._players[guest_id].progress == 2.0, "Waiting no longer drains the guest's progress")
+	host._physics_process(0.2)
+	_aim(guest)
+	guest.press_escape()
+	await _pump(0.06)
 	_check(not host._players.has(guest_id) and host._players.has(1), "Guest escapes independently")
 	_check(not guest._players.has(guest_id), "Guest receives escape confirmation")
 	# A client cannot overwrite authoritative lifetime through the state RPC.
@@ -104,5 +121,5 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	if _failures == 0:
-		print("OK: ENet glue captures, simultaneous wear, sender ownership, decay, escape and expiration")
+		print("OK: ENet glue captures, simultaneous wear, sender ownership, timed escape and expiration")
 	quit(_failures)

@@ -30,11 +30,15 @@ enum Capture { POUNCE, RISING, IN_HAND, BURSTING }
 @export var species: RatSpecies
 
 @export_group("Movement")
-@export var wander_speed := 2.2
-## Fleeing speed: slower than the player's run, faster than his walk.
-@export var flee_speed := 7.0
-## The startled dash, in the first moments of the flight.
-@export var burst_speed := 9.5
+@export var wander_speed := 1.6
+## Fleeing speed: slow enough for new players to track at the current view size,
+## and level with a walking man on purpose — he closes on a fleeing rat by
+## cutting corners, not by being quicker. A breed can be faster than this
+## (`RatSpecies.swiftness`), and one of them is: see `_flight_speed`.
+@export var flee_speed := 5.0
+## The startled dash, in the first moments of the flight. The breed multiplies
+## this one too.
+@export var burst_speed := 6.5
 @export var acceleration := 45.0
 @export var gravity := 22.0
 @export var turn_speed := 11.0
@@ -43,6 +47,11 @@ const STEP_DISTANCE := 0.8
 
 @export_group("Perception")
 ## Distance at which the rat flees if it can see the player.
+##
+## It, and the two below it, are written for a man walking about upright. What a
+## man actually gets is this times how much notice the animal is taking of him
+## (`_notice`): further off if he is running, closer in if he is on his knees,
+## closer still if the rat has its head in the food.
 @export var alert_radius := 16.0
 ## Distance at which it flees even without seeing the player (it heard footsteps).
 @export var panic_radius := 6.0
@@ -65,6 +74,12 @@ const PLAYER_HEIGHT := 1.2
 ## because it is asked of everybody in the house, character and avatar alike, and
 ## the two work their speed out by different roads.
 const RUNNING_SPEED := 7.0
+## And how much further: every distance a running man is noticed from, by eye or
+## by ear, times this. Its mirror is the crouch, which is the species' business
+## rather than a number here (`RatSpecies.crouch_notice`) — how much a breed
+## misses is part of what makes one breed harder to hunt than another, and how
+## loud a sprinting man is is not.
+const RUNNING_NOTICE := 1.4
 ## Only the scenery takes part in the sight and clearance checks (layer 1).
 const SCENERY_LAYER := 1
 ## Range of the "whiskers" that sniff out walls ahead. They only come into play
@@ -125,6 +140,22 @@ const LURE_PULL := 0.65
 ## How wide a circle round the food a rat is content to end up in. The animals
 ## mill about the heap rather than stack up on a single point.
 const LURE_SPREAD := 2.5
+## How long a rat stands still, in seconds: on open floor, where it is a sniff
+## and then on, and with its head in the rubbish, where it is a meal.
+##
+## **The second pair is what makes the food worth anything to the crew.** A rat
+## that reached a heap, sniffed for a second and wandered off again was an animal
+## nobody could ever be said to have caught *eating*, and the notice it gives up
+## while it feeds (`species.feeding_notice`) was being paid out over a moment too
+## short for a man to cross a room in. Standing still for the better part of ten
+## seconds is what turns a heap of rubbish into somewhere to stalk.
+const IDLE_TIME := Vector2(0.8, 2.4)
+const FEEDING_TIME := Vector2(5.0, 11.0)
+## How often a rat that has arrived somewhere stops there instead of picking the
+## next destination — and how often it does when what it arrived at was food.
+## Nearly always, on the food: it walked there to eat.
+const IDLE_CHANCE := 0.35
+const FEEDING_CHANCE := 0.9
 ## How often the map's foul spots are re-read. They do not move and are not made
 ## often, so the rat reads them on a slow clock and every decision it makes in
 ## between uses the list it already has.
@@ -387,6 +418,7 @@ const DEFAULT_SPECIES := preload("res://resources/species/common_rat.tres")
 const SPECIES: Array[RatSpecies] = [
 	preload("res://resources/species/common_rat.tres"),
 	preload("res://resources/species/sprayer_rat.tres"),
+	preload("res://resources/species/swift_rat.tres"),
 ]
 
 ## How fast a watched rat closes on where the wire last said it was, per second.
@@ -935,6 +967,15 @@ func is_pinned() -> bool:
 func glue_escape_time() -> float:
 	return species.glue_escape_seconds if species != null else 0.0
 
+## The flight speeds, after the breed has had its say (`RatSpecies.swiftness`).
+##
+## Only the running away goes through here. The wander is the animal minding its
+## own business and every breed does that at the same pace; what a fast breed
+## buys is the moment the man is behind it, where the difference is the whole
+## point — a rat that outruns a walk is a rat the crew has to spend stamina on.
+func _flight_speed(base: float) -> float:
+	return base * (species.swiftness if species != null else 1.0)
+
 func is_pinned_by(holder: Node3D) -> bool:
 	return _pinned and _pin == holder
 
@@ -1288,7 +1329,7 @@ func escape() -> void:
 	# start from scratch for the rat to pick up `burst_speed`.
 	_state = State.WANDERING
 	_change_state(State.FLEEING)
-	velocity = flight * flee_speed + Vector3.UP * ESCAPE_LEAP
+	velocity = flight * _flight_speed(flee_speed) + Vector3.UP * ESCAPE_LEAP
 
 ## A guest strangled the rat in his hands. Runs on the host.
 ##
@@ -1672,7 +1713,7 @@ func _reassess_state() -> void:
 	var distance := _player_distance()
 	# Hidden, it puts up with the player a lot closer before bolting again.
 	var hearing_limit := hidden_panic_radius if _state == State.HIDING else panic_radius
-	var scared := distance <= hearing_limit or (distance <= _current_alert_radius() and _sees_player())
+	var scared := _scared_by_anybody(hearing_limit)
 	# The other thing that gets a rat off the ground: standing where one of its
 	# own is lying dead. It hunts nobody and it does not move, so it never sends
 	# the rat anywhere in particular — it only makes it not want to be here, and
@@ -1702,7 +1743,10 @@ func _change_state(new_state: State) -> void:
 			_pick_wander_target()
 		State.IDLE:
 			_clear_target()
-			_idle_duration = randf_range(0.8, 2.4)
+			# A rat standing on the rubbish is eating and stays put; one standing
+			# anywhere else has only stopped to sniff.
+			var span := FEEDING_TIME if _at_food() else IDLE_TIME
+			_idle_duration = randf_range(span.x, span.y)
 		State.FLEEING:
 			_clear_target()
 			_search_time = 0.0
@@ -1724,8 +1768,10 @@ func _change_state(new_state: State) -> void:
 func _process_wander(delta: float) -> void:
 	_target_time += delta
 	if not _has_target or _target_time > 6.0 or agent.is_navigation_finished():
-		# Now and then it stops to sniff instead of picking another destination.
-		if randf() < 0.35:
+		# Now and then it stops to sniff instead of picking another destination —
+		# and at the food it nearly always stops, because eating is what it made
+		# the walk for.
+		if randf() < (FEEDING_CHANCE if _at_food() else IDLE_CHANCE):
 			_change_state(State.IDLE)
 			return
 		_pick_wander_target()
@@ -1766,7 +1812,7 @@ func _process_flee(delta: float) -> void:
 			return
 		# It reached the hideout: if the player cannot reach it with his eyes, it
 		# keeps still.
-		if not _sees_player() and _player_distance() > panic_radius:
+		if not _scared_by_anybody(panic_radius):
 			_change_state(State.HIDING)
 			return
 		_clear_target()
@@ -1780,7 +1826,7 @@ func _process_flee(delta: float) -> void:
 		# nearer one alone is what runs the animal straight into the other.
 		direction = _dodge(_away_from_hunters())
 	var speed := burst_speed if _state_time < BURST_TIME else flee_speed
-	_move(direction, speed, delta)
+	_move(direction, _flight_speed(speed), delta)
 
 func _process_hide(delta: float) -> void:
 	_move(Vector3.ZERO, 0.0, delta)
@@ -2505,47 +2551,111 @@ func _player_distance() -> float:
 		return INF
 	return _flat_distance(global_position, player.global_position)
 
-## The rat notices someone running past from further off than someone strolling.
+## Whether *anybody* frightens this animal from where it is standing — heard, or
+## seen. Everybody rather than just the nearest, and that is the point of it: a
+## man crouched behind a crate three metres away is neither seen by the rat nor
+## heard by it, and his colleague standing in the open across the room is both.
+## Asking only the nearest would leave the animal sitting still in plain sight of
+## somebody walking straight at it.
 ##
-## Asked of the nearest man, who is the one the flight is about. A sprinter
-## further away is caught by `_sees_player`, which asks everybody at his own
-## radius.
-func _current_alert_radius() -> float:
-	return _alert_radius_for(_get_player())
+## The two senses are asked together here, where they used to be one question
+## about the room and one about the nearest man. Once each man is heard from his
+## own distance (`_notice`), the nearest man has stopped being the same person as
+## the man worth being frightened of: a colleague strolling six metres off is
+## more of a threat than the one creeping about at four.
+func _scared_by_anybody(hearing_limit: float) -> bool:
+	for hunter in _hunters():
+		if _scared_by(hunter, hearing_limit):
+			return true
+	return false
 
-## How far away this particular man is noticed from. Split out of
-## `_current_alert_radius` because the sight check now asks it of everybody in
-## turn, and each of them is moving at his own speed.
-##
-## The two kinds of body answer differently and neither can answer for the other:
-## the character knows its own `velocity`, while an avatar has none — it is a
-## `Node3D` eased towards wherever the wire last put it, so its speed is worked
-## out from the packets instead (`player_avatar.gd: speed`).
-func _alert_radius_for(hunter: Node3D) -> float:
+## One man, both senses. The footsteps first, because that is arithmetic and the
+## sight check is a ray.
+func _scared_by(hunter: Node3D, hearing_limit: float) -> bool:
 	if hunter == null:
-		return alert_radius
-	var speed := 0.0
+		return false
+	if _flat_distance(global_position, hunter.global_position) <= hearing_limit * _notice(hunter):
+		return true
+	return _sees(hunter)
+
+## How far away this particular man is seen from: the radius the rat was written
+## with, cut or stretched by how much notice it is taking of him.
+func _alert_radius_for(hunter: Node3D) -> float:
+	return alert_radius * _notice(hunter)
+
+## How much of its usual notice this animal takes of one particular man, as a
+## multiplier on every distance it would otherwise notice him from — by eye and
+## by ear alike, which is what makes creeping worth anything at all. A crouch
+## that only shortened the sight would still have the rat bolting at footsteps
+## from the same six metres, and six metres is further than a man can reach.
+##
+## Two things move it, and they are separate questions. What *he* is doing is
+## here: a running man is noticed from further off, a man on his knees from
+## closer in. What the *rat* is doing is `_distraction`, and the two multiply —
+## which is what makes the creeping worth most where the animals are eating.
+##
+## The two kinds of body answer this differently and neither can answer for the
+## other. The character knows its own `velocity` and its own knees; an avatar has
+## neither — it is a `Node3D` eased towards wherever the wire last put it, so its
+## speed is worked out from the packets (`player_avatar.gd: speed`) and its
+## crouch is read off the pose it is being drawn in. Both of them answer the same
+## two method names, which is the whole of what this asks of a hunter.
+func _notice(hunter: Node3D) -> float:
+	var man := 1.0
+	if hunter != null:
+		# Running and crouching are not both on the table — there is no sprinting
+		# on your knees (`player.gd: _is_sprinting`) — so the loud case is settled
+		# first, and the quiet one only asked where it can happen.
+		if _hunter_speed(hunter) > RUNNING_SPEED:
+			man = RUNNING_NOTICE
+		elif species != null and _hunter_crouching(hunter):
+			man = species.crouch_notice
+	return man * _distraction()
+
+## How fast a hunter is travelling along the ground, whichever kind of body he
+## is. Nought for anything that is neither.
+func _hunter_speed(hunter: Node3D) -> float:
 	var body := hunter as CharacterBody3D
 	if body != null:
-		speed = Vector2(body.velocity.x, body.velocity.z).length()
-	else:
-		var avatar := hunter as PlayerAvatar
-		if avatar != null:
-			speed = avatar.speed
-	if speed > RUNNING_SPEED:
-		return alert_radius * 1.4
-	return alert_radius
+		return Vector2(body.velocity.x, body.velocity.z).length()
+	var avatar := hunter as PlayerAvatar
+	return avatar.speed if avatar != null else 0.0
 
-## Whether *anybody* has this rat in view, each of them from his own distance.
+## Whether a hunter is down on his knees. Asked by name rather than by type
+## because the two bodies keep the answer in different places — the character has
+## the crouch itself, the avatar only the pose it was told to draw — and neither
+## of them is worth a cast here.
+func _hunter_crouching(hunter: Node3D) -> bool:
+	return hunter.has_method("is_crouching") and hunter.is_crouching()
+
+## How much notice the animal is taking of anything at all, on the same scale. A
+## rat wandering the house is all eyes and takes its full number; one with its
+## head in a heap of rubbish is eating, and eating is the one thing in its day it
+## does *instead* of watching. It is what makes a tub of bait worth the walk out
+## to put it down: it does not only gather the animals, it makes the gathered
+## ones approachable.
 ##
-## Everybody rather than just the nearest, and that is the point of it: a man
-## crouched behind a crate three metres away does not see the rat, and his
-## colleague standing in the open across the room does. Asking only the nearest
-## would leave the animal sitting still in plain sight of somebody walking
-## straight at it.
-func _sees_player() -> bool:
-	for hunter in _hunters():
-		if _sees(hunter):
+## Only while it is calm, and that guard is the point. A frightened rat standing
+## on the food is not eating — it is crossing it on its way somewhere else — and
+## a flight that went quietly deaf over a bin bag would be an animal the crew
+## could walk up to and take mid-run.
+func _distraction() -> float:
+	if species == null:
+		return 1.0
+	if _state != State.WANDERING and _state != State.IDLE:
+		return 1.0
+	return species.feeding_notice if _at_food() else 1.0
+
+## Standing inside the circle the animals mill about a heap in (`LURE_SPREAD`),
+## which is close enough to have its nose in it.
+##
+## Deliberately not `_nearest_lure`: that answers which heap this rat can
+## *smell*, from most of the way across the house, and a rat that can smell food
+## is not a rat that is eating it.
+func _at_food() -> bool:
+	for node in get_tree().get_nodes_in_group("lures"):
+		var lure := node as Node3D
+		if lure != null and _flat_distance(lure.global_position, global_position) <= LURE_SPREAD:
 			return true
 	return false
 

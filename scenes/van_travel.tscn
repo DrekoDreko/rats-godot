@@ -14,6 +14,7 @@
 [ext_resource type="Script" uid="uid://bsgt4sowfdofs" path="res://scripts/travel/cabin_shake.gd" id="13_shake"]
 [ext_resource type="PackedScene" path="res://scenes/terminal_screen.tscn" id="17_store"]
 [ext_resource type="PackedScene" path="res://scenes/contract_vote_screen.tscn" id="20_vote"]
+[ext_resource type="PackedScene" path="res://scenes/result_screen.tscn" id="result_screen"]
 [ext_resource type="PackedScene" path="res://scenes/hud_game.tscn" id="21_hud_game"]
 [ext_resource type="PackedScene" path="res://scenes/pause_menu.tscn" id="99_pause"]
 [ext_resource type="PackedScene" path="res://scenes/scoreboard.tscn" id="98_scoreboard"]
@@ -296,6 +297,8 @@ spawn_radius = 0.0
 [node name="HUDPhase" parent="." unique_id=724187090 instance=ExtResource("5_hud_phase")]
 
 [node name="HUD" parent="." instance=ExtResource("21_hud_game")]
+
+[node name="ResultScreen" parent="." instance=ExtResource("result_screen")]
 
 [node name="Scoreboard" parent="." instance=ExtResource("98_scoreboard")]
 

@@ -70,6 +70,14 @@ signal splashed()
 ## to, and it goes out on the healing at respawn too, so nothing on screen is
 ## left showing a corpse's health.
 signal health_changed(current: int, maximum: int)
+## What is left of the sprint reserve. The HUD only mirrors this: spending and
+## recovering stamina both live beside the movement that causes them.
+signal stamina_changed(current: float, maximum: float)
+## Ran the reserve dry, or got it back. Between the two the player cannot run at
+## all, however much has trickled back in — see `_exhausted` for why that is a
+## latch and not simply an empty bar. The HUD listens so the bar can say so:
+## a Shift that does nothing with no reason given on screen reads as a bug.
+signal exhaustion_changed(exhausted: bool)
 ## Just took a wound. `remaining` is what was left standing after it — enough
 ## for the HUD to flash without having to keep a count of its own.
 signal damaged(amount: int, remaining: int)
@@ -99,18 +107,61 @@ signal hold_finished(completed: bool)
 signal seated_changed(seated: bool)
 
 @export_group("Movement")
-@export var walk_speed := 6.0
-@export var run_speed := 10.5
+@export var walk_speed := 5.0
+@export var run_speed := 7.0
 ## Speed with a rat struggling in the hands: enough to walk, not to hunt.
 @export var holding_speed := 3.5
 ## Speed crouched. Slower than a rat's wander, which is the point of it: it buys
-## quiet, not ground.
+## quiet, not ground — and the quiet is a real thing and not a figure of speech.
+## A man on his knees is seen and heard from closer in, by how much depending on
+## the breed and on whether the animal has its head in the food
+## (`rat.gd: _notice`). What he cannot do at this speed is chase one.
 @export var crouch_speed := 2.8
 @export var acceleration := 52.0
 @export var deceleration := 68.0
 @export var jump_height := 1.5
 @export var gravity := 22.0
 @export var mouse_sensitivity := 0.0035
+
+@export_group("Stamina")
+## A full reserve lasts this many seconds of continuous running.
+@export var max_stamina := 4.0
+## Stamina spent per second while Shift and a movement direction are held.
+@export var stamina_drain_rate := 1.0
+## Stamina recovered per second once the reserve has started coming back.
+@export var stamina_recovery_rate := 1.5
+## Dead time after the last thing that spent stamina before any of it comes
+## back, in seconds.
+##
+## Without it none of the costs below mean anything. A strangling takes forty
+## per cent of the bar and the reserve refills in under three seconds flat, so
+## the price of a kill was paid off during the walk to the next rat and the
+## player never once felt it. The pause is what turns a cost into a decision:
+## it is the seconds right after the kill — the loud, bloody moment a second rat
+## is most likely to come at him — that he spends unable to run.
+@export var stamina_recovery_delay := 1.0
+## How much of the bar has to come back before an emptied reserve will run
+## again, as a fraction of `max_stamina`. See `_exhausted`.
+@export var stamina_exhaustion_recovery := 0.35
+
+@export_subgroup("Costs")
+## Taken by getting a boot stuck in a strip of glue, as a fraction of the whole
+## bar. It is charged once, on the catch itself and not on the struggle out of
+## it: the fright and the wrench are the moment he is caught, and the timing bar
+## that follows is already its own punishment.
+@export var stamina_glue_cost := 0.30
+## Taken by strangling a rat that had to be fought for, as a fraction of the
+## whole bar. The largest of the three, and it should be: it is the one thing in
+## the game the player does with his whole body.
+@export var stamina_strangle_cost := 0.40
+## Taken by strangling a rat that was already stuck on the glue when he picked
+## it up. Half price, for the same reason it takes a third of the squeezes: the
+## animal had nothing left to brace against (`rat.gd: PINNED_EFFORT`).
+##
+## This is the shape of the whole trap loop in one number — the glue costs a
+## strip and the risk of standing in it, and pays back in kills that do not
+## empty him.
+@export var stamina_strangle_pinned_cost := 0.20
 
 @export_group("Camera")
 ## How far the camera travels from its resting height, in metres, at a full run.
@@ -175,8 +226,8 @@ const BOB_SETTLE := 8.0
 ## bends the visible legs; this moves the first-person view to the same height.
 const SEATED_HEAD_SCALE := 0.44
 ## Third-person death camera orbit.
-const DEATH_CAMERA_DISTANCE := 5.5
-const DEATH_CAMERA_HEIGHT := 2.6
+const DEATH_CAMERA_DISTANCE := 3.0
+const DEATH_CAMERA_HEIGHT := 1.4
 const DEATH_CAMERA_MIN_PITCH := deg_to_rad(-8.0)
 const DEATH_CAMERA_MAX_PITCH := deg_to_rad(42.0)
 const DEATH_FALL_TIME := 0.45
@@ -326,6 +377,20 @@ var _stand_collision_y := 0.0
 ## What is left of `max_health`. Zero is a dead player, and only for the instant
 ## it takes to send him back to the start.
 var _health := 0
+## The remaining sprint reserve. It is always kept in [0, max_stamina].
+var _stamina := 0.0
+## Ran it all the way down, and has not yet earned it back.
+##
+## It is a latch rather than the bare `_stamina > 0.0` test it replaces, because
+## that test gave the run back on the first drop that trickled in: the player
+## held Shift through an empty bar and got a fifteenth of a second of running
+## per frame of walking, which on screen is a stutter and in the hand is a
+## sprint key that has stopped meaning anything. Emptied, the reserve is out of
+## the question until `stamina_exhaustion_recovery` of it is back.
+var _exhausted := false
+## How much longer before spent stamina starts coming back, in seconds. Wound
+## right back up by every spend, so the pause always counts from the last one.
+var _stamina_delay := 0.0
 ## What is in front of him, or null. Only what changes is announced.
 var _focused: Interactable
 ## The rat in his sights, or null. Held so the outline can be taken off the one
@@ -351,6 +416,13 @@ var _look := Vector2.ZERO
 ## height of the frame, and hands that followed *that* would be dragged down by
 ## the body instead of putting it away.
 var _held_rat: Node3D
+## How much of the usual work the rat in his hands was worth when he grabbed
+## it, from 0 to 1, and 1.0 with empty hands. It is read once at the grab and
+## kept for one purpose: deciding what the kill costs him. One already stuck
+## on the glue was beaten before he touched it and is the cheaper kill, and
+## the animal stops being able to answer for itself the moment it is picked
+## up (`Weapon.capture_effort`).
+var _held_rat_effort := 1.0
 ## How much longer his arms are still busy with a rat he has already killed, in
 ## seconds. It is what keeps the body holding the animal for as long as it takes
 ## to come apart — see `_on_weapon_bursting` and `arms_state`.
@@ -361,7 +433,6 @@ var _seated := false
 var _glue: GlueTrap
 var glue_progress := 0.0
 var _glue_anchor := Vector3.ZERO
-var _glue_jump_block := false
 var _dead_camera_center := Vector3.ZERO
 var _dead_camera_yaw := 0.0
 var _dead_camera_pitch := deg_to_rad(14.0)
@@ -371,6 +442,7 @@ var _model_rest_transform := Transform3D.IDENTITY
 func _ready() -> void:
 	_start_position = global_position
 	_health = max_health
+	_stamina = max_stamina
 	# The player scene is mounted in the gameplay SubViewport. Wait until that
 	# mount has completed before selecting its listener; otherwise the main
 	# viewport has no current 3D listener and positional sounds are inaudible.
@@ -429,6 +501,14 @@ func _on_inventory_equipped(slot: int, weapon: Weapon) -> void:
 func _on_weapon_caught(rat: Node3D) -> void:
 	view_model.set_gripping(true)
 	_held_rat = rat
+	# Latched at the grab because by now the animal is off the glue and has no
+	# memory of having been on it — the weapon kept the reading from the
+	# instant before (`Weapon.capture_effort`), and this is the last moment it
+	# is still worth asking for.
+	_held_rat_effort = 1.0
+	var weapon := inventory.current()
+	if weapon != null:
+		_held_rat_effort = weapon.capture_effort()
 	capture_started.emit(rat)
 
 
@@ -445,7 +525,14 @@ func _on_weapon_caught(rat: Node3D) -> void:
 func _on_weapon_finished(killed: bool) -> void:
 	if not killed:
 		view_model.set_gripping(false)
+	# Only a kill is paid for. A rat that wriggled out took the player's
+	# stamina nowhere, and charging him for it would mean the worse outcome
+	# cost the same as the better one.
+	if killed:
+		_spend_stamina(stamina_strangle_pinned_cost if _held_rat_effort < 1.0
+			else stamina_strangle_cost)
 	_held_rat = null
+	_held_rat_effort = 1.0
 	capture_finished.emit(killed)
 
 
@@ -547,8 +634,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	# closes it is the screen's own business, and it never reaches this far.
 	if _ui_open:
 		return
-	if is_glued() and event.is_action_pressed("jump"):
-		_glue_jump_block = true
+	# Stuck on glue the click belongs to the escape and to nothing else — not to
+	# the weapon in hand, and not to a rat already in the fist. It comes first
+	# and swallows the press for that reason: a player pulling his boot free is
+	# not also hunting, and a rat he was strangling when he stepped in it drains
+	# loose while he works (`hands.gd: decay`).
+	if is_glued() and event.is_action_pressed("strangle"):
 		_glue.press_escape()
 		get_viewport().set_input_as_handled()
 		return
@@ -690,8 +781,6 @@ func _open_terminal() -> bool:
 	return terminal != null and terminal.open(self)
 
 func _physics_process(delta: float) -> void:
-	if not Input.is_action_pressed("jump"):
-		_glue_jump_block = false
 	if is_dead():
 		_update_dead_camera()
 		return
@@ -714,7 +803,7 @@ func _physics_process(delta: float) -> void:
 	# from down on his knees — pressing jump while crouched only lets go of the
 	# crouch, and the jump belongs to whoever is standing when he presses it.
 	if not busy and not _seated and not _ui_open and not is_crouching() \
-			and not is_glued() and not _glue_jump_block \
+			and not is_glued() \
 			and Input.is_action_just_pressed("jump") and _air_time <= COYOTE_TIME:
 		velocity.y = sqrt(2.0 * gravity * jump_height)
 		_air_time = COYOTE_TIME + 1.0
@@ -725,7 +814,8 @@ func _physics_process(delta: float) -> void:
 		_dip = JUMP_DIP
 
 	var direction := _desired_direction()
-	var target := direction * _target_speed(busy)
+	_update_stamina(delta, direction, busy)
+	var target := direction * _target_speed(direction, busy)
 	var rate := acceleration if direction != Vector3.ZERO else deceleration
 	velocity.x = move_toward(velocity.x, target.x, rate * delta)
 	velocity.z = move_toward(velocity.z, target.z, rate * delta)
@@ -808,11 +898,87 @@ func _update_dead_camera() -> void:
 ## Between standing and crouched it is not one speed or the other but the way
 ## from one to the other, because that is what his body is doing: going down
 ## slows him as he goes down, and standing up gives it back as he comes up.
-func _target_speed(busy: bool) -> float:
+func _target_speed(direction: Vector3, busy: bool) -> float:
 	if busy:
 		return holding_speed
-	var upright := run_speed if Input.is_action_pressed("run") else walk_speed
+	var upright := run_speed if _is_sprinting(direction, busy) else walk_speed
 	return lerpf(upright, crouch_speed, _crouch)
+
+
+## Sprinting is one state shared by speed and stamina: Shift alone, crouching,
+## a full pair of hands, or an empty reserve never count as a run.
+func _is_sprinting(direction: Vector3, busy: bool) -> bool:
+	return direction != Vector3.ZERO and not busy and not is_crouching() \
+		and not _ui_open and not _seated and not is_glued() and not _exhausted \
+		and Input.is_action_pressed("run")
+
+
+## The reserve, once per frame: running spends it, everything else waits out the
+## pause and then gives it back.
+##
+## The spending is here and the *costs* are not, and that split is the point of
+## the shape. This is the one drain that happens by the second, so it is the one
+## that belongs beside the movement causing it; a glue trap and a strangling are
+## each a single moment with a price on it, and they pay it where they happen
+## through `_spend_stamina`.
+func _update_stamina(delta: float, direction: Vector3, busy: bool) -> void:
+	if _is_sprinting(direction, busy):
+		_spend_stamina(stamina_drain_rate * delta / maxf(max_stamina, 0.001))
+		return
+	# Only the part of the frame left over after the pause recovers anything.
+	# Spending the whole delta on the frame the pause runs out would hand back a
+	# frame of stamina that was still owed, which at a long frame is enough to
+	# clear the exhaustion latch in the same breath that ended the wait.
+	var recovering := delta
+	if _stamina_delay > 0.0:
+		recovering = maxf(0.0, delta - _stamina_delay)
+		_stamina_delay = maxf(0.0, _stamina_delay - delta)
+	if recovering <= 0.0 or _stamina >= max_stamina:
+		return
+	_set_stamina(minf(max_stamina, _stamina + stamina_recovery_rate * recovering))
+
+
+## Charges a one-off cost, given as a fraction of the whole bar rather than in
+## seconds of running: what the player reads is the bar, and "a strangling takes
+## nearly half of it" survives anybody retuning `max_stamina` afterwards.
+##
+## Every spend restarts the pause before the reserve comes back, the running
+## drain included, so the wait always counts from the last thing that cost him
+## something rather than from whichever kind of spending it was.
+func _spend_stamina(fraction: float) -> void:
+	if fraction <= 0.0 or is_dead():
+		return
+	_stamina_delay = stamina_recovery_delay
+	_set_stamina(maxf(0.0, _stamina - fraction * max_stamina))
+
+
+## The one place the reserve is written, so the empty latch can never be out of
+## step with the number it is a latch on.
+func _set_stamina(value: float) -> void:
+	var previous := _stamina
+	_stamina = value
+	if not is_equal_approx(_stamina, previous):
+		stamina_changed.emit(_stamina, max_stamina)
+	var exhausted := _exhausted
+	if _stamina <= 0.0:
+		exhausted = true
+	elif _stamina >= max_stamina * stamina_exhaustion_recovery:
+		exhausted = false
+	if exhausted != _exhausted:
+		_exhausted = exhausted
+		exhaustion_changed.emit(_exhausted)
+
+
+## Back on his feet with a whole bar. Death and respawn both go through here, so
+## that neither can leave the latch set on a reserve that is already full.
+func _refill_stamina() -> void:
+	_stamina_delay = 0.0
+	_set_stamina(max_stamina)
+
+
+## Whether the reserve is too far gone to run on. See `_exhausted`.
+func is_exhausted() -> bool:
+	return _exhausted
 
 ## Movement direction on the XZ plane, relative to where the character faces.
 func _desired_direction() -> Vector3:
@@ -833,10 +999,24 @@ func is_glued() -> bool:
 	return is_instance_valid(_glue) and not is_dead()
 
 
+## The trap tells him he is stuck, every frame he stays stuck (`glue_trap.gd:
+## _apply_local_player`). The cost is charged on the *edge* and nowhere else:
+## the wrench of being caught is one moment, and billing it per frame would
+## empty the bar before the first sweep of the timing bar had crossed.
+##
+## Getting free and stepping back in is a second catch and is charged again,
+## which is correct and is not a way to drain the player twice over: the trap
+## blocks the boot that just came out of it (`glue_trap.gd: _blocked_players`).
 func set_glue_state(glue: GlueTrap, stuck: bool, progress: float, anchor: Vector3) -> void:
 	if stuck and not is_dead() and not _seated:
 		if is_instance_valid(_glue) and _glue != glue:
 			return
+		# `is_glued()` rather than a null check on `_glue`: a trap that peeled
+		# and freed itself leaves a dangling reference behind, and that is a
+		# player who is not stuck to anything and should be charged for the
+		# next strip he steps in.
+		if not is_glued():
+			_spend_stamina(stamina_glue_cost)
 		_glue = glue
 		glue_progress = progress
 		_glue_anchor = anchor
@@ -1057,6 +1237,12 @@ func _is_blocked_above() -> bool:
 
 ## Down, or on his way down. Anything asking whether he is crouched wants this
 ## and not the fraction: halfway to the floor is already too low to jump from.
+##
+## The rats ask it too, by this name (`rat.gd: _hunter_crouching`), and so does
+## every other machine's copy of him through the pose he is drawn in
+## (`player_avatar.gd: is_crouching`). Half-down counting as down is the right
+## answer there as well: the stealth should arrive with the key and not a
+## quarter of a second after it.
 func is_crouching() -> bool:
 	return _crouch > 0.0
 
@@ -1115,7 +1301,7 @@ func spawn_point() -> Vector3:
 func respawn() -> void:
 	_glue = null
 	glue_progress = 0.0
-	_glue_jump_block = false
+	_refill_stamina()
 	_death_started = false
 	_dead_camera_center = Vector3.ZERO
 	camera.top_level = false
@@ -1422,6 +1608,15 @@ func health() -> int:
 func health_fraction() -> float:
 	return 0.0 if max_health <= 0 else float(_health) / float(max_health)
 
+
+## What is left of the sprint reserve, from 0 to 1.
+func stamina_fraction() -> float:
+	return 0.0 if max_stamina <= 0.0 else _stamina / max_stamina
+
+
+func stamina() -> float:
+	return _stamina
+
 func is_dead() -> bool:
 	return _health <= 0
 
@@ -1434,6 +1629,7 @@ func _die() -> void:
 	_death_started = true
 	died.emit()
 	velocity = Vector3.ZERO
+	_refill_stamina()
 	collision.set_deferred("disabled", true)
 	_focused = null
 	_cancel_hold()

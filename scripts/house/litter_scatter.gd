@@ -5,8 +5,8 @@ extends Node3D
 ##
 ## The heaps of rubbish are level furniture put down by hand
 ## (`scripts/house/garbage_pile.gd`): a designer chose those spots because the
-## trails lead to them and the rats nest in them. **This is the other kind of
-## mess** — the banana skin in the hall, the bin bag split in a corner, the doll
+## trails lead to them and the rats nest in them, and a heap is a dozen of these
+## same pieces stacked in one place. **This is the other kind of mess** — the banana skin in the hall, the bin bag split in a corner, the doll
 ## face down on the landing. It is not a clue and nothing reads it. It is what
 ## makes a room look lived in and then abandoned, and there is a lot of it.
 ##
@@ -32,25 +32,9 @@ extends Node3D
 ## dropped onto whatever is really underneath it with `ClueManager.on_the_boards`
 ## — the same call the droppings and the streaks land through.
 
-## The pieces of rubbish this house is strewn with.
-##
-## Every piece is drawn at the art's own size — the scene's `pixel_size`, one
-## centimetre to the pixel — so how big a thing is in the house is decided by how
-## big it was drawn. A banana skin of 24 by 21 pixels is 24 by 21 centimetres on
-## the boards.
-##
-## Each piece used to carry a height in metres instead, with `pixel_size` worked
-## out from it. That kept the sizes fixed while the placeholder art changed
-## underneath, but it meant the file here and the file on disk both had a say in
-## how big a thing was; redrawing a sprite bigger did nothing until this list was
-## edited too. The art is the size now.
-const LITTER: Array[String] = [
-	"res://assets/textures/placeholder/banana.png",
-	"res://assets/textures/placeholder/trash.png",
-	"res://assets/textures/placeholder/dolly.png",
-]
-
-const LITTER_SCENE := "res://scenes/clues/floor_litter.tscn"
+## The art itself is not listed here. A piece of rubbish is a `FloorLitter` and
+## knows what it may be drawn as (`FloorLitter.ART`); this node only decides how
+## many there are and where they go.
 
 ## How much floor gets one piece, in square metres.
 ##
@@ -123,10 +107,6 @@ func _strew() -> void:
 	if floor_area <= 0.0:
 		return
 
-	var packed := load(LITTER_SCENE) as PackedScene
-	if packed == null:
-		return
-
 	var rng := RandomNumberGenerator.new()
 	rng.seed = SessionManager.random_seed
 
@@ -138,7 +118,7 @@ func _strew() -> void:
 		if at == ClueManager.INVALID_POINT:
 			continue
 		placed.append(at)
-		_drop(packed, at, rng)
+		_drop(at, rng)
 
 
 ## A spot for one piece: rolled on the mesh, dropped to the boards, and rejected
@@ -164,31 +144,16 @@ func _find_spot(polygons: Array, floor_area: float, placed: Array[Vector3],
 ## One piece of rubbish on the boards.
 ##
 ## The sprite is lifted by half its own height so it stands on the floor rather
-## than being buried to its waist in it, and turned a random amount around the
-## vertical — which for a billboard is not a rotation of the picture but of the
-## axis it spins about, and is what stops a row of identical bananas all facing
-## the same way from reading as a texture.
-func _drop(packed: PackedScene, at: Vector3, rng: RandomNumberGenerator) -> void:
-	var sprite := packed.instantiate() as Sprite3D
+## than being buried to its waist in it, and joins the `litter` group here rather
+## than in its own `_ready`: the group means the rubbish strewn loose across a
+## house, which is this node's doing and not every sprite's.
+func _drop(at: Vector3, rng: RandomNumberGenerator) -> void:
+	var sprite := FloorLitter.piece(rng)
 	if sprite == null:
 		return
-	var texture := load(LITTER[rng.randi_range(0, LITTER.size() - 1)]) as Texture2D
-	if texture == null:
-		return
-	sprite.texture = texture
-	# `pixel_size` is left at whatever the scene sets, so the piece is drawn at the
-	# art's own size. How tall that comes out is then read back off the texture
-	# rather than known in advance — it is what decides how far the sprite has to
-	# be lifted to stand on the boards instead of being sunk to its middle in them.
-	sprite.position = at + Vector3.UP * (_drawn_height(sprite, texture) * 0.5)
-	sprite.rotation.y = rng.randf_range(0.0, TAU)
+	sprite.position = at + Vector3.UP * (sprite.drawn_height() * 0.5)
+	sprite.add_to_group("litter")
 	add_child(sprite)
-
-
-## How tall a piece is drawn, in metres: its art's pixel height at the scene's
-## scale.
-func _drawn_height(sprite: Sprite3D, texture: Texture2D) -> float:
-	return sprite.pixel_size * float(texture.get_height())
 
 
 ## Every triangle of walkable floor in this house, each with the area it covers.

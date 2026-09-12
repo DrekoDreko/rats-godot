@@ -1,39 +1,6 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=2 format=3]
 
 [ext_resource type="Script" path="res://scripts/house/garbage_pile.gd" id="1_pile"]
 
-[sub_resource type="StandardMaterial3D" id="Material_bag"]
-shading_mode = 0
-albedo_color = Color(0.09, 0.09, 0.11, 1)
-
-[sub_resource type="SphereMesh" id="Mesh_bag"]
-material = SubResource("Material_bag")
-radius = 0.36
-height = 0.62
-radial_segments = 8
-rings = 4
-
-[sub_resource type="BoxMesh" id="Mesh_crate"]
-material = SubResource("Material_bag")
-size = Vector3(0.7, 0.4, 0.5)
-
 [node name="GarbagePile" type="Node3D" groups=["garbage"]]
 script = ExtResource("1_pile")
-
-[node name="Model" type="Node3D" parent="."]
-
-[node name="Crate" type="MeshInstance3D" parent="Model"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0)
-mesh = SubResource("Mesh_crate")
-
-[node name="Bag1" type="MeshInstance3D" parent="Model"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.22, 0.31, 0.1)
-mesh = SubResource("Mesh_bag")
-
-[node name="Bag2" type="MeshInstance3D" parent="Model"]
-transform = Transform3D(0.85, 0, 0, 0, 0.85, 0, 0, 0, 0.85, 0.24, 0.28, -0.12)
-mesh = SubResource("Mesh_bag")
-
-[node name="Bag3" type="MeshInstance3D" parent="Model"]
-transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 0.02, 0.66, 0.04)
-mesh = SubResource("Mesh_bag")

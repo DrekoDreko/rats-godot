@@ -26,11 +26,43 @@ extends Sprite3D
 ## the same banana skin, and a room of litter all rustling at once every frame
 ## would be noise rather than atmosphere.
 ##
+## **The `litter` group is not joined here.** It means the rubbish strewn loose
+## across the boards, and it is `LitterScatter` that puts its own pieces in it —
+## the pieces stacked into a heap (`GarbagePile`) are the same sprite doing a
+## different job, and they are not lying on the floor, which is a thing the group
+## is read for (`_test_litter.gd`).
+##
 ## Nothing here crosses the wire. Where the litter is comes from the shift's seed
 ## (`scripts/house/litter_scatter.gd`), so every machine already has the same
 ## rubbish in the same places; the hop is a reaction to *this* screen's player and
 ## belongs to him alone, the same way a streak's bite does
 ## (`scripts/house/rat_streak.gd`).
+
+## The pictures a piece of rubbish may be drawn as.
+##
+## The list lives here, with the piece, and not with whoever lays it: two things
+## strew rubbish now — the floor of a house (`LitterScatter`) and a heap of it
+## (`GarbagePile`) — and they agree on nothing except what one piece is.
+##
+## Every piece is drawn at the art's own size — the scene's `pixel_size`, one
+## centimetre to the pixel — so how big a thing is in the house is decided by how
+## big it was drawn. A banana skin of 24 by 21 pixels is 24 by 21 centimetres on
+## the boards.
+##
+## Each piece used to carry a height in metres instead, with `pixel_size` worked
+## out from it. That kept the sizes fixed while the placeholder art changed
+## underneath, but it meant the file here and the file on disk both had a say in
+## how big a thing was; redrawing a sprite bigger did nothing until this list was
+## edited too. The art is the size now.
+const ART: Array[String] = [
+	"res://assets/textures/placeholder/banana.png",
+	"res://assets/textures/placeholder/trash.png",
+	"res://assets/textures/placeholder/dolly.png",
+]
+
+## The scene one piece is made from — this script's own, so that whoever wants a
+## piece of rubbish asks the rubbish for one instead of knowing where it lives.
+const SCENE := "res://scenes/clues/floor_litter.tscn"
 
 ## How close a man has to come before it stirs, in metres across the floor.
 ##
@@ -75,8 +107,40 @@ var _bounce_time := -1.0
 var _armed := true
 
 
+## One piece of rubbish, drawn as one of `ART` and spun a random amount about the
+## vertical — which for a billboard is not a rotation of the picture but of the
+## axis it turns on, and is what stops a row of identical bananas all facing the
+## same way from reading as a texture. Null when the art will not load.
+##
+## It comes back loose and with no position on it. The two things that lay
+## rubbish want it arranged differently — a floor strewn piece by piece, a heap
+## stacked in a corner — and this is the part they share.
+static func piece(rng: RandomNumberGenerator) -> FloorLitter:
+	var packed := load(SCENE) as PackedScene
+	if packed == null:
+		return null
+	var sprite := packed.instantiate() as FloorLitter
+	if sprite == null:
+		return null
+	var texture := load(ART[rng.randi_range(0, ART.size() - 1)]) as Texture2D
+	if texture == null:
+		sprite.free()
+		return null
+	sprite.texture = texture
+	sprite.rotation.y = rng.randf_range(0.0, TAU)
+	return sprite
+
+
+## How tall this piece is drawn, in metres: its art's pixel height at the sprite's
+## own scale. Half of it is how far the piece has to be lifted to stand on what is
+## under it instead of being sunk to its middle in it.
+func drawn_height() -> float:
+	if texture == null:
+		return 0.0
+	return pixel_size * float(texture.get_height())
+
+
 func _ready() -> void:
-	add_to_group("litter")
 	_rest_y = position.y
 
 

@@ -33,6 +33,17 @@ var _failures := 0
 func _initialize() -> void:
 	call_deferred("_run")
 
+## Put the pointer in the middle of the green, which is what a well-timed click
+## is. The bench has no hands and the sweep would otherwise run past it.
+func _aim(glue) -> void:
+	glue.sweep_pointer = glue.sweep_zone_start + glue.sweep_zone_width * 0.5
+
+## Just past the green, which is what a mistimed click is. Above it rather than
+## below: the first sweep of all starts with the green at the foot of the track,
+## where "a little before it" is inside it.
+func _miss(glue) -> void:
+	glue.sweep_pointer = minf(1.0, glue.sweep_zone_start + glue.sweep_zone_width + 0.05)
+
 func _check(condition: bool, message: String) -> void:
 	if not condition:
 		push_error(message)
@@ -79,21 +90,33 @@ func _run() -> void:
 	_check(player.holder == glue and is_equal_approx(glue.remaining, 30.0), "Player capture costs ten seconds")
 	other._physics_process(0.0)
 	_check(other._players.is_empty() and is_equal_approx(other.remaining, 40.0), "Only one glue holds each player")
-	for index in 4:
-		glue._physics_process(0.2)
-		glue.press_escape()
-	_check(is_equal_approx(player.progress, 4.0 / 6.0), "Four rhythmic presses accumulate")
-	glue._physics_process(1.35)
-	_check(is_equal_approx(player.progress, 2.0 / 6.0), "Pausing gradually drains progress")
-	glue._physics_process(1.0)
-	_check(is_zero_approx(player.progress), "Progress drains back to zero")
-	for index in 5:
-		glue._physics_process(0.2)
-		glue.press_escape()
-	_check(player.holder == glue, "Five fresh presses are insufficient")
+	# The escape is timed now: only a click with the pointer in the green counts,
+	# and either way the green moves.
 	glue._physics_process(0.2)
+	var missed_target: float = glue.sweep_zone_start
+	_miss(glue)
 	glue.press_escape()
-	_check(player.holder == null, "Six rhythmic presses release the player")
+	_check(is_zero_approx(player.progress) and glue.sweep_zone_start != missed_target,
+		"A click outside the green is worth nothing and moves the target")
+	glue.sweep_pointer = 1.0
+	glue._physics_process(0.1)
+	var first_sweep: float = 1.0 - glue.sweep_pointer
+	_aim(glue)
+	glue.press_escape()
+	_check(is_equal_approx(player.progress, 1.0 / 3.0), "A click in the green counts")
+	glue.sweep_pointer = 1.0
+	glue._physics_process(0.1)
+	_check(1.0 - glue.sweep_pointer > first_sweep, "Each landed hit speeds the next sweep up")
+	glue._physics_process(2.0)
+	_check(is_equal_approx(player.progress, 1.0 / 3.0), "Standing still no longer drains progress")
+	_check(is_equal_approx(glue.sweep_pointer, 1.0), "An unanswered sweep starts over rather than stopping")
+	_aim(glue)
+	glue.press_escape()
+	_check(is_equal_approx(player.progress, 2.0 / 3.0), "Timed hits accumulate")
+	glue._physics_process(0.1)
+	_aim(glue)
+	glue.press_escape()
+	_check(player.holder == null, "Three timed hits release the player")
 	var time_after_escape: float = glue.remaining
 	glue._physics_process(0.0)
 	_check(player.holder == null and glue.remaining == time_after_escape, "No immediate recapture or repeated cost")
@@ -126,20 +149,21 @@ func _run() -> void:
 	fresh.set_physics_process(false)
 	fresh._physics_process(0.0)
 	_check(real_player.is_glued(), "Actual player is immobilized")
-	var key := InputEventKey.new()
-	key.physical_keycode = KEY_SPACE
-	key.pressed = true
-	key.echo = true
-	real_player._unhandled_input(key)
-	_check(is_zero_approx(real_player.glue_progress), "Holding Space does not count key repeat")
-	key.echo = false
-	for index in 6:
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	_miss(fresh)
+	real_player._unhandled_input(click)
+	_check(is_zero_approx(real_player.glue_progress), "A mistimed click does not free the actual player")
+	for index in 3:
 		fresh._physics_process(0.2)
-		real_player._unhandled_input(key)
-	_check(not real_player.is_glued() and real_player._glue_jump_block, "Actual Space escape suppresses the release-frame jump")
+		_aim(fresh)
+		real_player._unhandled_input(click)
+	_check(not real_player.is_glued(), "Actual timed clicks free the player")
 	var hud := real_player.get_node("GlueHUD")
 	hud._process(0.0)
-	_check(hud._prompt is BigFontOutlinedLabel and not hud._bar.show_percentage, "HUD uses reusable text scene")
+	_check(hud._prompt is BigFontOutlinedLabel and hud._counter is BigFontOutlinedLabel,
+		"HUD uses reusable text scene")
 	# Exercise actual physics entry/exit, including recapture immunity.
 	var physical_glue = scene.instantiate()
 	physical_glue.position.x = 25.0
@@ -169,6 +193,21 @@ func _run() -> void:
 	await physics_frame
 	await physics_frame
 	_check(physical_rat.is_pinned(), "Rat can be caught again after physical exit and reentry")
+	# The green lands all over the track and never twice in the same place.
+	seed(38219)
+	var thirds := [false, false, false]
+	for index in 300:
+		var previous: float = other._previous_zone_center
+		other._start_sweep()
+		var center: float = other._previous_zone_center
+		_check(other.sweep_zone_start >= 0.08 - 0.00001
+			and other.sweep_zone_start + other.sweep_zone_width <= 0.92 + 0.00001,
+			"The green stays on the track")
+		_check(previous < 0.0 or absf(center - previous) >= other.MIN_ZONE_SHIFT - 0.00001,
+			"The green moves between one go and the next")
+		thirds[clampi(int(center * 3.0), 0, 2)] = true
+	_check(thirds.all(func(seen: bool) -> bool: return seen),
+		"The green reaches every third of the track")
 	var common: Resource = load("res://resources/species/common_rat.tres")
 	var sprayer: Resource = load("res://resources/species/sprayer_rat.tres")
 	_check(common.glue_escape_seconds == 0.0 and sprayer.glue_escape_seconds == 20.0, "Species escape configuration")
@@ -176,5 +215,5 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	if _failures == 0:
-		print("OK: glue capacity, escape, decay, wear, overlap, reentry, expiration, preparation and integration")
+		print("OK: glue capacity, timed escape, wear, overlap, reentry, expiration, preparation and integration")
 	quit(_failures)

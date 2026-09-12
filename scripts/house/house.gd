@@ -27,7 +27,8 @@ extends Node3D
 ## - Host spawns rats based on `SessionManager.random_seed` and the contract's
 ##   infestation level, out of the heaps the crew baited first and then out of the
 ##   burrows farthest from the front-door spawns (`_nests`). A quarter of them are
-##   the marking breed, which wets the floor as it goes.
+##   the spraying breed, which turns and gets whoever corners it, and a sixth are
+##   the fast breed, which no walking man ever catches (`_roll_species`).
 ## - Visual highlights on rat holes are extinguished.
 ## - Attack weapons unlocked in the inventory belt.
 ## - Trap installation takes longer arming cooldown.
@@ -53,13 +54,20 @@ const RAT_SCENE_PATH := "res://scenes/rat.tscn"
 ## what is in the walls: enough that every shift has one, few enough that meeting
 ## one is news.
 const SPRAYER_SHARE := 0.25
+## And how much is the fast breed (`resources/species/swift_rat.tres`), which
+## outruns a walking man and has to be sprinted down. Rarer than the sprayer on
+## purpose: it is the one animal in the house that spends the crew's stamina, and
+## a shift where half the walls run faster than a walk is a shift nobody ever
+## catches their breath in.
+const SWIFT_SHARE := 0.15
 
-## The two breeds the house puts out. They are the same resources `rat.gd` lists
-## in `SPECIES`, reached by the same paths so that `preload` hands back the same
+## The breeds the house puts out. They are the same resources `rat.gd` lists in
+## `SPECIES`, reached by the same paths so that `preload` hands back the same
 ## instances — which is what lets the rat find its own breed's index in that list
 ## and send it to the guests.
 const RAT_SPECIES_COMMON := preload("res://resources/species/common_rat.tres")
 const RAT_SPECIES_SPRAYER := preload("res://resources/species/sprayer_rat.tres")
+const RAT_SPECIES_SWIFT := preload("res://resources/species/swift_rat.tres")
 
 ## Where the animals are put when there is no house around them at all — a bench,
 ## or a world somebody trimmed the burrows out of.
@@ -378,11 +386,23 @@ func _spawn_rats_if_needed() -> void:
 				# in its own `_ready` to work out the index that crosses the wire
 				# (`rat.gd::sync_species`), and a breed written afterwards is a
 				# breed the guests were never told about.
-				var sprayer := rng.randf() < SPRAYER_SHARE
-				rat.species = RAT_SPECIES_SPRAYER if sprayer else RAT_SPECIES_COMMON
+				rat.species = _roll_species(rng)
 				_rats_root.add_child(rat)
 				if rat.has_signal("died"):
 					rat.died.connect(_on_rat_died)
+
+
+## Which breed this one is. One roll down the shares in order, so that adding a
+## breed is a share and a line rather than a nest of ifs, and the common rat is
+## whatever is left over — it has no share of its own and cannot be squeezed out
+## by arithmetic.
+func _roll_species(rng: RandomNumberGenerator) -> RatSpecies:
+	var roll := rng.randf()
+	if roll < SPRAYER_SHARE:
+		return RAT_SPECIES_SPRAYER
+	if roll < SPRAYER_SHARE + SWIFT_SHARE:
+		return RAT_SPECIES_SWIFT
+	return RAT_SPECIES_COMMON
 
 
 ## Deferred, and that is the whole of it: `died` is emitted *before* the rat

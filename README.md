@@ -31,6 +31,7 @@ an argument: `godot res://scenes/world.tscn`.
 | Mouse | Look around |
 | Left button | Grab the rat |
 | Left button (with a rat in hand) | Strangle |
+| Left button (stuck on glue) | Pull free, timed on the green |
 | `1` `2` `3` | Switch weapon |
 | `Q` | Back to your own hands |
 | `E` | Use what you are looking at (the computer in the van) |
@@ -46,13 +47,24 @@ neither does `Space`. Letting go of `Ctrl` is a request and not an order: under
 something too low to stand up in he stays down until he walks out from under it,
 and then he gets up on his own.
 
+Down there he is also quieter, and that is what the speed is paying for. A rat
+sees and hears a kneeling man from closer in than a walking one — how much
+closer is the breed's own number, so a sprayer is harder to creep up on than a
+common rat — and an animal with its head in a heap of rubbish or in a tub of
+bait is taking less notice of anything at all. The two multiply, which is why
+the food is where the creeping is worth most: it is the difference between
+watching a rat bolt at six metres and getting a hand to it.
+
+None of it makes you invisible. The distances shrink; they never go to nothing,
+and a rat that has already bolted is not crept up on over its dinner.
+
 ## The rats
 
 Ten rats live loose about the map. Each one has four behaviours:
 
 - **Wandering** — walks slowly to any point nearby and sometimes stops to sniff.
 - **Fleeing** — on hearing the player closer than 6 m, or seeing him closer than
-  16 m (further still if he is running), it bolts. The burst is faster than the
+  16 m (further still if he is running, closer in if he is crouched), it bolts. The burst is faster than the
   player's run, but then it tires and settles into something a little slower than
   that — you can catch up.
 - **Hiding** — while fleeing, it looks at the obstacles around it and runs for the
@@ -77,7 +89,7 @@ Hands do not kill: they **grab**. The rat hunches on the ground, is torn off in
 an arc, turns a somersault in the air and stops in the middle of the screen,
 held, struggling and trying to bite. From then on the same click is what kills:
 each one squeezes its neck a little harder, and the grip drains on its own while
-the player does not click again. Hammering without stopping takes about thirteen
+the player does not click again. Hammering without stopping takes twelve
 squeezes. Hammering slowly takes more — and if the bar reaches zero and stays
 there, the rat gets loose from the hand, leaps away and bolts with a few seconds'
 head start in which it cannot be re-grabbed.
@@ -242,6 +254,19 @@ sells a broom, with that instead and at the broom's own price.
 A pinned rat is also *less work*: it has nothing to brace against, and `effort()`
 says so as a plain fraction. The hands multiply their squeezes by it and never
 learn what glue is — which is the seam every weapon after them comes in through.
+
+The player is not exempt. Walk onto a strip and the boot stays where it is: the
+body is pinned to the spot it was caught at, the strip loses ten seconds of its
+own life for the trouble, and the way out is a bar across the bottom of the
+screen. A pointer sweeps it, the click only counts inside the green, and three
+of those pull the boot free — each one moving the green somewhere else and
+speeding the next sweep up. Missing costs no progress; it costs the sweep, which
+is time stood still in a house with rats in it.
+
+The aim is judged on the machine holding the mouse and only the hits it lands
+cross the wire, so a guest's escape does not wait a round trip to feel like one.
+Everything else about the strip — how long it lives, how many it holds, who is
+stuck to it — stays the host's (`glue_trap.gd`).
 
 That is the trade: the mousetrap works alone and pays three quarters; the glue
 does half the job, asks the player to walk over and finish it, and pays the lot.
@@ -753,7 +778,8 @@ The acceptance test needs two Steam accounts and is done by hand:
 - `scripts/` — GDScript scripts (`player.gd` handles first-person movement,
   `rat.gd` the rats' AI and the capture, `navigation.gd` bakes the mesh they walk
   on, `rat_counter.gd` the HUD scoreboard, `hud_money.gd` the wallet on screen,
-  `hud_strangle.gd` the strangling prompt, `hud_hotbar.gd` the belt's three
+  `hud_strangle.gd` the strangling prompt, `glue_hud.gd` the bar a stuck player
+  beats to get off the glue, `hud_hotbar.gd` the belt's three
   slots, `hud_health.gd` the health bar over them, `hud_prompt.gd` the line that
   says what `E` would do)
 - `scripts/weapons/` — the player's weapons: `weapon.gd` is the base of them all,

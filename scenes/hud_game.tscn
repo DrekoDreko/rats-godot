@@ -6,6 +6,7 @@
 [ext_resource type="Script" path="res://scripts/hud_splatter.gd" id="13_splatter"]
 [ext_resource type="Script" uid="uid://bk3mtd8wq1jyf" path="res://scripts/rat_counter.gd" id="4_counter"]
 [ext_resource type="Script" uid="uid://bss1ad1ogrub7" path="res://scripts/hud_health.gd" id="5_health"]
+[ext_resource type="Script" path="res://scripts/hud_stamina.gd" id="19_stamina"]
 [ext_resource type="Script" uid="uid://m4hmg2xirspk" path="res://scripts/hud_hotbar.gd" id="6_hotbar"]
 [ext_resource type="Script" uid="uid://bgxxpnjqmrumj" path="res://scripts/hud_prompt.gd" id="7_prompt"]
 [ext_resource type="Script" uid="uid://po783g0faobf" path="res://scripts/hud_hold.gd" id="8_hold"]
@@ -18,6 +19,12 @@
 [ext_resource type="Texture2D" path="res://assets/textures/crosshair.png" id="16_crosshair_idle"]
 [ext_resource type="Texture2D" path="res://assets/textures/crosshair_active.png" id="17_crosshair_active"]
 [ext_resource type="Script" path="res://scripts/hud_ready_prompt.gd" id="18_ready_prompt"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_stamina_background"]
+bg_color = Color(0, 0, 0, 0.7)
+
+[sub_resource type="StyleBoxFlat" id="StyleBox_stamina_fill"]
+bg_color = Color(1, 1, 1, 1)
 
 [node name="HUD" type="CanvasLayer"]
 
@@ -138,6 +145,18 @@ text = "Press F to ready"
 font_size = 16
 horizontal_alignment = 1
 script = ExtResource("18_ready_prompt")
+
+[node name="Stamina" type="ProgressBar" parent="Belt"]
+custom_minimum_size = Vector2(0, 3)
+layout_mode = 2
+mouse_filter = 2
+max_value = 1.0
+step = 0.0
+value = 1.0
+show_percentage = false
+theme_override_styles/background = SubResource("StyleBox_stamina_background")
+theme_override_styles/fill = SubResource("StyleBox_stamina_fill")
+script = ExtResource("19_stamina")
 
 [node name="Health" type="ProgressBar" parent="Belt"]
 custom_minimum_size = Vector2(0, 5)
@@ -433,7 +452,7 @@ mouse_filter = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 12
-theme_override_constants/margin_bottom = 12
+theme_override_constants/margin_bottom = 64
 script = ExtResource("9_strangle")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Strangle"]
@@ -445,17 +464,19 @@ size_flags_vertical = 8
 layout_mode = 2
 theme_override_colors/font_color = Color(0.94, 0.86, 0.36, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 8
-font_size = 32
+theme_override_constants/outline_size = 5
+font_size = 16
 text = "HUD_STRANGLE_BUTTON"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="Bar" type="Control" parent="Strangle/VBoxContainer"]
-custom_minimum_size = Vector2(160, 20)
+[node name="Bar" type="ProgressBar" parent="Strangle/VBoxContainer"]
+custom_minimum_size = Vector2(144, 5)
 layout_mode = 2
 size_flags_horizontal = 4
 mouse_filter = 2
+max_value = 1.0
+show_percentage = false
 
 [node name="Instruction" parent="Strangle/VBoxContainer" instance=ExtResource("1_big_font")]
 layout_mode = 2

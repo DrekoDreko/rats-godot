@@ -14,3 +14,5 @@ base_value = 16
 variation = 0.0
 sprays = true
 glue_escape_seconds = 20.0
+crouch_notice = 0.8
+feeding_notice = 0.85
